@@ -1,0 +1,5 @@
+# Project Global Rules for AI Assistants
+
+1. **Demo Files Location**: Whenever the user asks to create, generate, or write a "Demo" file, example code, or demonstration, you MUST ALWAYS save and place those files inside the `Demos/` directory.
+2. **Directory Creation**: If the `Demos/` folder does not exist, create it before saving the file.
+3. **No Root Clutter**: Do not output demo scripts or files in the root directory or other directories unless explicitly requested by the user.
