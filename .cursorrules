@@ -1,5 +1,5 @@
-# Project Global Rules for AI Assistants
+# AI 助手的项目全局规则
 
-1. **Demo Files Location**: Whenever the user asks to create, generate, or write a "Demo" file, example code, or demonstration, you MUST ALWAYS save and place those files inside the `Demos/` directory.
-2. **Directory Creation**: If the `Demos/` folder does not exist, create it before saving the file.
-3. **No Root Clutter**: Do not output demo scripts or files in the root directory or other directories unless explicitly requested by the user.
+1. **演示文件位置**：每当用户要求创建、生成或编写“演示 (Demo)”文件、示例代码或演示时，这些文件的格式可能是html/vue等，您必须始终将这些文件保存并放置在 `Demos/` 目录中。
+2. **目录创建**：如果 `Demos/` 文件夹不存在，请在保存文件之前创建它。
+3. **保持根目录整洁**：除非用户明确要求，否则不要在根目录或其他目录中输出演示脚本或文件。

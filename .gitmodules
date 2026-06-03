@@ -1,3 +1,6 @@
 [submodule "SKillS/skill_seerdesign_demo_v2.0"]
 	path = SKillS/skill_seerdesign_demo_v2.0
 	url = https://github.com/wangjue2026/skill_seerdesign_demo_v2.0.git
+[submodule "SKillS/skill-competitor-analysis"]
+	path = SKillS/skill-competitor-analysis
+	url = https://github.com/wangjue2026/skill-competitor-analysis.git
