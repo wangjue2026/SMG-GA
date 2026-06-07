@@ -1,0 +1,1755 @@
+@charset "UTF-8";
+/* SeerDesign 视觉规范 - 全局 CSS 变量与通用组件样式类 */
+/* 使用说明：本样式库提供 SeerDesign 核心规范 Token 变量，并提供原生 CSS 可用的 .sd- 前缀通用组件类，适用于纯原生 CSS / Tailwind CSS / React 等各种技术栈的快速 Demo 制作。 */
+
+/* ============================================
+   0. 全局 CSS 变量定义 (Tokens)
+   ============================================ */
+:root {
+  /* ========== Font Family Stack ========== */
+  --seer-font-family: "PingFang SC", "Helvetica Neue", Arial, "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", SimSun, sans-serif;
+
+  /* ========== Font Weights ========== */
+  --seer-font-weight-regular: 400;
+  --seer-font-weight-bold: 600;
+
+  /* ========== Font Sizes & Line Heights ========== */
+  /* 行高公式：字号 + 8px */
+  --seer-font-size-xs: 12px;
+  --seer-line-height-xs: 20px;
+
+  --seer-font-size-md: 14px;
+  --seer-line-height-md: 22px;
+
+  --seer-font-size-lg: 16px;
+  --seer-line-height-lg: 24px;
+
+  --seer-font-size-xl: 20px;
+  --seer-line-height-xl: 28px;
+
+  --seer-font-size-2xl: 24px;
+  --seer-line-height-2xl: 32px;
+
+  --seer-font-size-3xl: 30px;
+  --seer-line-height-3xl: 38px;
+
+  --seer-font-size-4xl: 36px;
+  --seer-line-height-4xl: 44px;
+
+  --seer-font-size-5xl: 48px;
+  --seer-line-height-5xl: 56px;
+
+  --seer-font-size-6xl: 56px;
+  --seer-line-height-6xl: 64px;
+
+  --seer-font-size-7xl: 64px;
+  --seer-line-height-7xl: 72px;
+
+  /* ========== Base Colors ========== */
+  --color-white: #FFFFFF;
+
+  /* ========== Brand Colors ========== */
+  --color-blue-l50: #E8F4FF;
+  --color-blue-l10: #4FA1FF;
+  --color-blue: #1C6EFF;
+  --color-blue-d10: #1458CC;
+  --color-turquoise: #6DD405;
+
+  /* ========== Status Colors ========== */
+  --color-red: #F52727;
+  --color-red-d10: #CF171D;
+  --color-red-d30: #82010E;
+  --color-turquoise-d10: #12A679;
+  --color-brown: #FDAA1D;
+  --color-cyan-d10: #0BA7B5;
+
+  /* ========== Security Level Colors ========== */
+  --color-orange: #FA721B;
+
+  /* ========== Metal Colors ========== */
+  --color-gold-l10: #F5C76C;
+  --color-gold: #E7AA40;
+  --color-gold-d10: #C2862D;
+  --color-silver-l10: #CBDED4;
+  --color-silver: #A9B4C8;
+  --color-silver-d10: #7F8AA1;
+  --color-bronze-l10: #D6A181;
+  --color-bronze: #C97F58;
+  --color-bronze-d10: #A35F40;
+
+  /* ========== Graphite / Grayscale ========== */
+  --color-graphite-l50: #F7F9FC;
+  --color-graphite-l40: #EDF1F7;
+  --color-graphite-l30: #E1E5EB;
+  --color-graphite-l20: #D3D7DE;
+  --color-graphite-l10: #BEC3CC;
+  --color-graphite: #A1A7B3;
+  --color-graphite-d10: #6F7785;
+  --color-graphite-d20: #5E6573;
+  --color-graphite-d30: #454C59;
+  --color-graphite-d40: #2F3540;
+  --color-graphite-d50: #1E232B;
+
+  /* ========== Shadows ========== */
+  --seer-dropshadow-s1: 0 2px 10px 0 rgba(30, 35, 43, 0.16);
+  --seer-dropshadow-s2: 0 4px 16px 0 rgba(30, 35, 43, 0.14);
+  --seer-dropshadow-s3: 0 8px 22px 0 rgba(30, 35, 43, 0.12);
+}
+
+/* ============================================
+   1. 全局手势与圆角
+   ============================================ */
+
+/* 圆角与手势规范 - 对照组件和输入控件应用 */
+.sd-input,
+.sd-input-affix-wrapper,
+.sd-btn:not([disabled]),
+.sd-select:not(.sd-select-disabled),
+.sd-picker:not(.sd-picker-disabled),
+.sd-menu-item:not(.sd-menu-item-disabled),
+.sd-tabs-tab:not(.sd-tabs-tab-disabled){
+  border-radius: 2px !important;
+  cursor: pointer;
+}
+
+/* 禁用态保持 not-allowed 光标 */
+.sd-btn[disabled],
+.sd-input[disabled],
+.sd-select-disabled,
+.sd-picker-disabled,
+.sd-menu-item-disabled,
+.sd-tabs-tab-disabled{
+  cursor: not-allowed !important;
+}
+
+/* ============================================
+   2. 表格组件：行高、字号、无圆角 (Table)
+   ============================================ */
+
+/* 表格无圆角 - 全局 2px 圆角不适用于表格 */
+.sd-table,
+.sd-table-container,
+.sd-table-content{
+  border-radius: 0 !important;
+  border-collapse: collapse;
+}
+
+/* 表头样式 */
+.sd-table th{
+  height: 32px !important;
+  padding: 0 12px !important;
+  box-sizing: border-box !important;
+  line-height: 20px !important;
+  vertical-align: middle !important;
+  text-align: left !important;
+  position: relative !important;
+  background-color: var(--color-graphite-l40) !important; /* #EDF1F7 */
+  border-bottom: 1px solid var(--color-graphite-l30) !important; /* #E1E5EB */
+  white-space: nowrap !important; /* 表头文字不允许换行 */
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  font-family: var(--seer-font-family) !important;
+  color: var(--color-graphite-d30) !important; /* #454C59 */
+}
+
+/* 关闭表头默认伪元素分割线，避免和自定义 ::after 双线 */
+.sd-table th::before{
+  display: none !important;
+}
+
+/* 表头分割线（配合 th 的 position: relative） */
+.sd-table th:not(:last-child)::after{
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 16px;
+  width: 1px;
+  background-color: var(--color-graphite-l30); /* #E1E5EB */
+}
+
+/* 表格内容行 */
+.sd-table td{
+  height: 40px !important;
+  box-sizing: border-box !important;
+  line-height: 20px !important;
+  vertical-align: middle !important;
+  text-align: left !important;
+  border: none !important;
+  border-bottom: 1px solid var(--color-graphite-l30) !important; /* 行间线：一级分割线颜色 #E1E5EB */
+  padding: 0 12px !important; /* 单元格文字左右间距 12px */
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  font-family: var(--seer-font-family) !important;
+  color: var(--color-graphite-d40) !important; /* #2F3540 */
+}
+
+/* 可点击文字样式 */
+.sd-table .clickable-text{
+  color: var(--color-blue) !important; /* #1C6EFF */
+  cursor: pointer !important;
+}
+
+.sd-table .clickable-text:hover{
+  color: var(--color-blue-l10) !important; /* #4FA1FF */
+}
+
+/* 操作列文字 */
+.sd-table .action-link{
+  color: var(--color-blue) !important;
+  cursor: pointer !important;
+  margin-right: 16px !important;
+  text-decoration: none;
+}
+
+.sd-table .action-link:last-child{
+  margin-right: 0 !important;
+}
+
+.sd-table .action-link:hover{
+  color: var(--color-blue-l10) !important;
+}
+
+/* 行 Hover 样式 */
+.sd-table tr:hover td{
+  background-color: var(--color-graphite-l50) !important; /* 一级背景色 #F7F9FC */
+}
+
+/* 序号列 */
+.sd-table th.serial-column,
+.sd-table td.serial-column{
+  width: 40px !important;
+  text-align: center !important;
+}
+
+/* 多选框列 */
+.sd-table-selection-column{
+  width: 40px !important;
+  text-align: center !important;
+}
+
+/* 数字列右对齐 */
+.sd-table-cell.numeric-column,
+.sd-table th.numeric-column{
+  text-align: right !important;
+}
+
+/* ============================================
+   3. 输入框规范 (Input)
+   ============================================ */
+
+/* 输入框默认状态 - 禁止使用 line-height: 32px 实现垂直居中 */
+.sd-input{
+  height: 32px !important;
+  font-size: 12px !important;
+  line-height: 20px !important;
+  padding: 5px 12px !important;
+  box-sizing: border-box !important;
+  border: 1px solid var(--color-graphite-l20) !important;
+  border-radius: 2px !important;
+  background-color: var(--color-white) !important;
+  color: var(--color-graphite-d40) !important;
+  font-weight: 400 !important;
+  outline: none;
+  transition: all 0.2s;
+}
+
+/* 输入框焦点 */
+.sd-input:focus,
+.sd-input-focused,
+.sd-input:hover{
+  border-color: var(--color-blue) !important;
+  box-shadow: none !important;
+}
+
+/* 输入框禁用 */
+.sd-input-disabled,
+.sd-input[disabled]{
+  background-color: var(--color-graphite-l30) !important;
+  border-color: var(--color-graphite-l20) !important;
+  color: var(--color-graphite) !important;
+  cursor: not-allowed !important;
+}
+
+/* 输入框错误 */
+.sd-input.has-error{
+  border-color: var(--color-red-d10) !important;
+}
+
+/* Placeholder 样式 */
+.sd-input::placeholder{
+  color: var(--color-graphite) !important; /* #A1A7B3 */
+  font-size: 12px !important;
+}
+
+/* 带前后缀/密码框/allowClear 输入框外层容器 */
+.sd-input-affix-wrapper{
+  display: inline-flex;
+  align-items: center;
+  height: 32px !important;
+  padding: 5px 12px !important;
+  border: 1px solid var(--color-graphite-l20) !important;
+  border-radius: 2px !important;
+  box-shadow: none !important;
+  background-color: var(--color-white) !important;
+  box-sizing: border-box;
+}
+
+.sd-input-affix-wrapper:hover,
+.sd-input-affix-wrapper-focused{
+  border-color: var(--color-blue) !important;
+  box-shadow: none !important;
+}
+
+.sd-input-affix-wrapper.has-error{
+  border-color: var(--color-red-d10) !important;
+}
+
+/* affix-wrapper 内部 input */
+.sd-input-affix-wrapper .sd-input{
+  border: none !important;
+  padding: 0 !important;
+  height: auto !important;
+  line-height: 20px !important;
+  background: transparent !important;
+}
+
+/* 文本域输入框 */
+.sd-textarea{
+  font-size: 12px !important;
+  line-height: 20px !important;
+  padding: 6px 12px !important;
+  min-height: 52px !important;
+  border: 1px solid var(--color-graphite-l20) !important;
+  border-radius: 2px !important;
+  background-color: var(--color-white) !important;
+  color: var(--color-graphite-d40) !important;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.sd-textarea:focus,
+.sd-textarea:hover{
+  border-color: var(--color-blue) !important;
+  box-shadow: none !important;
+}
+
+/* ============================================
+   4. 基础搜索框规范 (Search)
+   ============================================ */
+
+/* 基础搜索框容器 */
+.basic-search {
+  position: relative;
+  display: inline-block;
+  height: 32px;
+}
+
+/* 基础搜索框 - 右侧图标区域 32px */
+.basic-search .sd-input{
+  padding-right: 32px !important;
+}
+
+/* 基础搜索框 Placeholder */
+.basic-search .sd-input::placeholder{
+  color: var(--color-graphite) !important;
+}
+
+/* 搜索图标区域 */
+.basic-search .search-icon-wrapper {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.basic-search .search-icon {
+  color: var(--color-graphite);
+}
+
+/* 关闭图标 */
+.basic-search .clear-icon {
+  margin-right: 4px;
+  color: var(--color-graphite);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.basic-search .clear-icon:hover {
+  color: var(--color-blue);
+}
+
+/* ============================================
+   5. 选择器规范 (Select)
+   ============================================ */
+
+.sd-select{
+  display: inline-block;
+  position: relative;
+  font-size: 12px;
+}
+
+/* 原生 Select 支持 */
+select.sd-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23A1A7B3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 8px center !important;
+  background-size: 12px !important;
+  padding-right: 28px !important;
+}
+
+/* 选择器圆角与边框 */
+.sd-select-selector{
+  border: 1px solid var(--color-graphite-l20) !important;
+  border-radius: 2px !important;
+  background-color: var(--color-white) !important;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+/* 单选 Select 固定高度 */
+.sd-select-single .sd-select-selector{
+  height: 32px !important;
+  display: flex;
+  align-items: center;
+  padding: 0 8px 0 12px !important;
+}
+
+/* 单选 Select 已选值和 Placeholder 文字垂直居中对齐 */
+.sd-select-selection-item,
+.sd-select-selection-placeholder{
+  line-height: 30px !important;
+  font-size: 12px !important;
+}
+
+/* 单选 Select 已选文字颜色 */
+.sd-select-selection-item{
+  color: var(--color-graphite-d40) !important; /* #2F3540 */
+}
+
+/* 选择器 Placeholder 颜色 */
+.sd-select-selection-placeholder{
+  color: var(--color-graphite) !important; /* #A1A7B3 */
+}
+
+/* 多选 Select 最小高度，允许换行 */
+.sd-select-multiple .sd-select-selector{
+  min-height: 32px !important;
+  height: auto !important;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 2px 8px;
+  gap: 4px;
+}
+
+/* 选择器焦点 */
+.sd-select-focused:not(.sd-select-disabled) .sd-select-selector{
+  border-color: var(--color-blue) !important;
+  box-shadow: none !important;
+}
+
+/* 选择器悬浮 (Hover) */
+.sd-select:hover:not(.sd-select-disabled) .sd-select-selector {
+  border-color: var(--color-blue) !important;
+}
+
+/* 选择器禁用 */
+.sd-select-disabled .sd-select-selector{
+  background-color: var(--color-graphite-l30) !important;
+  border-color: var(--color-graphite-l20) !important;
+  color: var(--color-graphite) !important;
+  cursor: not-allowed !important;
+}
+
+/* 下拉面板阴影 */
+.sd-select-dropdown{
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 1050;
+  box-shadow: var(--seer-dropshadow-s2) !important;
+  border-radius: 2px !important;
+  border: none !important;
+  background-color: var(--color-white);
+  padding: 4px 0 !important;
+}
+
+/* 下拉选项 */
+.sd-select-item{
+  height: 32px !important;
+  line-height: 32px !important;
+  font-size: 12px !important;
+  padding: 0 12px !important;
+  color: var(--color-graphite-d40);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* 下拉选项选中 - 底色通栏展示，禁止勾选图标 */
+.sd-select-item-selected{
+  background-color: var(--color-blue-l50) !important;
+  color: var(--color-blue) !important;
+}
+
+.sd-select-item-option-state{
+  display: none !important;
+}
+
+/* 下拉选项 hover */
+.sd-select-item:hover:not(.sd-select-item-selected),
+.sd-select-item-active:not(.sd-select-item-selected){
+  background-color: var(--color-graphite-l50) !important;
+}
+
+/* 多选选择器 Tags */
+.sd-select-multiple .sd-select-selection-item{
+  background-color: var(--color-graphite-l40) !important; /* #EDF1F7 */
+  border: none !important;
+  color: var(--color-graphite-d40) !important; /* #2F3540 */
+  border-radius: 2px !important;
+  height: 20px !important;
+  line-height: 20px !important;
+  margin: 2px !important;
+  padding: 0 8px !important;
+  display: inline-flex;
+  align-items: center;
+}
+
+.sd-select-multiple .sd-select-selection-item-remove{
+  color: var(--color-graphite-d40) !important;
+  margin-left: 8px !important;
+  font-size: 12px !important;
+  cursor: pointer;
+}
+
+.sd-select-multiple .sd-select-selection-item-remove:hover{
+  color: var(--color-blue) !important;
+}
+
+/* ============================================
+   6. 复选框规范 (Checkbox)
+   ============================================ */
+
+.sd-checkbox{
+  position: relative;
+  display: inline-block;
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: middle;
+  outline: none;
+  cursor: pointer;
+}
+
+/* 未选中状态 - 背景色白色 */
+.sd-checkbox-inner{
+  display: block;
+  width: 14px;
+  height: 14px;
+  background-color: var(--color-white) !important;
+  border: 1px solid var(--color-graphite-l20) !important;
+  border-radius: 2px;
+  position: relative;
+  transition: all 0.2s;
+}
+
+/* 已选状态 - 无边框线 */
+.sd-checkbox-checked .sd-checkbox-inner{
+  background-color: var(--color-blue) !important;
+  border-color: var(--color-blue) !important;
+}
+
+.sd-checkbox-checked .sd-checkbox-inner::after{
+  content: '';
+  position: absolute;
+  display: table;
+  border: 2px solid var(--color-white);
+  border-top: 0;
+  border-left: 0;
+  transform: rotate(45deg) scale(1) translate(-50%, -50%);
+  left: 21%;
+  top: 45%;
+  width: 4px;
+  height: 8px;
+}
+
+/* 半选状态 - 无边框线 */
+.sd-checkbox-indeterminate .sd-checkbox-inner{
+  background-color: var(--color-blue) !important;
+  border-color: var(--color-blue) !important;
+}
+
+.sd-checkbox-indeterminate .sd-checkbox-inner::after{
+  content: '';
+  position: absolute;
+  height: 2px !important;
+  background-color: var(--color-white) !important;
+  width: 8px !important;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* 禁用状态 */
+.sd-checkbox-disabled.sd-checkbox-checked .sd-checkbox-inner::after{
+  border-color: var(--color-graphite-d10) !important;
+}
+
+.sd-checkbox-disabled .sd-checkbox-inner{
+  background-color: var(--color-graphite-l30) !important;
+  border-color: var(--color-graphite-l20) !important;
+}
+
+.sd-checkbox + span{
+  font-size: 12px;
+  padding-left: 8px;
+  padding-right: 8px;
+  color: var(--color-graphite-d40);
+}
+
+/* ============================================
+   7. 单选框规范 (Radio)
+   ============================================ */
+
+.sd-radio{
+  position: relative;
+  display: inline-block;
+  line-height: 1;
+  white-space: nowrap;
+  vertical-align: middle;
+  outline: none;
+  cursor: pointer;
+}
+
+/* 未选状态 */
+.sd-radio-inner{
+  display: block;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--color-graphite-l20) !important;
+  border-radius: 50% !important;
+  background-color: transparent !important;
+  position: relative;
+  transition: all 0.2s;
+}
+
+/* 已选状态 - 蓝色圆点 */
+.sd-radio-checked .sd-radio-inner{
+  border-color: var(--color-blue) !important;
+}
+
+.sd-radio-checked .sd-radio-inner::after{
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-blue) !important;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.75);
+}
+
+/* 悬浮态 */
+.sd-radio-wrapper:hover .sd-radio-inner,
+.sd-radio:hover .sd-radio-inner{
+  border-color: var(--color-blue) !important;
+}
+
+/* 点击态 */
+.sd-radio-wrapper:active .sd-radio-inner,
+.sd-radio:active .sd-radio-inner{
+  border-color: var(--color-blue-d10) !important;
+}
+
+/* 未选禁用 */
+.sd-radio-disabled .sd-radio-inner{
+  border-color: var(--color-graphite-l20) !important;
+  background-color: var(--color-graphite-l30) !important;
+}
+
+/* 已选禁用 */
+.sd-radio-disabled.sd-radio-checked .sd-radio-inner{
+  border-color: var(--color-graphite-l20) !important;
+  background-color: var(--color-graphite-l30) !important;
+}
+
+.sd-radio-disabled.sd-radio-checked .sd-radio-inner::after{
+  background-color: var(--color-graphite) !important;
+}
+
+/* 禁用文字颜色 */
+.sd-radio-disabled + span{
+  color: var(--color-graphite) !important;
+  cursor: not-allowed;
+}
+
+/* 单选框文字样式 */
+.sd-radio-wrapper{
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  color: var(--color-graphite-d40) !important;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* ============================================
+   8. 按钮规范 (Button)
+   ============================================ */
+
+/* 按钮基础 - 字重 400 */
+.sd-btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 400 !important;
+  border-radius: 2px !important;
+  height: 32px !important;
+  font-size: 12px !important;
+  padding: 0 16px;
+  border: 1px solid var(--color-graphite-l20);
+  background-color: var(--color-white);
+  color: var(--color-graphite-d40);
+  cursor: pointer;
+  transition: all 0.2s;
+  outline: none;
+  box-sizing: border-box;
+}
+
+/* 主按钮 (Primary) */
+.sd-btn-primary{
+  background-color: var(--color-blue) !important;
+  border-color: var(--color-blue) !important;
+  color: var(--color-white) !important;
+}
+
+.sd-btn-primary:hover{
+  background-color: var(--color-blue-l10) !important;
+  border-color: var(--color-blue-l10) !important;
+  color: var(--color-white) !important;
+}
+
+.sd-btn-primary:active{
+  background-color: var(--color-blue-d10) !important;
+  border-color: var(--color-blue-d10) !important;
+  color: var(--color-white) !important;
+}
+
+/* 普通按钮 / 次按钮 (Default) */
+.sd-btn-default{
+  background-color: var(--color-white) !important;
+  color: var(--color-graphite-d40) !important;
+  border-color: var(--color-graphite-l20) !important;
+}
+
+.sd-btn-default:hover{
+  color: var(--color-blue) !important;
+  border-color: var(--color-blue) !important;
+  background-color: var(--color-white) !important;
+}
+
+.sd-btn-default:active{
+  color: var(--color-blue-d10) !important;
+  border-color: var(--color-blue-d10) !important;
+  background-color: var(--color-white) !important;
+}
+
+/* 双字按钮固定宽度 */
+.sd-btn.two-chars{
+  width: 56px !important;
+  padding: 0 !important;
+  font-size: 12px !important;
+}
+
+/* 多字按钮自适应 */
+.sd-btn:not(.two-chars):not(.sd-btn-icon-only){
+  padding: 0 16px !important;
+  font-size: 12px !important;
+}
+
+/* 禁用径向扩散阴影 */
+.sd-btn:active::after{
+  display: none !important;
+}
+
+/* 按钮焦点 */
+.sd-btn:focus{
+  box-shadow: none !important;
+}
+
+/* ============================================
+   9. 弹窗规范 (Modal)
+   ============================================ */
+
+.sd-modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(30, 35, 43, 0.45);
+  z-index: 1000;
+}
+
+.sd-modal-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* 弹窗整体结构 */
+.sd-modal{
+  background-color: var(--color-white);
+  border-radius: 2px !important;
+  box-shadow: var(--seer-dropshadow-s3);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+/* 弹窗标题栏 */
+.sd-modal-header{
+  height: 48px !important;
+  min-height: 48px !important;
+  padding: 0 16px !important;
+  border-bottom: none !important;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  background: transparent !important;
+}
+
+.sd-modal-title{
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  line-height: 48px !important;
+  color: var(--color-graphite-d40) !important;
+}
+
+/* 弹窗内容区 - 左右边距 32px */
+.sd-modal-body{
+  flex: 1;
+  padding: 0 32px !important;
+  overflow-y: auto;
+  font-size: 12px;
+  color: var(--color-graphite-d40);
+}
+
+/* 弹窗底部按钮栏 - 按钮右对齐，排列顺序：主按钮在左，取消按钮在右 */
+.sd-modal-footer{
+  height: 56px !important;
+  min-height: 56px !important;
+  padding: 0 16px !important;
+  border-top: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-direction: row-reverse !important; /* 主按钮在左，取消按钮在右，整体右对齐 */
+  gap: 8px !important;
+  flex-shrink: 0;
+  background: transparent !important;
+}
+
+.sd-modal-footer .sd-btn{
+  height: 32px !important;
+  font-size: 14px !important;
+  border-radius: 2px !important;
+}
+
+/* ============================================
+   10. 抽屉规范 (Drawer)
+   ============================================ */
+
+.sd-drawer-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(30, 35, 43, 0.45);
+  z-index: 1000;
+}
+
+.sd-drawer-wrapper {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+}
+
+/* 抽屉整体结构 */
+.sd-drawer{
+  background-color: var(--color-white);
+  box-shadow: var(--seer-dropshadow-s3);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* 抽屉标题栏 */
+.sd-drawer-header{
+  height: 48px !important;
+  min-height: 48px !important;
+  padding: 0 16px !important;
+  border-bottom: none !important;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  background: transparent !important;
+}
+
+.sd-drawer-title{
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  line-height: 48px !important;
+  text-align: left !important;
+  color: var(--color-graphite-d40) !important;
+}
+
+/* 抽屉内容区 - 左右边距 32px */
+.sd-drawer-body{
+  flex: 1;
+  padding: 0 32px !important;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-size: 12px;
+  color: var(--color-graphite-d40);
+}
+
+/* 抽屉底部按钮栏 - 按钮左对齐，主按钮在左 */
+.sd-drawer-footer{
+  height: 56px !important;
+  min-height: 56px !important;
+  padding: 0 16px !important;
+  border-top: 1px solid var(--color-graphite-l30) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+  flex-shrink: 0;
+  background: transparent !important;
+}
+
+.sd-drawer-footer .sd-btn{
+  height: 32px !important;
+  font-size: 14px !important;
+  border-radius: 2px !important;
+}
+
+/* 弹窗/抽屉底部按钮间间距 */
+.sd-modal-footer .sd-btn + .sd-btn,
+.sd-drawer-footer .sd-btn + .sd-btn{
+  margin-left: 0 !important;
+}
+
+/* ============================================
+   11. 分页器规范 (Pagination)
+   ============================================ */
+
+/* 分页器默认右对齐 */
+.sd-pagination{
+  text-align: right !important;
+  font-size: 12px !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 分页项尺寸统一 */
+.sd-pagination-item{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px !important;
+  height: 32px !important;
+  border: 1px solid var(--color-graphite-l20);
+  border-radius: 2px;
+  background: var(--color-white);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+/* 当前页码 - 蓝色圆形，直径 24px */
+.sd-pagination-item-active{
+  min-width: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
+  background-color: var(--color-blue) !important;
+  border-color: var(--color-blue) !important;
+  border-radius: 50% !important;
+}
+
+.sd-pagination-item-active a{
+  color: var(--color-white) !important;
+}
+
+/* 页码悬浮边框 */
+.sd-pagination-item:not(.sd-pagination-item-active):hover{
+  border-color: var(--color-blue) !important;
+}
+
+/* 页码点击边框 */
+.sd-pagination-item:not(.sd-pagination-item-active):active{
+  border-color: var(--color-blue-d10) !important;
+}
+
+/* 分页器文字颜色 */
+.sd-pagination-total{
+  color: var(--color-graphite-d10) !important;
+}
+
+/* 分页器数字颜色 */
+.sd-pagination-item a{
+  color: var(--color-graphite-d40) !important;
+  text-decoration: none;
+}
+
+/* 快速跳转输入框 */
+.sd-pagination-jumper input{
+  width: 48px !important;
+  height: 32px !important;
+  border: 1px solid var(--color-graphite-l20) !important;
+  border-radius: 2px !important;
+  font-size: 12px !important;
+  color: var(--color-graphite-d40) !important;
+  outline: none;
+  text-align: center;
+}
+
+.sd-pagination-jumper input:focus{
+  border-color: var(--color-blue) !important;
+  box-shadow: none !important;
+}
+
+/* 禁用状态 */
+.sd-pagination-disabled .sd-pagination-item{
+  color: var(--color-graphite-l10) !important;
+  border-color: var(--color-graphite-l10) !important;
+}
+
+/* ============================================
+   12. 全局提示规范 (Message)
+   ============================================ */
+
+/* Message 基础容器 */
+.sd-message-notice{
+  border-radius: 2px !important;
+  background-color: var(--color-white) !important;
+  box-shadow: var(--seer-dropshadow-s3) !important;
+  border: none !important;
+  padding: 8px 16px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  line-height: 20px !important;
+  box-sizing: border-box;
+}
+
+/* Message 图标区域 */
+.sd-message-notice-icon{
+  font-size: 16px !important;
+}
+
+/* Message 图标与文字间距 */
+.sd-message-notice-icon + span{
+  margin-left: 8px !important;
+}
+
+/* Message 成功图标颜色 */
+.sd-message-success .sd-message-notice-icon{
+  color: var(--color-turquoise-d10) !important;
+}
+
+/* Message 信息图标颜色 */
+.sd-message-info .sd-message-notice-icon{
+  color: var(--color-blue) !important;
+}
+
+/* Message 警告图标颜色 */
+.sd-message-warning .sd-message-notice-icon{
+  color: var(--color-orange) !important;
+}
+
+/* Message 错误图标颜色 */
+.sd-message-error .sd-message-notice-icon{
+  color: var(--color-red-d10) !important;
+}
+
+/* Message 加载图标颜色 */
+.sd-message-loading .sd-message-notice-icon{
+  color: var(--color-blue) !important;
+}
+
+/* ============================================
+   13. 警告提示规范 (Alert)
+   ============================================ */
+
+/* Alert 基础样式 - 无边框，最小高度 32px */
+.sd-alert{
+  border: none !important;
+  min-height: 32px !important;
+  border-radius: 2px !important;
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* Alert banner 模式圆角为 0 */
+.sd-alert-banner{
+  border-radius: 0 !important;
+}
+
+/* Alert 图标尺寸 */
+.sd-alert-icon{
+  font-size: 16px !important;
+  margin-right: 8px;
+}
+
+/* 普通提示条 - graphite-d10 图标和文字，#F7F7F8 背景 */
+.sd-alert-info{
+  background-color: #F7F7F8 !important;
+  border: none !important;
+}
+
+.sd-alert-info .sd-alert-icon{
+  color: var(--color-graphite-d10) !important; /* #6F7785 */
+}
+
+.sd-alert-info .sd-alert-message,
+.sd-alert-info .sd-alert-description{
+  color: var(--color-graphite-d10) !important; /* #6F7785 */
+}
+
+/* 告警提示条 - bronze-d10 图标和文字，#FFFAF2 背景 */
+.sd-alert-warning{
+  background-color: #FFFAF2 !important;
+  border: none !important;
+}
+
+.sd-alert-warning .sd-alert-icon{
+  color: var(--color-bronze-d10) !important; /* #A35F40 */
+}
+
+.sd-alert-warning .sd-alert-message,
+.sd-alert-warning .sd-alert-description{
+  color: var(--color-bronze-d10) !important; /* #A35F40 */
+}
+
+/* Alert 链接样式 */
+.sd-alert a{
+  margin-left: 16px !important;
+  color: var(--color-blue);
+  text-decoration: none;
+}
+
+/* Alert 关闭按钮右对齐 */
+.sd-alert-close{
+  margin-left: auto !important;
+  cursor: pointer;
+}
+
+/* ============================================
+   14. 日期选择器规范 (Date Picker)
+   ============================================ */
+
+.sd-picker{
+  display: inline-flex;
+  align-items: center;
+  height: 32px !important;
+  padding: 4px 12px;
+  border: 1px solid var(--color-graphite-l20);
+  border-radius: 2px;
+  background-color: var(--color-white);
+  box-sizing: border-box;
+  transition: all 0.2s;
+}
+
+/* 日期选择器焦点 */
+.sd-picker:hover,
+.sd-picker-focused{
+  border-color: var(--color-blue) !important;
+  box-shadow: none !important;
+}
+
+/* 日期选择器下拉面板阴影 */
+.sd-picker-dropdown{
+  box-shadow: var(--seer-dropshadow-s2) !important;
+  border-radius: 2px !important;
+}
+
+/* ============================================
+   15. 标签页规范 (Tabs)
+   ============================================ */
+
+.sd-tabs-nav{
+  position: relative;
+  display: flex;
+  width: 100%;
+}
+
+/* 标签页容器底部 1px 分割线 */
+.sd-tabs-nav::before{
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  border-bottom: 1px solid var(--color-graphite-l30) !important; /* #E1E5EB */
+}
+
+/* 未选中状态 - 字重400，颜色graphite-d40 */
+.sd-tabs-tab{
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  font-weight: 400 !important;
+  color: var(--color-graphite-d40) !important; /* #2F3540 */
+  font-size: 14px !important;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+/* 选中状态 - 字重600，颜色blue */
+.sd-tabs-tab-active{
+  font-weight: 600 !important;
+  color: var(--color-blue) !important; /* #1C6EFF */
+}
+
+/* 下划线 - 高度2px，左上右上圆角2px，左下右下直角，覆盖在容器底部分割线上 */
+.sd-tabs-ink-bar{
+  position: absolute;
+  bottom: 0;
+  height: 2px !important;
+  border-radius: 2px 2px 0 0 !important;
+  background: var(--color-blue) !important; /* #1C6EFF */
+  transition: all 0.2s;
+}
+
+/* --- 分段式标签页 (Segment Style) --- */
+
+/* 分段标签页通用 - 圆角2px */
+.sd-segment-tabs,
+.seer-segment-tabs {
+  display: inline-flex;
+  background-color: var(--color-graphite-l50);
+  padding: 2px;
+  border-radius: 2px;
+}
+
+.sd-segment-tabs-item{
+  border-radius: 2px !important;
+  font-size: 12px !important;
+  height: 32px !important;
+  line-height: 30px !important;
+  padding: 0 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid transparent;
+  background: transparent;
+  box-sizing: border-box;
+}
+
+/* 重标签样式 (Heavy) - 未选中 */
+.sd-segment-tabs-heavy .sd-segment-tabs-item{
+  color: var(--color-graphite-d40) !important; /* #2F3540 */
+  background-color: var(--color-white) !important;
+  border-color: var(--color-graphite-l20) !important; /* #D3D7DE */
+}
+
+/* 重标签样式 - 选中 */
+.sd-segment-tabs-heavy .sd-segment-tabs-item-active{
+  color: var(--color-white) !important;
+  background-color: var(--color-blue) !important; /* #1C6EFF */
+  border-color: var(--color-blue) !important;
+}
+
+/* 重标签样式 - Hover */
+.sd-segment-tabs-heavy .sd-segment-tabs-item:not(.sd-segment-tabs-item-active):hover{
+  color: var(--color-blue) !important; /* #1C6EFF */
+  background-color: #E8F0FF !important;
+  border-color: #B3CCFF !important;
+}
+
+/* 重标签样式 - 禁用 */
+.sd-segment-tabs-heavy .sd-segment-tabs-item-disabled{
+  color: #C0C4CC !important;
+  background-color: #F7F8FA !important;
+  border-color: #DCDFE6 !important;
+  cursor: not-allowed !important;
+}
+
+/* 轻量样式 (Light) - 未选中 */
+.sd-segment-tabs-light .sd-segment-tabs-item{
+  color: var(--color-graphite-d40) !important; /* #2F3540 */
+  background-color: var(--color-white) !important;
+  border-color: var(--color-graphite-l20) !important; /* #D3D7DE */
+}
+
+/* 轻量样式 - 选中 */
+.sd-segment-tabs-light .sd-segment-tabs-item-active{
+  color: var(--color-blue) !important; /* #1C6EFF */
+  background-color: var(--color-white) !important;
+  border-color: var(--color-blue) !important;
+}
+
+/* 轻量样式 - Hover */
+.sd-segment-tabs-light .sd-segment-tabs-item:not(.sd-segment-tabs-item-active):hover{
+  color: #458FFF !important;
+  background-color: var(--color-white) !important;
+  border-color: #458FFF !important;
+}
+
+/* 轻量样式 - 禁用 */
+.sd-segment-tabs-light .sd-segment-tabs-item-disabled{
+  color: #C0C4CC !important;
+  background-color: #F7F8FA !important;
+  border-color: #DCDFE6 !important;
+  cursor: not-allowed !important;
+}
+
+/* ============================================
+   16. 下拉/浮层投影
+   ============================================ */
+.sd-dropdown-menu{
+  box-shadow: var(--seer-dropshadow-s2) !important;
+  border-radius: 2px !important;
+  border: none !important;
+  background: var(--color-white);
+  padding: 4px 0 !important;
+}
+
+/* ============================================
+   17. 复合搜索框 (Composite Search)
+   ============================================ */
+.composite-search {
+  width: min(660px, 100%);
+  min-width: 0;
+  max-width: 660px;
+}
+
+/* 搜索按钮正方形 - 32x32 */
+.composite-search .sd-input-search-button{
+  width: 32px !important;
+  height: 32px !important;
+  background: var(--color-blue) !important;
+  border-color: var(--color-blue) !important;
+  color: var(--color-white) !important;
+  padding: 0 !important;
+}
+
+/* 复合搜索框 Tags 样式 */
+.composite-search .sd-tag{
+  background-color: var(--color-graphite-l50) !important;
+  border: 1px solid var(--color-graphite-l30) !important;
+  color: var(--color-graphite-d40) !important;
+  border-radius: 2px !important;
+}
+
+.composite-search .sd-tag-close{
+  color: var(--color-graphite-d20) !important;
+  cursor: pointer;
+}
+
+/* ============================================
+   18. 复合日期筛选器布局
+   ============================================ */
+.date-picker-wrapper {
+  display: flex;
+  align-items: center;
+}
+
+.date-picker-wrapper .sd-select{
+  min-width: 88px;
+}
+
+.date-picker-wrapper .sd-picker-range{
+  width: min(340px, 100%);
+  margin-left: 0 !important;
+}
+
+/* ============================================
+   19. 表单规范 (Form)
+   ============================================ */
+
+/* 通用表单变量 */
+.sd-form {
+  --sd-form-label-width: 64px;
+  --sd-form-label-gap: 16px;
+  --sd-form-item-gap: 8px;
+  --sd-form-control-height: 32px;
+  --sd-form-control-padding-x: 12px;
+
+  width: 100% !important;
+  padding: 0 !important;
+  max-width: none !important;
+}
+
+/* 表单项布局 */
+.sd-form-item{
+  display: flex !important;
+  column-gap: var(--sd-form-label-gap) !important;
+  margin-bottom: var(--sd-form-item-gap) !important;
+}
+
+/* 抽屉内表单 */
+.sd-form--drawer {
+  --sd-form-label-width: 64px;
+}
+
+/* 表单 Label 样式 */
+.sd-form-item-label{
+  width: var(--sd-form-label-width) !important;
+  flex: none !important;
+  display: flex;
+  align-items: center;
+}
+
+.sd-form-item-label > label{
+  color: var(--color-graphite-d10) !important; /* #6F7785 */
+  font-size: 12px !important;
+  font-weight: 400 !important;
+}
+
+/* Label 不显示冒号 */
+.sd-form-item-label > label::after{
+  content: none !important;
+}
+
+/* 表单必填星号 - absolute 定位，不占用 Label 宽度 */
+.sd-form-item-label > label.is-required::before,
+.sd-form-item-label.is-required::before{
+  content: '*' !important;
+  color: var(--color-red) !important; /* #F52727 */
+  margin-right: 4px !important; /* 星号与Label文字间距4px */
+}
+
+/* 表单错误提示 */
+.sd-form-explain-error{
+  font-size: 12px !important;
+  color: var(--color-red-d10) !important; /* #CF171D */
+  margin-top: 4px !important;
+}
+
+/* 控件高度统一 32px */
+.sd-form .sd-input,
+.sd-form .sd-select-selector,
+.sd-form .sd-picker{
+  height: var(--sd-form-control-height) !important;
+}
+
+/* Placeholder 统一样式 */
+.sd-form .sd-input::placeholder,
+.sd-form .sd-select-selection-placeholder{
+  font-size: 12px !important;
+  color: var(--color-graphite) !important; /* #A1A7B3 */
+}
+
+/* ============================================
+   20. 全局字体设置
+   ============================================ */
+body {
+  font-family: var(--seer-font-family);
+  font-weight: var(--seer-font-weight-regular);
+  font-size: var(--seer-font-size-md);
+  line-height: var(--seer-line-height-md);
+  color: var(--color-graphite-d40);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: var(--seer-font-weight-bold);
+}
+
+/* 小尺寸组件字体对齐 */
+.sd-btn-sm,
+.sd-input-sm,
+.sd-select-sm .sd-select-selector{
+  font-size: var(--seer-font-size-xs);
+  line-height: var(--seer-line-height-xs);
+}
+
+/* ============================================
+   21. 详情概览卡片 (Detail Overview Card)
+   ============================================ */
+
+/* 卡片容器 - 浅蓝色背景 */
+.detail-overview-card {
+  width: 100%;
+  background-color: var(--color-blue-l50) !important; /* #E8F4FF */
+  border-radius: 2px !important;
+  padding: 16px !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  box-sizing: border-box !important;
+}
+
+/* 对象图标区 */
+.detail-overview-card .card-icon {
+  width: 32px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: var(--color-blue) !important;
+  margin-right: 24px !important;
+}
+
+/* 大图标模式 */
+.detail-overview-card .card-icon-large {
+  width: 64px !important;
+  min-width: 64px !important;
+  height: 64px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: var(--color-blue) !important;
+  margin-right: 24px !important;
+}
+
+/* 核心信息区 - 自适应宽度 */
+.detail-overview-card .card-info {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+/* 对象名称 */
+.detail-overview-card .card-name {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--color-graphite-d40) !important;
+  line-height: 22px !important;
+}
+
+/* 状态标签与名称间距 */
+.detail-overview-card .card-name .sd-tag{
+  margin-left: 8px !important;
+  height: 20px !important;
+  font-size: 12px !important;
+  vertical-align: middle !important;
+}
+
+/* 关键属性行 */
+.detail-overview-card .card-attrs {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  column-gap: 16px !important;
+  row-gap: 8px !important;
+  margin-top: 4px !important;
+}
+
+/* 单个属性片段 */
+.detail-overview-card .card-attr-item {
+  display: flex !important;
+  align-items: center !important;
+  font-size: 12px !important;
+  line-height: 20px !important;
+}
+
+.detail-overview-card .card-attr-label {
+  color: var(--color-graphite) !important; /* #A1A7B3 */
+  margin-right: 16px !important;
+  white-space: nowrap !important;
+}
+
+.detail-overview-card .card-attr-value {
+  color: var(--color-graphite-d40) !important; /* #2F3540 */
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* 右侧操作区 - 固定右侧，顶部对齐 */
+.detail-overview-card .card-actions {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
+  margin-left: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+.detail-overview-card .card-actions .sd-btn{
+  height: 32px !important;
+  font-size: 12px !important;
+}
+
+/* ============================================
+   22. 表单一级标题 (Form Section Title)
+   ============================================ */
+
+/* 表单一级标题通用样式 */
+.sd-form .form-section-title {
+  height: 32px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--color-graphite-d40) !important;
+  line-height: 32px !important;
+  margin-bottom: 8px !important;
+  background: none !important;
+  border: none !important;
+}
+
+/* 蓝色竖条标题 */
+.sd-form .form-section-title-blue::before {
+  content: '' !important;
+  display: inline-block !important;
+  width: 2px !important;
+  height: 12px !important;
+  border-radius: 0.2px !important;
+  background-color: var(--color-blue) !important;
+  margin-right: 4px !important;
+  vertical-align: middle !important;
+}
+
+/* ============================================
+   23. 前后置输入框 (Prefix/Suffix Input)
+   ============================================ */
+
+/* 组合控件整体容器 */
+.input-combined {
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 32px !important;
+  border-radius: 2px !important;
+  border: 1px solid var(--color-graphite-l20) !important;
+  background-color: var(--color-white) !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+/* 前置/后置区域通用样式 */
+.input-combined .input-addon {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+  white-space: nowrap !important;
+  background-color: var(--color-graphite-l50) !important; /* #F7F9FC */
+  color: var(--color-graphite-d40) !important; /* #2F3540 */
+  border-right: 1px solid var(--color-graphite-l20) !important;
+}
+
+.input-combined .input-addon:last-child {
+  border-right: none !important;
+  border-left: 1px solid var(--color-graphite-l20) !important;
+}
+
+/* 固定展示型前后置 - 最小宽度 48px */
+.input-combined .input-addon-fixed {
+  min-width: 48px !important;
+}
+
+/* 可切换选择型前后置 - 最小宽度 64px，显示下拉icon */
+.input-combined .input-addon-selectable {
+  min-width: 64px !important;
+  cursor: pointer !important;
+}
+
+.input-combined .input-addon-selectable .addon-icon {
+  margin-left: 8px !important;
+  font-size: 12px !important;
+}
+
+/* 输入区域 - 无边框 */
+.input-combined .sd-input{
+  border: none !important;
+  min-width: 80px !important;
+  height: 30px !important;
+  padding: 0 12px !important;
+  border-radius: 0 !important;
+}
+
+.input-combined .sd-input:focus{
+  box-shadow: none !important;
+}
+
+/* focus/error/disabled 状态作用于整体控件 */
+.input-combined:focus-within {
+  border-color: var(--color-blue) !important;
+}
+
+.input-combined.has-error {
+  border-color: var(--color-red-d10) !important;
+}
+
+.input-combined.is-disabled {
+  background-color: var(--color-graphite-l30) !important;
+  border-color: var(--color-graphite-l20) !important;
+  cursor: not-allowed !important;
+}
+
+/* ============================================
+   24. 表单说明文字
+   ============================================ */
+
+/* 表单项说明文字 - 控件行下方 */
+.sd-form-item-extra{
+  font-size: 12px !important;
+  color: var(--color-graphite) !important; /* #A1A7B3 */
+  line-height: 20px !important;
+  margin-top: 4px !important;
+}
+
+/* ============================================
+   25. 表格更多列 / 列设置列 (Table Extra Columns)
+   ============================================ */
+
+/* 更多列固定宽度 40px */
+.sd-table-more-column{
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  text-align: center !important;
+  padding: 0 !important;
+}
+
+/* 表头更多列 - 居中省略号图标 */
+.sd-table th.sd-table-more-column{
+  text-align: center !important;
+}
+
+/* 内容区更多列 - 空白不可点击 */
+.sd-table td.sd-table-more-column{
+  cursor: default !important;
+}
+
+/* ============================================
+   使用建议与类名映射关系（开发直接参考此映射）
+   ============================================
+   1. 颜色与阴影：直接使用原生变量，如 var(--color-blue)
+   2. 常用类名对照：
+      - 按钮：.sd-btn | .sd-btn-primary | .sd-btn-default (可用在 <button> 或 <a> 上)
+      - 输入框：.sd-input | .sd-textarea (可用在 <input> 或 <textarea> 上)
+      - 下拉框：.sd-select (使用自定义 HTML 结构模拟即可)
+      - 表格：.sd-table (直接在 <table> 上加类，配合 <th> 和 <td> 即可)
+      - 弹窗与抽屉：.sd-modal | .sd-drawer (配合 flex 布局控制标题 48px/底部 56px/内容滚动)
+      - 分页器：.sd-pagination | .sd-pagination-item | .sd-pagination-item-active
+      - 标签页：.sd-tabs | .sd-tabs-tab | .sd-tabs-tab-active | .sd-tabs-ink-bar
+      - 警告提示：.sd-alert | .sd-alert-info | .sd-alert-warning
+   ============================================ */
