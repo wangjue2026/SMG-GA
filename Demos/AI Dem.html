@@ -1265,6 +1265,7 @@
                  diagState: 'idle',
                  chatState: 'init',
                  chatScenario: 'oa',
+                 customQuery: '',
                  pilotMode: 'auto',
                  remediatingId: null,
                  remediatedIssues: { 0: true },
@@ -1386,8 +1387,6 @@
 
               <!-- Right actions -->
               <div class="ml-auto pr-4 flex items-center gap-2">
-                <button
-                  class="h-8 px-4 text-xs border border-border text-text rounded-control hover:text-brand hover:border-brand transition-colors">导出报告</button>
               </div>
               <!-- Header Bottom Border -->
               <div class="absolute bottom-0 left-0 right-0 h-[1px] bg-bg-line"></div>
@@ -1782,8 +1781,9 @@
         <div class="text-sm font-bold text-text-title flex items-center gap-1.5">
           <span>SeerAgent 运维大脑</span>
           <span class="relative flex h-2.5 w-2.5 items-center justify-center">
-            <span class="absolute inline-flex h-full w-full rounded-full bg-success opacity-60 animate-pulse" style="animation-duration: 2s; box-shadow: 0 0 8px rgba(18,166,121,0.8);"></span>
-            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-success"></span>
+            <span class="absolute inline-flex h-full w-full rounded-full bg-success opacity-55 animate-ping" style="animation-duration: 1.8s;"></span>
+            <span class="absolute inline-flex h-2 w-2 rounded-full bg-success/35 animate-pulse" style="animation-duration: 2.4s; box-shadow: 0 0 10px rgba(18,166,121,0.45);"></span>
+            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-success shadow-[0_0_6px_rgba(18,166,121,0.75)]"></span>
           </span>
         </div>
         <div class="text-[10px] text-text-mute mt-1.5 leading-relaxed pr-2">今日已巡检 <span class="font-semibold text-text-title">4</span> 个站点，<span class="font-semibold text-text-title">12</span> 款核心应用，<br>目前已识别并自动闭环 <span class="font-semibold text-brand">4</span> 个体验问题。</div>
@@ -1819,7 +1819,7 @@
           :class="smartOpsTab === '实时体验监测' 
              ? 'bg-brand/5 border-brand/40 shadow-[0_4px_12px_rgba(28,110,255,0.12)]' 
              : 'bg-white border-slate-200 hover:border-brand/30 hover:shadow-sm'"
-          @click="smartOpsTab = '实时体验监测'">
+          @click="smartOpsTab = '实时体验监测'; pageTab = '智能运维'">
        <div class="flex items-start justify-between">
          <div class="flex items-center gap-2">
            <div class="w-8 h-8 rounded bg-brand/10 text-brand flex items-center justify-center flex-shrink-0">
@@ -1846,20 +1846,20 @@
 
      <!-- 卡片 2 -->
      <div class="p-3 rounded-container border cursor-pointer transition-all duration-300 flex flex-col justify-between group relative"
-          :class="smartOpsTab === '报障定位' 
+          :class="smartOpsTab === '故障定位' 
              ? 'bg-brand/5 border-brand/40 shadow-[0_4px_12px_rgba(28,110,255,0.12)]' 
              : 'bg-white border-slate-200 hover:border-brand/30 hover:shadow-sm'"
-          @click="smartOpsTab = '报障定位'">
+          @click="smartOpsTab = '故障定位'; pageTab = '智能运维'">
        <div class="flex items-start justify-between">
          <div class="flex items-center gap-2">
            <div class="w-8 h-8 rounded text-slate-400 flex items-center justify-center flex-shrink-0"
-                :class="smartOpsTab === '报障定位' ? 'bg-brand/10 text-brand' : 'bg-slate-50 border border-slate-100'">
+                :class="smartOpsTab === '故障定位' ? 'bg-brand/10 text-brand' : 'bg-slate-50 border border-slate-100'">
              <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
              </svg>
            </div>
            <div>
-             <span class="text-xs font-bold block" :class="smartOpsTab === '报障定位' ? 'text-brand' : 'text-text-title'">故障定位</span>
+             <span class="text-xs font-bold block" :class="smartOpsTab === '故障定位' ? 'text-brand' : 'text-text-title'">故障定位</span>
              <span class="text-[9px] text-text-mute font-mono">Agent-02 • Diagnostic</span>
            </div>
          </div>
@@ -1867,29 +1867,29 @@
        </div>
        <p class="text-[10px] text-text-mute mt-2 line-clamp-2 leading-relaxed">AI 诊断助手，针对申报自动追溯终端/网络/应用慢因，打包证据。</p>
        <div class="mt-2 pt-2 border-t flex items-center justify-between text-[9px] font-mono"
-            :class="smartOpsTab === '报障定位' ? 'border-brand/10 text-brand/80' : 'border-slate-100 text-slate-400'">
+            :class="smartOpsTab === '故障定位' ? 'border-brand/10 text-brand/80' : 'border-slate-100 text-slate-400'">
          <span>推理耗时: ~1.2s</span>
          <span>匹配精度: 99.4%</span>
        </div>
-       <div x-show="smartOpsTab === '报障定位'" class="absolute inset-0 border-[1.5px] border-brand rounded-container pointer-events-none"></div>
+       <div x-show="smartOpsTab === '故障定位'" class="absolute inset-0 border-[1.5px] border-brand rounded-container pointer-events-none"></div>
      </div>
 
      <!-- 卡片 3 -->
      <div class="p-3 rounded-container border cursor-pointer transition-all duration-300 flex flex-col justify-between group relative"
-          :class="smartOpsTab === '模拟测试' 
+          :class="smartOpsTab === '仿真测试' 
              ? 'bg-brand/5 border-brand/40 shadow-[0_4px_12px_rgba(28,110,255,0.12)]' 
              : 'bg-white border-slate-200 hover:border-brand/30 hover:shadow-sm'"
-          @click="smartOpsTab = '模拟测试'">
+          @click="smartOpsTab = '仿真测试'; pageTab = '智能运维'">
        <div class="flex items-start justify-between">
          <div class="flex items-center gap-2">
            <div class="w-8 h-8 rounded text-slate-400 flex items-center justify-center flex-shrink-0"
-                :class="smartOpsTab === '模拟测试' ? 'bg-brand/10 text-brand' : 'bg-slate-50 border border-slate-100'">
+                :class="smartOpsTab === '仿真测试' ? 'bg-brand/10 text-brand' : 'bg-slate-50 border border-slate-100'">
              <svg class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
              </svg>
            </div>
            <div>
-             <span class="text-xs font-bold block" :class="smartOpsTab === '模拟测试' ? 'text-brand' : 'text-text-title'">仿真测试</span>
+             <span class="text-xs font-bold block" :class="smartOpsTab === '仿真测试' ? 'text-brand' : 'text-text-title'">仿真测试</span>
              <span class="text-[9px] text-text-mute font-mono">Agent-03 • Simulator</span>
            </div>
          </div>
@@ -1897,63 +1897,90 @@
        </div>
        <p class="text-[10px] text-text-mute mt-2 line-clamp-2 leading-relaxed">跨网主动拨测仿真，智能映射预测并规避 SLA 偏离风险点。</p>
        <div class="mt-2 pt-2 border-t flex items-center justify-between text-[9px] font-mono"
-            :class="smartOpsTab === '模拟测试' ? 'border-brand/10 text-brand/80' : 'border-slate-100 text-slate-400'">
+            :class="smartOpsTab === '仿真测试' ? 'border-brand/10 text-brand/80' : 'border-slate-100 text-slate-400'">
          <span>模拟路径: 48条</span>
          <span>执行周期: 5m</span>
        </div>
-       <div x-show="smartOpsTab === '模拟测试'" class="absolute inset-0 border-[1.5px] border-brand rounded-container pointer-events-none"></div>
+       <div x-show="smartOpsTab === '仿真测试'" class="absolute inset-0 border-[1.5px] border-brand rounded-container pointer-events-none"></div>
      </div>
   </div>
 </div>
-<div class="relative">
+<div class="relative flex-1 mt-4">
 
-                  <div x-show="smartOpsTab === '实时体验监测'" class="flex flex-col">
+                  <div :class="smartOpsTab === '实时体验监测' ? 'flex flex-col' : 'hidden'">
 
                     <!-- 访问体验问题筛选区 -->
-                    <div class="flex flex-wrap items-center justify-end gap-3 mt-4 mb-2">
+                    <div class="flex flex-wrap items-center justify-end gap-3 mb-2">
                       
                       <div class="flex items-center gap-3 flex-wrap">
-                        <!-- Date Shortcut -->
-                        <select class="h-8 px-2 border border-border rounded text-xs focus:border-brand outline-none bg-white text-text">
-                          <option>今天</option>
-                          <option>昨天</option>
-                          <option>近7天</option>
-                        </select>
-                        
-                        <!-- Date Range -->
-                        <div class="h-8 px-3 border border-border rounded text-xs flex items-center gap-2 text-text bg-white">
-                          <span>2026-06-07 00:00:00 ~ 2026-06-07 23:59:59</span>
-                          <svg class="w-3.5 h-3.5 text-text-mute" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <!-- 复合日期选择器 (Complex DatePicker) -->
+                        <div class="flex items-center h-[32px] rounded-[2px] border bg-white overflow-hidden min-w-[428px] focus-within:border-brand transition-colors" style="border-color: var(--color-graphite-l20, #D2D6DE);">
+                          <!-- Date Shortcut (Left side) -->
+                          <div class="h-full border-r flex-shrink-0 min-w-[88px] flex items-center px-[8px] relative cursor-pointer" style="background-color: var(--color-graphite-l50, #F4F6F8); border-right-color: var(--color-graphite-l30, #E0E4EB);">
+                            <select class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" x-model="dateShortcut">
+                              <option>今天</option>
+                              <option>昨天</option>
+                              <option>近7天</option>
+                            </select>
+                            <span class="text-[12px] font-normal w-full text-center flex items-center justify-between" style="color: var(--color-graphite-d40, #2F3540);">
+                              <span x-text="dateShortcut">今天</span>
+                              <svg class="w-3.5 h-3.5 ml-1 flex-shrink-0" style="color: var(--color-graphite, #A1A7B3);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </span>
+                          </div>
+                          
+                          <!-- Date Range (Right side) -->
+                          <div class="h-full px-[4px] flex items-center justify-between w-[340px] flex-shrink-0 cursor-pointer bg-white">
+                            <span class="text-[12px] font-normal" style="color: var(--color-graphite-d40, #2F3540);" x-text="dateRange"></span>
+                            <svg class="w-3.5 h-3.5 flex-shrink-0 mr-[4px]" style="color: var(--color-graphite, #A1A7B3);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                          </div>
                         </div>
 
-                        <!-- Type -->
-                        <select class="h-8 px-2 border border-border rounded text-xs focus:border-brand outline-none bg-white text-text min-w-[100px]">
-                          <option>全部类型</option>
-                          <option>SaaS 访问</option>
-                          <option>内网穿透</option>
-                          <option>证书异常</option>
-                        </select>
+                        <!-- Type (Select) -->
+                        <div class="relative h-[32px] bg-white border rounded-[2px] min-w-[100px] flex items-center focus-within:border-brand transition-colors cursor-pointer" style="border-color: var(--color-graphite-l20, #D2D6DE);" x-data="{ val: '全部类型' }">
+                          <select class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" x-model="val" @change="filterType = val === '全部类型' ? 'all' : val">
+                            <option>全部类型</option>
+                            <option>SaaS 访问</option>
+                            <option>内网穿透</option>
+                            <option>证书异常</option>
+                          </select>
+                          <span class="text-[12px] font-normal pl-[12px] pr-[8px] w-full flex items-center justify-between" style="color: var(--color-graphite-d40, #2F3540);">
+                            <span x-text="val"></span>
+                            <svg class="w-3.5 h-3.5" style="color: var(--color-graphite, #A1A7B3);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                          </span>
+                        </div>
 
-                        <!-- Severity -->
-                        <select class="h-8 px-2 border border-border rounded text-xs focus:border-brand outline-none bg-white text-text min-w-[100px]">
-                          <option>全部级别</option>
-                          <option>紧急：高</option>
-                          <option>紧急：中</option>
-                          <option>紧急：低</option>
-                        </select>
+                        <!-- Severity (Select) -->
+                        <div class="relative h-[32px] bg-white border rounded-[2px] min-w-[100px] flex items-center focus-within:border-brand transition-colors cursor-pointer" style="border-color: var(--color-graphite-l20, #D2D6DE);" x-data="{ val: '全部级别' }">
+                          <select class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" x-model="val" @change="filterSeverity = val === '全部级别' ? 'all' : val">
+                            <option>全部级别</option>
+                            <option>紧急：高</option>
+                            <option>紧急：中</option>
+                            <option>紧急：低</option>
+                          </select>
+                          <span class="text-[12px] font-normal pl-[12px] pr-[8px] w-full flex items-center justify-between" style="color: var(--color-graphite-d40, #2F3540);">
+                            <span x-text="val"></span>
+                            <svg class="w-3.5 h-3.5" style="color: var(--color-graphite, #A1A7B3);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                          </span>
+                        </div>
 
-                        <!-- Sort -->
-                        <select class="h-8 px-2 border border-border rounded text-xs focus:border-brand outline-none bg-white text-text min-w-[100px]">
-                          <option>时间降序</option>
-                          <option>时间升序</option>
-                          <option>影响人数降序</option>
-                        </select>
+                        <!-- Sort (Select) -->
+                        <div class="relative h-[32px] bg-white border rounded-[2px] min-w-[100px] flex items-center focus-within:border-brand transition-colors cursor-pointer" style="border-color: var(--color-graphite-l20, #D2D6DE);" x-data="{ val: '时间降序' }">
+                          <select class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" x-model="val" @change="sortBy = val === '时间降序' ? 'timeDesc' : (val === '时间升序' ? 'timeAsc' : 'severityDesc')">
+                            <option>时间降序</option>
+                            <option>时间升序</option>
+                            <option>影响人数降序</option>
+                          </select>
+                          <span class="text-[12px] font-normal pl-[12px] pr-[8px] w-full flex items-center justify-between" style="color: var(--color-graphite-d40, #2F3540);">
+                            <span x-text="val"></span>
+                            <svg class="w-3.5 h-3.5" style="color: var(--color-graphite, #A1A7B3);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                          </span>
+                        </div>
 
                         <!-- Search -->
                         <div class="relative">
-                          <input type="text" placeholder="搜索 ID、用户或应用..." 
-                                 class="h-8 pl-8 pr-3 border border-border rounded text-xs focus:border-brand outline-none bg-white text-text w-[200px]">
-                          <svg class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-text-mute" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <input type="text" placeholder="搜索 ID、用户或应用..." x-model="searchQuery"
+                                 class="h-[32px] pl-[32px] pr-[12px] border rounded-[2px] text-[12px] focus:border-brand outline-none bg-white w-[200px] transition-colors" style="border-color: var(--color-graphite-l20, #D2D6DE); color: var(--color-graphite-d40, #2F3540);">
+                          <svg class="w-3.5 h-3.5 absolute left-[12px] top-[9px]" style="color: var(--color-graphite, #A1A7B3);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                           </svg>
                         </div>
@@ -2534,7 +2561,9 @@
                     </div>
                   </div>
 
-                  <div x-show="smartOpsTab === '报障定位'" class="flex h-[calc(100vh-210px)] min-h-[500px] gap-4" x-cloak>
+                  </div>
+
+                  <div :class="smartOpsTab === '故障定位' ? 'flex h-[calc(100vh-210px)] min-h-[500px] gap-4' : 'hidden'">
 
                     <div
                       class="w-[380px] bg-white border border-bg-line rounded-container flex flex-col overflow-hidden shadow-sm flex-shrink-0">
@@ -2617,6 +2646,7 @@
                               <span x-show="chatScenario === 'gitlab'">研发反馈拉取 GitLab 代码速度严重拉跨</span>
                               <span x-show="chatScenario === 'airport'">销售主管在机场登入零信任客户端频繁超时</span>
                               <span x-show="chatScenario === 'wifi'">北京分公司办公区网络频繁卡顿掉线</span>
+                              <span x-show="chatScenario === 'custom'" x-text="customQuery"></span>
                             </div>
                             <div
                               class="w-8 h-8 rounded-full bg-border flex items-center justify-center flex-shrink-0 text-text font-bold text-xs">
@@ -2684,6 +2714,33 @@
                                   建议动作：下发北京办公室 AP 空道动态调优策略。</div>
                               </div>
 
+                              <div x-show="chatScenario === 'custom'" x-cloak>
+                                <div class="flex flex-col gap-2 mt-2">
+                                <div class="bg-risk/5 border border-risk/20 rounded p-2.5">
+                                  <span class="font-bold text-risk flex items-center gap-1.5 text-xs">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                                    根因定位：发现网络阻断与应用响应异常
+                                  </span>
+                                  <span class="text-text-title font-normal mt-1.5 block text-[11px] leading-relaxed">
+                                    根据您描述的现象，SeerAgent 抓取了相关 IP 和应用近期 15 分钟内的遥测数据：<br>
+                                    1. 终端到底层网关 <strong>Ping 丢包率正常 (0%)</strong>；<br>
+                                    2. 接入网关到目标服务器之间的 <strong>HTTPS 握手耗时高达 2500ms</strong>，存在严重的应用层响应瓶颈；<br>
+                                    3. 检测到目标应用服务器当前 CPU 负载达 98%，存在资源枯竭现象。
+                                  </span>
+                                </div>
+                                <div class="bg-brand/5 border border-brand/20 rounded p-2.5">
+                                  <span class="font-bold text-brand flex items-center gap-1.5 text-xs">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                    智能处置建议
+                                  </span>
+                                  <ul class="text-[11px] text-text-title mt-1.5 list-disc list-inside space-y-1">
+                                    <li>已自动生成流量降级策略，建议对非核心业务进行临时限流。</li>
+                                    <li>请通知应用运维团队检查后端服务器负载状态，或进行横向扩容。</li>
+                                  </ul>
+                                </div>
+                                </div>
+                              </div>
+
                               <button
                                 class="mt-3 w-full h-8 bg-white border border-brand text-brand rounded hover:bg-brand hover:text-white transition-colors text-xs font-semibold"
                                 @click="chatState = 'init'">重新选择诊断场景</button>
@@ -2692,13 +2749,17 @@
                         </div>
                       </div>
 
-                      <div class="p-3 border-t border-bg-line flex items-center gap-2 bg-white flex-shrink-0">
+                      <div class="p-3 border-t border-bg-line flex items-center gap-2 bg-white flex-shrink-0 relative">
                         <input type="text"
-                          class="flex-1 h-8 px-3 border border-border rounded text-xs focus:border-brand outline-none"
-                          placeholder="输入问题或指定终端IP..." disabled>
+                          class="flex-1 h-9 px-3 pr-10 border border-border rounded-[4px] text-xs focus:border-brand outline-none transition-colors shadow-sm"
+                          placeholder="请输入描述您的故障场景，以进行精准定位" 
+                          x-model="customQuery"
+                          @keyup.enter="if(customQuery) { chatState = 'analyzing'; chatScenario = 'custom'; setTimeout(() => chatState = 'result', 1500) }">
                         <button
-                          class="h-8 w-8 bg-brand text-white rounded flex items-center justify-center hover:bg-brand-hover opacity-50 cursor-not-allowed">
-                          <svg class="w-4 h-4 transform rotate-90" fill="none" stroke="currentColor"
+                          class="absolute right-4 w-6 h-6 bg-brand text-white rounded-[2px] flex items-center justify-center hover:bg-brand-hover transition-colors"
+                          :class="!customQuery ? 'opacity-50 cursor-not-allowed' : 'shadow-md cursor-pointer'"
+                          @click="if(customQuery) { chatState = 'analyzing'; chatScenario = 'custom'; setTimeout(() => chatState = 'result', 1500) }">
+                          <svg class="w-3.5 h-3.5 transform -rotate-90" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
@@ -2722,7 +2783,7 @@
                             d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
                           </path>
                         </svg>
-                        <span class="text-xs">请在左侧点击一个场景发回报障以生成链路拓扑...</span>
+                        <span class="text-xs">请输入描述您的故障场景，以进行精准定位...</span>
                       </div>
 
                       <div class="absolute inset-0 bg-white/80 z-10 flex items-center justify-center"
@@ -2848,7 +2909,7 @@
                     </div>
                   </div>
 
-                  <div x-show="smartOpsTab === '模拟测试'" class="flex flex-col gap-4" x-cloak>
+                  <div :class="smartOpsTab === '仿真测试' ? 'flex flex-col gap-4' : 'hidden'">
 
                     <div class="bg-white border border-bg-line rounded-container shadow-sm p-4">
                       <div class="grid grid-cols-4 gap-4 items-end">
@@ -2963,10 +3024,41 @@
                         <span class="text-xs text-text font-medium">正在追踪路由拓扑，发送探测数据包...</span>
                       </div>
 
-                      <div x-show="diagState === 'done'" class="flex-1 flex flex-col gap-6" x-cloak>
+                      <div x-show="diagState === 'done'" class="flex-1 flex flex-col gap-4" x-cloak>
+                        
+                        <!-- 综合评级大盘 -->
+                        <div class="flex items-center gap-6 bg-white border border-bg-line rounded-[8px] p-4 shadow-sm relative overflow-hidden">
+                          <div class="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-bg-light to-transparent opacity-50"></div>
+                          <div class="flex flex-col items-center justify-center p-4 rounded-lg min-w-[100px] shadow-inner" 
+                               :class="simScenario === 'abnormal' ? 'bg-risk/10 border border-risk/20 text-risk' : 'bg-success/10 border border-success/20 text-success'">
+                            <span class="text-[11px] font-bold opacity-80 uppercase tracking-widest">综合评级</span>
+                            <span class="text-4xl font-black font-mono mt-1" x-text="simScenario === 'abnormal' ? '差' : '优'"></span>
+                          </div>
+                          
+                          <div class="flex flex-col gap-1.5 flex-1 relative z-10">
+                            <span class="text-base font-bold text-text-title flex items-center gap-2">
+                              全链路拨测诊断报告
+                              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-medium border" :class="simScenario === 'abnormal' ? 'bg-risk/10 text-risk border-risk/20' : 'bg-success/10 text-success border-success/20'" x-text="simScenario === 'abnormal' ? '发现异常节点' : '链路完全通畅'"></span>
+                            </span>
+                            <div class="flex gap-6 mt-1">
+                              <div class="flex flex-col text-[11px]">
+                                <span class="text-text-mute">测试路线</span>
+                                <span class="text-text-title font-semibold mt-0.5" x-text="simSource + ' ➔ ' + simDest"></span>
+                              </div>
+                              <div class="flex flex-col text-[11px]">
+                                <span class="text-text-mute">目标 IP / 协议</span>
+                                <span class="text-text-title font-mono font-semibold mt-0.5"><span x-text="simIP"></span> | <span x-text="simProtocol"></span></span>
+                              </div>
+                              <div class="flex flex-col text-[11px]">
+                                <span class="text-text-mute">执行时间</span>
+                                <span class="text-text-title font-semibold mt-0.5">刚刚 (耗时 1.2s)</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
 
                         <div
-                          class="flex items-center justify-between px-8 py-8 bg-bg-light/40 border border-bg-line rounded-lg mt-2 relative">
+                          class="flex items-center justify-between px-6 py-6 bg-white border border-bg-line rounded-[8px] shadow-sm relative">
                           <div class="flex flex-col items-center gap-2">
                             <div
                               class="w-12 h-12 rounded-full border flex items-center justify-center text-brand bg-white"
@@ -3057,47 +3149,62 @@
 
                         </div>
 
-                        <div class="p-4 border rounded-[6px]"
-                          :class="simScenario === 'abnormal' ? 'bg-risk/5 border-risk/20 text-text' : 'bg-success/5 border-success/20 text-text'">
+                        <div class="p-5 border rounded-[8px] bg-white shadow-sm flex flex-col gap-3"
+                          :class="simScenario === 'abnormal' ? 'border-risk/30' : 'border-success/30'">
 
                           <template x-if="simScenario === 'normal'">
-                            <div>
-                              <div class="flex items-center gap-2 font-bold text-success text-xs">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            <div class="flex flex-col gap-3">
+                              <div class="flex items-center gap-2 font-bold text-success text-sm border-b border-bg-line pb-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
-                                模拟探测通过：全链路无网络体验故障
+                                结论与理由：全链路无网络体验故障，指标表现优异
                               </div>
-                              <p class="text-xs text-text mt-2 leading-relaxed">
-                                <span class="font-bold">探测结论：</span>从发起源 <span class="font-semibold text-text-title"
-                                  x-text="simSource"></span> 到目标服务 <span class="font-semibold text-text-title"
-                                  x-text="simDest"></span> 的 ICMP 数据报文握包率达到 100%，平均往返时延 <span
-                                  class="text-success font-semibold">42ms</span>。链路中的各个防火墙、零信任控制器及中转节点均处于极佳健康状态。
-                              </p>
+                              <div class="grid grid-cols-2 gap-4 text-xs">
+                                <div class="bg-success/5 p-3 rounded border border-success/10">
+                                  <span class="font-bold text-text-title block mb-1.5">指标分析与理由</span>
+                                  <ul class="text-text-mute space-y-1.5 list-disc list-inside">
+                                    <li>端到端 ICMP/TCP 握包成功率 <strong>100%</strong>。</li>
+                                    <li>平均往返时延 (RTT) 仅为 <strong class="text-success">14ms</strong>，低于优良基线(50ms)。</li>
+                                    <li>中间核心中转网关 <span x-text="simTransit"></span> 转发性能处于健康水位。</li>
+                                  </ul>
+                                </div>
+                                <div class="bg-brand/5 p-3 rounded border border-brand/10">
+                                  <span class="font-bold text-text-title block mb-1.5">运维建议</span>
+                                  <span class="text-text-mute leading-relaxed block mt-1">当前通道运行极佳，符合 SLA 黄金标准。无需采取任何网络干预或策略优化措施。</span>
+                                </div>
+                              </div>
                             </div>
                           </template>
 
                           <template x-if="simScenario === 'abnormal'">
-                            <div>
-                              <div class="flex items-center gap-2 font-bold text-risk text-xs">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
-                                  </path>
+                            <div class="flex flex-col gap-3">
+                              <div class="flex items-center gap-2 font-bold text-risk text-sm border-b border-bg-line pb-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                                 </svg>
-                                模拟探测受阻：发现网络节点堵塞及策略拒绝
+                                结论与理由：发现严重网络拥堵及访问阻断
                               </div>
-                              <p class="text-xs text-text mt-2 leading-relaxed">
-                                <span class="font-bold">故障定位：</span>数据流在经过 <span class="font-bold text-text-title"
-                                  x-text="simTransit"></span> 转发到目标服务器时，发生了 <span class="text-risk font-bold">15%
-                                  的丢包</span> 且最终发生了端口拦截连通超时。<br>
-                                <span class="font-bold block mt-1">根因诊断：</span>1. 华东网关到目标服务器之间的 QOS
-                                等级未设定，触发了临时物理路由节点堵塞；2. 目标服务器防火墙未加白来自 <span class="font-mono text-text-title"
-                                  x-text="simTransit"></span> 的源 NAT IP 地址，导致握包响应被直接 Drop（丢弃）。<br>
-                                <span
-                                  class="font-bold text-brand block mt-1">智能解决方案：</span>建议登录目标应用的安全防护控制台，放行网关白名单段，并在一键诊断模块给测试链路激活专线通道。
-                              </p>
+                              <div class="grid grid-cols-2 gap-4 text-xs">
+                                <div class="bg-risk/5 p-3 rounded border border-risk/10">
+                                  <span class="font-bold text-text-title block mb-1.5">根因定位与理由</span>
+                                  <ul class="text-text-mute space-y-1.5 list-disc list-inside">
+                                    <li>数据包在抵达 <span x-text="simTransit" class="font-bold text-text-title"></span> 时，发生了 <strong>15% 的异常丢包</strong>。</li>
+                                    <li>节点间 QoS 拥塞，导致传输时延突增至 <strong class="text-risk">320ms</strong>。</li>
+                                    <li>目标应用防火墙未放行该网关源 IP，导致最终发生 <strong>连接超时 (Timeout)</strong>。</li>
+                                  </ul>
+                                </div>
+                                <div class="bg-brand/5 p-3 rounded border border-brand/10">
+                                  <span class="font-bold text-text-title block mb-1.5">智能修复建议</span>
+                                  <ul class="text-text-mute space-y-1.5 list-disc list-inside">
+                                    <li><strong>网络层：</strong>在边缘网关处开启备用 BGP 专线进行流量重分发。</li>
+                                    <li><strong>安全层：</strong>在目标应用服务器上将中转网关加入网络白名单。</li>
+                                  </ul>
+                                  <button class="mt-3 h-7 px-3 bg-brand text-white rounded-[4px] text-[11px] hover:bg-brand-hover shadow-sm transition-colors" @click="alert('修复策略已推送下发！'); simScenario = 'normal'; diagState = 'running'; setTimeout(() => diagState = 'done', 1500)">
+                                    一键下发自愈修复
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           </template>
 
