@@ -1,0 +1,375 @@
+/* aTrust 零信任控制中心 - 导航框架与全球加速 Layout 样式 */
+
+:root {
+  --app-sider-bg: #272E38;
+  --color-green: #12A679;
+}
+
+/* aTrust 顶部导航 Segment Tabs */
+.at-top-nav-item {
+  height: 32px;
+  padding: 0 16px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-graphite-d40);
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s;
+}
+
+.at-top-nav-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.at-top-nav-item.active {
+  background: var(--color-blue);
+  color: #FFFFFF;
+  font-weight: 500;
+}
+
+/* aTrust 左侧导航 (Sider) - 严格修正 48px 高度 */
+.at-sider {
+  background: var(--app-sider-bg);
+  width: 240px;
+}
+
+.at-sider-title {
+  height: 48px;
+  min-height: 48px;
+  max-height: 48px;
+  box-sizing: border-box;
+  color: #A1A7B3;
+  font-size: 16px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* aTrust L2 二级菜单 */
+.at-menu-l2 {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+  color: #EDF1F7;
+  font-size: 13px;
+  font-weight: 400;
+  transition: color 0.2s;
+}
+
+.at-menu-l2:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: #FFFFFF;
+}
+
+.at-menu-l2-icon {
+  width: 16px;
+  height: 16px;
+  margin-left: 24px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.at-menu-l2.active {
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+/* aTrust L3 三级菜单 (阅读对齐线: 48px) */
+.at-menu-l3 {
+  height: 32px;
+  padding-left: 48px;
+  padding-right: 16px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+  color: #BEC3CC;
+  font-size: 12px;
+  font-weight: 400;
+  transition: color 0.2s;
+}
+
+.at-menu-l3:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.at-menu-l3.active {
+  color: #FFFFFF;
+  font-weight: 600;
+  background: linear-gradient(90deg, rgba(28, 110, 255, 0.2), transparent);
+}
+
+.at-menu-l3.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--color-blue);
+}
+
+/* 表格基础重置 */
+.sd-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.sd-table th {
+  height: 32px;
+  background: var(--color-graphite-l50);
+  color: var(--color-graphite);
+  font-weight: 400;
+  text-align: left;
+  border-bottom: 1px solid var(--color-graphite-l20);
+  padding: 0 12px;
+  position: relative !important;
+}
+
+.sd-table td {
+  height: 40px;
+  border-bottom: 1px solid var(--color-graphite-l30);
+  padding: 0 12px;
+  color: var(--color-graphite-d40);
+  white-space: nowrap;
+}
+
+[x-cloak] {
+  display: none !important;
+}
+
+.at-menu-l4 {
+  height: 32px;
+  padding-left: 60px;
+  padding-right: 16px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #BEC3CC;
+  font-size: 12px;
+  font-weight: 400;
+  transition: color 0.2s;
+}
+
+.at-menu-l4:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.at-menu-l4.active {
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.at-menu-group {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  color: #5E6573;
+  font-size: 12px;
+  cursor: default;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* --- 新增高科技与AI特效样式 --- */
+@keyframes dash {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+.animate-flow {
+  stroke-dasharray: 6, 4;
+  animation: dash 1s linear infinite;
+}
+
+@keyframes radar {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+.radar-ring {
+  animation: radar 2s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
+}
+
+@keyframes ai-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(28, 110, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(28, 110, 255, 0.8);
+  }
+}
+
+.ai-glowing {
+  animation: ai-pulse 3s ease-in-out infinite;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(28, 110, 255, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(28, 110, 255, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(28, 110, 255, 0);
+  }
+}
+
+.ai-pulsing-button {
+  animation: pulse-ring 2s infinite;
+}
+
+/* 斑马线/磨砂玻璃效果 */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(225, 229, 235, 0.6);
+}
+
+@keyframes radar-scan {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.radar-scan-icon {
+  animation: radar-scan 4s linear infinite;
+  transform-origin: 12px 12px;
+}
+
+/* ==========================================================================
+   SVG 全球加速地图基于激活 class 的 CSS 样式控制 (支持多选)
+   ========================================================================== */
+.route-shanghai, .route-singapore, .route-beijing, .route-shenzhen, .route-hongkong {
+  display: none;
+}
+.shanghai-radar, .singapore-radar, .beijing-radar, .shenzhen-radar, .hongkong-radar {
+  display: none;
+}
+
+svg.active-shanghai .route-shanghai {
+  display: inline;
+}
+svg.active-singapore .route-singapore {
+  display: inline;
+}
+svg.active-beijing .route-beijing {
+  display: inline;
+}
+svg.active-shenzhen .route-shenzhen {
+  display: inline;
+}
+svg.active-hongkong .route-hongkong {
+  display: inline;
+}
+
+svg.active-shanghai .shanghai-dot {
+  fill: #1C6EFF;
+}
+svg.active-singapore .singapore-dot {
+  fill: #1C6EFF;
+}
+svg.active-beijing .beijing-dot {
+  fill: #1C6EFF;
+}
+svg.active-shenzhen .shenzhen-dot {
+  fill: #1C6EFF;
+}
+svg.active-hongkong .hongkong-dot {
+  fill: #1C6EFF;
+}
+
+svg.active-shanghai .shanghai-radar {
+  display: inline;
+}
+svg.active-singapore .singapore-radar {
+  display: inline;
+}
+svg.active-beijing .beijing-radar {
+  display: inline;
+}
+svg.active-shenzhen .shenzhen-radar {
+  display: inline;
+}
+svg.active-hongkong .hongkong-radar {
+  display: inline;
+}
+
+svg.active-shanghai .shanghai-text {
+  fill: #FFFFFF;
+}
+svg.active-singapore .singapore-text {
+  fill: #FFFFFF;
+}
+svg.active-beijing .beijing-text {
+  fill: #FFFFFF;
+}
+svg.active-shenzhen .shenzhen-text {
+  fill: #FFFFFF;
+}
+svg.active-hongkong .hongkong-text {
+  fill: #FFFFFF;
+}
+
+/* 复选框样式组件 */
+.sd-checkbox {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--color-graphite-l20);
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.sd-checkbox-checked {
+  background: var(--color-blue);
+  border-color: var(--color-blue);
+}
+.sd-checkbox-checked::after {
+  content: '✓';
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+
+/* ==========================================================================
+   向导步骤布局 - 底部操作栏始终吸底
+   使用方法：将 at-wizard-content-grid 添加到步骤内容主网格上
+   原理：grid-auto-rows: 1fr 强制单行填满 Flex 分配的全部高度，
+         配合列内 overflow-y-auto 实现内容独立滚动，底部操作栏固定在容器底部
+   ========================================================================== */
+.at-wizard-content-grid {
+  grid-auto-rows: 1fr;
+}
+
