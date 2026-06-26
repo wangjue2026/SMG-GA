@@ -119,11 +119,30 @@
     step1Ingress: '',
     step1Egress: '',
     step1SourceObj: '',
-    getWebCname(target) {
+    getWebTargetUrl(target) {
       if (!target) return '';
-      let clean = target.replace(/https?:\/\//, '').split('/')[0].split(':')[0];
-      let host = clean.replace(/\./g, '-');
-      return 'https://saauth.sangfor.com.cn/sa/auth/' + host + '.cname.sangfor.com';
+      const found = this.mockWebApps.find(app => app.label === target);
+      if (found) return found.url;
+      if (target.startsWith('http://') || target.startsWith('https://')) {
+        return target;
+      }
+      if (target.includes('.')) {
+        return 'https://' + target;
+      }
+      return 'https://' + target + '.sangfor.com';
+    },
+    getWebCname(row) {
+      if (!row || !row.target) return '';
+      let url = this.getWebTargetUrl(row.target);
+      let clean = url.replace(/https?:\/\//, '').split('/')[0].split(':')[0];
+      let str = row.id + clean;
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
+      }
+      let hex = Math.abs(hash).toString(36).substring(0, 6);
+      return 'https://saauth.sangfor.com.cn/sa/auth/yu' + hex + '.cname.sangfor.com';
     },
     copyText(text, rowId) {
       try {
@@ -517,14 +536,14 @@
                 <tbody>
                   <template x-for="row in sourceRows.filter(r => r.target)" :key="'cname-'+row.id">
                     <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
-                      <td class="py-2.5 px-4 text-slate-700 font-medium" x-text="row.target"></td>
+                      <td class="py-2.5 px-4 text-slate-700 font-medium" x-text="getWebTargetUrl(row.target)"></td>
                       <td class="py-2.5 px-4">
                         <div class="flex items-center justify-between gap-3 bg-emerald-50/40 border border-emerald-100 rounded px-2.5 py-1 text-emerald-800 font-mono text-[11px]">
                           <span class="flex items-center gap-1">
                             <span class="text-emerald-600 text-xs">⚡</span>
-                            <span x-text="getWebCname(row.target)"></span>
+                            <span x-text="getWebCname(row)"></span>
                           </span>
-                          <button @click.stop="copyText(getWebCname(row.target), row.id)" class="text-emerald-600 hover:text-emerald-800 flex-shrink-0 relative group p-0.5">
+                          <button @click.stop="copyText(getWebCname(row), row.id)" class="text-emerald-600 hover:text-emerald-800 flex-shrink-0 relative group p-0.5">
                             <template x-if="copiedRowId === row.id">
                               <span class="text-[10px] text-emerald-600 font-sans font-bold flex items-center gap-0.5">
                                 <span>✓</span>已复制
