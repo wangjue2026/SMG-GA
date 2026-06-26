@@ -14,18 +14,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>aTrust 零信任控制中心 - 导航框架模版</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap"
-    rel="stylesheet">
-
-  <!-- 引入 Alpine.js 及 Collapse 插件实现顺滑手风琴折叠 -->
-  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- 引入本地 Alpine.js 及 Collapse 插件实现顺滑手风琴折叠 -->
+  <script defer src="assets/lib/alpine-collapse.min.js"></script>
+  <script defer src="assets/lib/alpine.min.js"></script>
 
   <!-- 引入 Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="assets/lib/tailwind-cdn.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -58,6 +52,23 @@
 
   <!-- 引入 SASE 全球加速 Alpine 状态与逻辑 -->
   <script src="assets/atrust-data.js"></script>
+  <script>
+    window.safeStorage = {
+      getItem(key, defaultValue = null) {
+        try {
+          const val = localStorage.getItem(key);
+          return val !== null ? val : defaultValue;
+        } catch (e) {
+          return defaultValue;
+        }
+      },
+      setItem(key, value) {
+        try {
+          localStorage.setItem(key, value);
+        } catch (e) {}
+      }
+    };
+  </script>
 </head>
 
 <body class="bg-bg-light text-text font-sans overflow-hidden w-screen h-screen">
@@ -82,7 +93,7 @@
     用途：维护顶部导航、左侧菜单展开项、当前叶子菜单、全局抽屉开关等 Alpine 状态。
     排障提示：如导航切换、菜单高亮、抽屉打开异常，优先检查此 x-data。
   ======================================================= -->
-  <div class="flex flex-col w-full h-full" x-data="Object.assign(globalAccelerationApp(), { pageMode: 'config', configStep: 1 })">
+  <div class="flex flex-col w-full h-full" x-data="Object.assign(globalAccelerationApp(), { pageMode: 'initial', openLearnModal: false, showLearnBubble: safeStorage.getItem('hideLearnBubble') !== 'true', dontShowBubbleAgain: safeStorage.getItem('hideLearnBubble') === 'true', hoveredTerm: null })">
 
     <!-- ======================================================
       Header / 顶部导航栏，固定高度 56px
@@ -1211,853 +1222,221 @@
           </div>
           <!-- 右侧面包屑操作 -->
           <div class="flex items-center gap-3" x-show="pageMode !== 'initial'">
-            <button class="text-brand hover:underline font-medium" @click="location.href = 'atrust_global_acceleration.html'">返回首页</button>
+            <button class="text-brand hover:underline font-medium" @click="location.href = 'GA-initial.html'">返回首页</button>
           </div>
         </div>
 
-        <!-- Main content area / 主内容区域 (不可滚动，内部卡片自适应滚动) -->
-        <div class="flex-1 overflow-hidden p-6 flex flex-col min-h-0 space-y-3" x-show="activeLeaf === 'm_1_2_1'">
-          <!-- ==========================================
-            STATE 2: 配置内页 (pageMode === 'config')
-          =========================================== -->
-          <div x-show="pageMode === 'config'" class="flex-1 flex flex-col min-h-0 space-y-3" x-cloak>
+        <!-- Workspace container / 铺满全屏的卡片容器 -->
+        <div class="flex-1 p-3 flex flex-col overflow-hidden" x-show="activeLeaf === 'm_1_2_1'">
+          <div x-show="pageMode === 'initial'" class="bg-white rounded-sm shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-4 flex-1 flex flex-col overflow-y-auto" x-cloak>
             
-            <!-- 步骤指示器 (Stepper - 超轻量版) -->
-            <div class="flex items-center justify-start px-1 py-1 select-none text-xs flex-shrink-0">
-              <div class="flex items-center gap-4">
+              <!-- 1. 已开通的加速资源面板 -->
+              <div>
+                <div class="flex items-center gap-2 mb-4">
+                  <span class="text-sm font-semibold text-text-title">已开通的加速资源</span>
+                </div>
                 
-                <!-- 步骤 1 -->
-                <div class="flex items-center gap-1.5">
-                  <span class="w-[18px] h-[18px] rounded-full flex items-center justify-center font-outfit font-bold text-[10px]"
-                        :class="configStep >= 1 ? 'bg-brand text-white' : 'bg-gray-100 text-text-mute'">1</span>
-                  <span :class="configStep === 1 ? 'font-semibold text-text-title' : 'text-text-mute'">选择加速目标</span>
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  <!-- 大陆卡片 -->
+                  <div class="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-sm p-4 hover:shadow-md transition-shadow relative overflow-hidden group">
+                    <div class="absolute right-0 bottom-0 translate-x-3 translate-y-3 opacity-10 group-hover:scale-110 transition-transform">
+                      <svg class="w-16 h-16 text-brand" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                    </div>
+                    <div class="text-xs text-text-mute mb-1">中国大陆</div>
+                    <div class="flex items-baseline gap-1">
+                      <span class="text-2xl font-bold font-outfit text-brand">40</span>
+                      <span class="text-xs text-text-mute">Mbps</span>
+                    </div>
+                    <div class="text-[11px] text-text-mute mt-2">到期时间: 2026-12-09</div>
+                  </div>
+
+                  <!-- 亚太卡片 -->
+                  <div class="bg-gradient-to-br from-blue-50/50 to-white border border-blue-100/50 rounded-sm p-4 hover:shadow-md transition-shadow relative overflow-hidden group">
+                    <div class="text-xs text-text-mute mb-1">亚太地区</div>
+                    <div class="flex items-baseline gap-1">
+                      <span class="text-2xl font-bold font-outfit text-text-title">40</span>
+                      <span class="text-xs text-text-mute">Mbps</span>
+                    </div>
+                    <div class="text-[11px] text-text-mute mt-2">到期时间: 2026-12-09</div>
+                  </div>
+
+                  <!-- 欧美卡片 -->
+                  <div class="bg-gradient-to-br from-blue-50/50 to-white border border-blue-100/50 rounded-sm p-4 hover:shadow-md transition-shadow relative overflow-hidden group">
+                    <div class="text-xs text-text-mute mb-1">欧美地区</div>
+                    <div class="flex items-baseline gap-1">
+                      <span class="text-2xl font-bold font-outfit text-text-title">60</span>
+                      <span class="text-xs text-text-mute">Mbps</span>
+                    </div>
+                    <div class="text-[11px] text-text-mute mt-2">到期时间: 2026-12-09</div>
+                  </div>
+
+                  <!-- 其他地区卡片 -->
+                  <div class="bg-gradient-to-br from-blue-50/50 to-white border border-blue-100/50 rounded-sm p-4 hover:shadow-md transition-shadow relative overflow-hidden group">
+                    <div class="text-xs text-text-mute mb-1">其他地区</div>
+                    <div class="flex items-baseline gap-1">
+                      <span class="text-2xl font-bold font-outfit text-text-title">60</span>
+                      <span class="text-xs text-text-mute">Mbps</span>
+                    </div>
+                    <div class="text-[11px] text-text-mute mt-2">到期时间: 2026-12-09</div>
+                  </div>
+
+                  <!-- 独享IP数卡片 -->
+                  <div class="bg-gradient-to-br from-blue-50/50 to-white border border-blue-100/50 rounded-sm p-4 hover:shadow-md transition-shadow relative overflow-hidden group">
+                    <div class="text-xs text-text-mute mb-1">独享固定 IP 数</div>
+                    <div class="flex items-baseline gap-1">
+                      <span class="text-2xl font-bold font-outfit text-text-title">3</span>
+                      <span class="text-xs text-text-mute ml-1">个</span>
+                      <span class="text-xs text-green-600 font-semibold ml-2 font-outfit">↑</span>
+                    </div>
+                    <div class="text-[11px] text-text-mute mt-2">已分配 0 个 / 剩余 3 个</div>
+                  </div>
                 </div>
-
-                <!-- 连结符号 -->
-                <span class="text-text-mute opacity-30 text-[10px] select-none">/</span>
-
-                <!-- 步骤 2 -->
-                <div class="flex items-center gap-1.5">
-                  <span class="w-[18px] h-[18px] rounded-full flex items-center justify-center font-outfit font-bold text-[10px]"
-                        :class="configStep >= 2 ? 'bg-brand text-white' : 'bg-gray-100 text-text-mute'">2</span>
-                  <span :class="configStep === 2 ? 'font-semibold text-text-title' : 'text-text-mute'">确认加速群体及资源</span>
-                </div>
-
-                <!-- 连结符号 -->
-                <span class="text-text-mute opacity-30 text-[10px] select-none">/</span>
-
-                <!-- 步骤 3 -->
-                <div class="flex items-center gap-1.5">
-                  <span class="w-[18px] h-[18px] rounded-full flex items-center justify-center font-outfit font-bold text-[10px]"
-                        :class="configStep === 3 ? 'bg-brand text-white' : 'bg-gray-100 text-text-mute'">3</span>
-                  <span :class="configStep === 3 ? 'font-semibold text-text-title' : 'text-text-mute'">部署与验证</span>
-                </div>
-
               </div>
-            </div>
 
-            <!-- 配置内容主面板 (单白卡片内嵌左右分栏) -->
-            <div class="bg-white rounded-sm border border-border shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex flex-col flex-1 min-h-0 overflow-hidden">
-              <div class="grid grid-cols-1 lg:grid-cols-5 flex-1 min-h-0 overflow-hidden">
+              <!-- 两部分间隔距离保有 16px -->
+              <div style="height: 16px;"></div>
+
+              <!-- 2. 选择加速场景区域 -->
+              <div>
+                <div class="text-sm font-semibold text-text-title mb-4">选择加速场景</div>
                 
-                <!-- 左栏：表单项配置区域 (3/5) -->
-                <div class="lg:col-span-3 flex flex-col border-r border-border min-h-0 overflow-y-auto">
-                  
-                  <div class="p-5 space-y-6">
-                    
-                    <!-- ================== STEP 1 FORM ================== -->
-                    <div x-show="configStep === 1" class="space-y-6" x-cloak>
-                      <!-- 场景 1: 应用访问加速 -->
-                      <div class="space-y-3">
-                        <div class="flex items-center gap-2">
-                          <h3 class="text-sm font-bold text-text-title">1. 应用访问加速场景</h3>
-                        </div>
-                        
-                        <div>
-                          <div class="text-xs text-text-mute">零信任架构下，不同的代理网关代理着不同的私网业务。请选择需要启用加速的代理网关：</div>
-                        </div>
-
-                        <!-- 代理网关多选下拉选择器 -->
-                        <div class="sd-select sd-select-multiple w-full" x-data="{ open: false }" @click.away="open = false" style="margin-bottom: 12px; margin-top: 8px; position: relative;">
-                          <div class="sd-select-selector w-full cursor-pointer flex items-center justify-between" :class="open && 'sd-select-focused'" @click="open = !open">
-                            <div class="flex flex-wrap gap-1 items-center flex-1 min-w-0">
-                              <template x-if="activeGateways.length === 0">
-                                <span class="sd-select-selection-placeholder">请选择代理网关</span>
-                              </template>
-                              <template x-for="key in activeGateways" :key="key">
-                                <span class="sd-select-selection-item">
-                                  <span x-text="gateways[key].name"></span>
-                                  <span class="sd-select-selection-item-remove" @click.stop="removeActiveGateway(key)">×</span>
-                                </span>
-                              </template>
-                            </div>
-                            <svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0 transition-transform mr-1" :class="open ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                            </svg>
-                          </div>
-                          
-                          <!-- 下拉选项列表 -->
-                          <div class="sd-select-dropdown w-full border border-border mt-1 rounded shadow-lg bg-white absolute left-0 right-0 z-50 overflow-y-auto max-h-[200px]" x-show="open" x-cloak>
-                            <template x-for="(gw, key) in gateways" :key="key">
-                              <div class="sd-select-item flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-slate-50 transition-colors" 
-                                   :class="activeGateways.includes(key) && 'sd-select-item-selected'"
-                                   @click="toggleActiveGateway(key)">
-                                <div class="flex items-center gap-2">
-                                  <!-- 自定义复选框效果 -->
-                                  <span class="w-3.5 h-3.5 rounded flex items-center justify-center border" :class="activeGateways.includes(key) ? 'border-brand bg-brand text-white' : 'border-slate-300 bg-white'">
-                                    <template x-if="activeGateways.includes(key)">
-                                      <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                                      </svg>
-                                    </template>
-                                  </span>
-                                  <span class="text-xs" x-text="gw.name"></span>
-                                </div>
-                                <span class="text-[10px] text-text-mute font-outfit" x-text="gw.ip"></span>
-                              </div>
-                            </template>
-                          </div>
-                        </div>
-
-                        <!-- 代理网关选择面板 (每个为一个独立小卡片，上下间距8px) -->
-                        <div class="space-y-2">
-                          
-                          <!-- 网关 1: 上海办公网关 -->
-                          <div class="border rounded bg-white transition-all duration-200 cursor-pointer select-none hover:border-brand/50 hover:shadow-sm"
-                               x-show="activeGateways.includes('shanghai')"
-                               :class="selectedGateway === 'shanghai' ? 'border-brand bg-[#F4F8FF]/20 shadow-[0_2px_8px_rgba(28,110,255,0.08)]' : 'border-border bg-white'"
-                               @click="selectedGateway = 'shanghai'"
-                               x-cloak>
-                            <div class="p-3 flex items-center justify-between">
-                              <div class="flex items-center gap-3">
-                                <span class="sd-checkbox" :class="activeGateways.includes('shanghai') && 'sd-checkbox-checked'" @click.stop="removeActiveGateway('shanghai')">
-                                </span>
-                                <div>
-                                  <div class="text-xs font-semibold text-text-title">上海办公网关</div>
-                                  <div class="text-[11px] text-text-mute font-outfit">203.0.113.24</div>
-                                </div>
-                              </div>
-                              <div class="flex items-center gap-1.5" @click.stop="expandedGateway = (expandedGateway === 'shanghai' ? null : 'shanghai')">
-                                <span class="text-xs text-brand hover:underline">关联应用 12 个</span>
-                                <svg class="w-3.5 h-3.5 text-brand transition-transform" :class="expandedGateway === 'shanghai' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                              </div>
-                            </div>
-
-                            <!-- 上海内嵌智能推荐源站区域 -->
-                            <div class="border-t border-dashed border-border bg-green-50/10 p-3 space-y-2" @click.stop="">
-                              <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-1.5">
-                                  <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                  <span class="text-xs font-semibold text-[#6F7785]">智能推荐最佳源站：</span><span class="text-xs font-semibold text-green-700">广州</span>
-                                  <span class="px-1 py-0.2 bg-green-100 text-green-700 rounded text-[9px] font-semibold">推荐</span>
-                                </div>
-                                <button class="text-[11px] text-brand font-medium hover:underline" @click.stop="">修改</button>
-                              </div>
-                              <div class="text-[11px] text-text-mute leading-relaxed">
-                                经链路探测分析，该网关物理归属于上海，直连网络延迟达 78ms，推荐接入就近且网速最优的广州 PoP 节点作为网络下车点。预计时延从 <span class="text-green-700 font-semibold">78ms 降至 22ms (↓ 71.8%)</span>，访问速度提升 <span class="text-green-700 font-semibold">2.5 倍</span>。已自动开通就近加速。
-                              </div>
-                            </div>
-
-                            <!-- 展开的应用列表表格 -->
-                            <div x-show="expandedGateway === 'shanghai'" x-collapse x-cloak @click.stop="">
-                              <div class="border-t border-dashed border-border p-2 bg-white rounded-b">
-                                <table class="sd-table">
-                                  <thead>
-                                    <tr>
-                                      <th style="font-size: 11px; height: 26px;">应用名称</th>
-                                      <th style="font-size: 11px; height: 26px;">协议类型</th>
-                                      <th style="font-size: 11px; height: 26px;">服务器地址</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    <template x-for="app in gateways.shanghai.apps">
-                                      <tr>
-                                        <td style="font-size: 11px; height: 30px;" x-text="app.name"></td>
-                                        <td style="font-size: 11px; height: 30px;"><span class="px-1 py-0.2 bg-gray-100 text-gray-600 rounded text-[9px] font-outfit" x-text="app.protocol"></span></td>
-                                        <td style="font-size: 11px; height: 30px; font-family: monospace;" x-text="app.target"></td>
-                                      </tr>
-                                    </template>
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          </div>
-
-                          <!-- 网关 2: 新加坡业务网关 -->
-                          <div class="border rounded bg-white transition-all duration-200 cursor-pointer select-none hover:border-brand/50 hover:shadow-sm"
-                               x-show="activeGateways.includes('singapore')"
-                               :class="selectedGateway === 'singapore' ? 'border-brand bg-[#F4F8FF]/20 shadow-[0_2px_8px_rgba(28,110,255,0.08)]' : 'border-border bg-white'"
-                               @click="selectedGateway = 'singapore'"
-                               x-cloak>
-                            <div class="p-3 flex items-center justify-between">
-                              <div class="flex items-center gap-3">
-                                <span class="sd-checkbox" :class="activeGateways.includes('singapore') && 'sd-checkbox-checked'" @click.stop="removeActiveGateway('singapore')">
-                                </span>
-                                <div>
-                                  <div class="text-xs font-semibold text-text-title">新加坡业务网关</div>
-                                  <div class="text-[11px] text-text-mute font-outfit">198.51.100.16</div>
-                                </div>
-                              </div>
-                              <div class="flex items-center gap-1.5" @click.stop="expandedGateway = (expandedGateway === 'singapore' ? null : 'singapore')">
-                                <span class="text-xs text-brand hover:underline">关联应用 8 个</span>
-                                <svg class="w-3.5 h-3.5 text-brand transition-transform" :class="expandedGateway === 'singapore' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                              </div>
-                            </div>
-
-                            <!-- 新加坡内嵌智能推荐源站区域 -->
-                            <div class="border-t border-dashed border-border bg-green-50/10 p-3 space-y-2" @click.stop="">
-                              <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-1.5">
-                                  <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                  <span class="text-xs font-semibold text-[#6F7785]">智能推荐最佳源站：</span><span class="text-xs font-semibold text-green-700">新加坡</span>
-                                  <span class="px-1 py-0.2 bg-green-100 text-green-700 rounded text-[9px] font-semibold">推荐</span>
-                                </div>
-                                <button class="text-[11px] text-brand font-medium hover:underline" @click.stop="">修改</button>
-                              </div>
-                              <div class="text-[11px] text-text-mute leading-relaxed">
-                                经链路探测分析，该网关物理归属于新加坡，直连网络延迟达 180ms，推荐接入就近且网速最优的新加坡 PoP 节点作为网络下车点。预计时延从 <span class="text-green-700 font-semibold">180ms 降至 45ms (↓ 75.0%)</span>，访问速度提升 <span class="text-green-700 font-semibold">3.0 倍</span>。已自动开通就近加速。
-                              </div>
-                            </div>
-
-                            <div x-show="expandedGateway === 'singapore'" x-collapse x-cloak @click.stop="">
-                              <div class="border-t border-dashed border-border p-2 bg-white rounded-b">
-                                <table class="sd-table">
-                                  <thead>
-                                    <tr>
-                                      <th style="font-size: 11px; height: 26px;">应用名称</th>
-                                      <th style="font-size: 11px; height: 26px;">协议类型</th>
-                                      <th style="font-size: 11px; height: 26px;">服务器地址</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    <template x-for="app in gateways.singapore.apps">
-                                      <tr>
-                                        <td style="font-size: 11px; height: 30px;" x-text="app.name"></td>
-                                        <td style="font-size: 11px; height: 30px;"><span class="px-1 py-0.2 bg-gray-100 text-gray-600 rounded text-[9px] font-outfit" x-text="app.protocol"></span></td>
-                                        <td style="font-size: 11px; height: 30px; font-family: monospace;" x-text="app.target"></td>
-                                      </tr>
-                                    </template>
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          </div>
-
-                          <!-- 网关 3: 北京研发网关 -->
-                          <div class="border rounded bg-white transition-all duration-200 cursor-pointer select-none hover:border-brand/50 hover:shadow-sm"
-                               x-show="activeGateways.includes('beijing')"
-                               :class="selectedGateway === 'beijing' ? 'border-brand bg-[#F4F8FF]/20 shadow-[0_2px_8px_rgba(28,110,255,0.08)]' : 'border-border bg-white'"
-                               @click="selectedGateway = 'beijing'"
-                               x-cloak>
-                            <div class="p-3 flex items-center justify-between">
-                              <div class="flex items-center gap-3">
-                                <span class="sd-checkbox" :class="activeGateways.includes('beijing') && 'sd-checkbox-checked'" @click.stop="removeActiveGateway('beijing')">
-                                </span>
-                                <div>
-                                  <div class="text-xs font-semibold text-text-title">北京研发网关</div>
-                                  <div class="text-[11px] text-text-mute font-outfit">192.0.2.10</div>
-                                </div>
-                              </div>
-                              <div class="flex items-center gap-1.5" @click.stop="expandedGateway = (expandedGateway === 'beijing' ? null : 'beijing')">
-                                <span class="text-xs text-brand hover:underline">关联应用 6 个</span>
-                                <svg class="w-3.5 h-3.5 text-brand transition-transform" :class="expandedGateway === 'beijing' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                              </div>
-                            </div>
-
-                            <!-- 北京内嵌智能推荐源站区域 -->
-                            <div class="border-t border-dashed border-border bg-green-50/10 p-3 space-y-2" @click.stop="">
-                              <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-1.5">
-                                  <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                  <span class="text-xs font-semibold text-[#6F7785]">智能推荐最佳源站：</span><span class="text-xs font-semibold text-green-700">北京</span>
-                                  <span class="px-1 py-0.2 bg-green-100 text-green-700 rounded text-[9px] font-semibold">推荐</span>
-                                </div>
-                                <button class="text-[11px] text-brand font-medium hover:underline" @click.stop="">修改</button>
-                              </div>
-                              <div class="text-[11px] text-text-mute leading-relaxed">
-                                经链路探测分析，该网关物理归属于北京，直连网络延迟达 90ms，推荐接入就近且网速最优的北京 PoP 节点作为网络下车点。预计时延从 <span class="text-green-700 font-semibold">90ms 降至 25ms (↓ 72.2%)</span>，访问速度提升 <span class="text-green-700 font-semibold">2.6 倍</span>。已自动开通对端加速。
-                              </div>
-                            </div>
-
-                            <div x-show="expandedGateway === 'beijing'" x-collapse x-cloak @click.stop="">
-                              <div class="border-t border-dashed border-border p-2 bg-white rounded-b">
-                                <table class="sd-table">
-                                  <thead>
-                                    <tr>
-                                      <th style="font-size: 11px; height: 26px;">应用名称</th>
-                                      <th style="font-size: 11px; height: 26px;">协议类型</th>
-                                      <th style="font-size: 11px; height: 26px;">服务器地址</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    <template x-for="app in gateways.beijing.apps">
-                                      <tr>
-                                        <td style="font-size: 11px; height: 30px;" x-text="app.name"></td>
-                                        <td style="font-size: 11px; height: 30px;"><span class="px-1 py-0.2 bg-gray-100 text-gray-600 rounded text-[9px] font-outfit" x-text="app.protocol"></span></td>
-                                        <td style="font-size: 11px; height: 30px; font-family: monospace;" x-text="app.target"></td>
-                                      </tr>
-                                    </template>
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          </div>
-
-                          <!-- 网关 4: 深圳研发网关 -->
-                          <div class="border rounded bg-white transition-all duration-200 cursor-pointer select-none hover:border-brand/50 hover:shadow-sm"
-                               x-show="activeGateways.includes('shenzhen')"
-                               :class="selectedGateway === 'shenzhen' ? 'border-brand bg-[#F4F8FF]/20 shadow-[0_2px_8px_rgba(28,110,255,0.08)]' : 'border-border bg-white'"
-                               @click="selectedGateway = 'shenzhen'"
-                               x-cloak>
-                            <div class="p-3 flex items-center justify-between">
-                              <div class="flex items-center gap-3">
-                                <span class="sd-checkbox" :class="activeGateways.includes('shenzhen') && 'sd-checkbox-checked'" @click.stop="removeActiveGateway('shenzhen')">
-                                </span>
-                                <div>
-                                  <div class="text-xs font-semibold text-text-title">深圳研发网关</div>
-                                  <div class="text-[11px] text-text-mute font-outfit">120.24.8.19</div>
-                                </div>
-                              </div>
-                              <div class="flex items-center gap-1.5" @click.stop="expandedGateway = (expandedGateway === 'shenzhen' ? null : 'shenzhen')">
-                                <span class="text-xs text-brand hover:underline">关联应用 5 个</span>
-                                <svg class="w-3.5 h-3.5 text-brand transition-transform" :class="expandedGateway === 'shenzhen' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                              </div>
-                            </div>
-
-                            <!-- 深圳内嵌智能推荐源站区域 -->
-                            <div class="border-t border-dashed border-border bg-green-50/10 p-3 space-y-2" @click.stop="">
-                              <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-1.5">
-                                  <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                  <span class="text-xs font-semibold text-[#6F7785]">智能推荐最佳源站：</span><span class="text-xs font-semibold text-green-700">广州</span>
-                                  <span class="px-1 py-0.2 bg-green-100 text-green-700 rounded text-[9px] font-semibold">推荐</span>
-                                </div>
-                                <button class="text-[11px] text-brand font-medium hover:underline" @click.stop="">修改</button>
-                              </div>
-                              <div class="text-[11px] text-text-mute leading-relaxed">
-                                经链路探测分析，该网关物理归属于深圳，直连网络延迟达 12ms，推荐接入就近且网速最优的广州 PoP 节点作为网络下车点。预计时延从 <span class="text-green-700 font-semibold">12ms 降至 3ms (↓ 75.0%)</span>，访问速度提升 <span class="text-green-700 font-semibold">4.0 倍</span>。已自动开通就近加速。
-                              </div>
-                            </div>
-
-                            <div x-show="expandedGateway === 'shenzhen'" x-collapse x-cloak @click.stop="">
-                              <div class="border-t border-dashed border-border p-2 bg-white rounded-b">
-                                <table class="sd-table">
-                                  <thead>
-                                    <tr>
-                                      <th style="font-size: 11px; height: 26px;">应用名称</th>
-                                      <th style="font-size: 11px; height: 26px;">协议类型</th>
-                                      <th style="font-size: 11px; height: 26px;">服务器地址</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    <template x-for="app in gateways.shenzhen.apps">
-                                      <tr>
-                                        <td style="font-size: 11px; height: 30px;" x-text="app.name"></td>
-                                        <td style="font-size: 11px; height: 30px;"><span class="px-1 py-0.2 bg-gray-100 text-gray-600 rounded text-[9px] font-outfit" x-text="app.protocol"></span></td>
-                                        <td style="font-size: 11px; height: 30px; font-family: monospace;" x-text="app.target"></td>
-                                      </tr>
-                                    </template>
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          </div>
-
-                          <!-- 网关 5: 香港业务网关 -->
-                          <div class="border rounded bg-white transition-all duration-200 cursor-pointer select-none hover:border-brand/50 hover:shadow-sm"
-                               x-show="activeGateways.includes('hongkong')"
-                               :class="selectedGateway === 'hongkong' ? 'border-brand bg-[#F4F8FF]/20 shadow-[0_2px_8px_rgba(28,110,255,0.08)]' : 'border-border bg-white'"
-                               @click="selectedGateway = 'hongkong'"
-                               x-cloak>
-                            <div class="p-3 flex items-center justify-between">
-                              <div class="flex items-center gap-3">
-                                <span class="sd-checkbox" :class="activeGateways.includes('hongkong') && 'sd-checkbox-checked'" @click.stop="removeActiveGateway('hongkong')">
-                                </span>
-                                <div>
-                                  <div class="text-xs font-semibold text-text-title">香港业务网关</div>
-                                  <div class="text-[11px] text-text-mute font-outfit">47.75.12.98</div>
-                                </div>
-                              </div>
-                              <div class="flex items-center gap-1.5" @click.stop="expandedGateway = (expandedGateway === 'hongkong' ? null : 'hongkong')">
-                                <span class="text-xs text-brand hover:underline">关联应用 4 个</span>
-                                <svg class="w-3.5 h-3.5 text-brand transition-transform" :class="expandedGateway === 'hongkong' ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                              </div>
-                            </div>
-
-                            <!-- 香港内嵌智能推荐源站区域 -->
-                            <div class="border-t border-dashed border-border bg-green-50/10 p-3 space-y-2" @click.stop="">
-                              <div class="flex items-center justify-between">
-                                <div class="flex items-center gap-1.5">
-                                  <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                  <span class="text-xs font-semibold text-[#6F7785]">智能推荐最佳源站：</span><span class="text-xs font-semibold text-green-700">香港</span>
-                                  <span class="px-1 py-0.2 bg-green-100 text-green-700 rounded text-[9px] font-semibold">推荐</span>
-                                </div>
-                                <button class="text-[11px] text-brand font-medium hover:underline" @click.stop="">修改</button>
-                              </div>
-                              <div class="text-[11px] text-text-mute leading-relaxed">
-                                经链路探测分析，该网关物理归属于香港，直连网络延迟达 48ms，推荐接入就近且网速最优的香港 PoP 节点作为网络下车点。预计时延从 <span class="text-green-700 font-semibold">48ms 降至 12ms (↓ 75.0%)</span>，访问速度提升 <span class="text-green-700 font-semibold">4.0 倍</span>。已自动开通对端加速。
-                              </div>
-                            </div>
-
-                            <div x-show="expandedGateway === 'hongkong'" x-collapse x-cloak @click.stop="">
-                              <div class="border-t border-dashed border-border p-2 bg-white rounded-b">
-                                <table class="sd-table">
-                                  <thead>
-                                    <tr>
-                                      <th style="font-size: 11px; height: 26px;">应用名称</th>
-                                      <th style="font-size: 11px; height: 26px;">协议类型</th>
-                                      <th style="font-size: 11px; height: 26px;">服务器地址</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    <template x-for="app in gateways.hongkong.apps">
-                                      <tr>
-                                        <td style="font-size: 11px; height: 30px;" x-text="app.name"></td>
-                                        <td style="font-size: 11px; height: 30px;"><span class="px-1 py-0.2 bg-gray-100 text-gray-600 rounded text-[9px] font-outfit" x-text="app.protocol"></span></td>
-                                        <td style="font-size: 11px; height: 30px; font-family: monospace;" x-text="app.target"></td>
-                                      </tr>
-                                    </template>
-                                  </tbody>
-                                </table>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- ================== STEP 2 FORM ================== -->
-                    <div x-show="configStep === 2" class="space-y-5" x-cloak>
-                      <div class="flex justify-between items-center select-none">
-                        <div>
-                          <div class="text-sm font-semibold text-text-title mb-1">确认加速群体及资源</div>
-                          <div class="text-xs text-text-mute font-sans">请为各个启用的加速网关单独配置目标加速群体与独享带宽资源配额。</div>
-                        </div>
-                        <!-- 剩余带宽配额指示 -->
-                        <div class="bg-brand/5 border border-brand/10 text-brand px-3 py-1.5 rounded-sm text-xs font-semibold">
-                          全球带宽池余量：<span class="font-outfit" x-text="getRemainingBandwidth()"></span> / 40 Mbps
-                        </div>
-                      </div>
-
-                      <!-- 网关专属策略分配卡片列表 -->
-                      <div class="space-y-3">
-                        <template x-for="gwKey in activeGateways" :key="gwKey">
-                          <div class="border rounded bg-white transition-all duration-200 cursor-pointer select-none hover:shadow-sm"
-                               :class="selectedGateway === gwKey ? 'border-brand shadow-[0_2px_8px_rgba(28,110,255,0.06)]' : 'border-border bg-white'"
-                               @click="selectedGateway = gwKey">
-                            
-                            <!-- 卡片头部 -->
-                            <div class="p-3 bg-slate-50/50 border-b border-border/60 flex items-center justify-between">
-                              <div class="flex items-center gap-2">
-                                <span class="w-1.5 h-1.5 rounded-full bg-brand"></span>
-                                <span class="text-xs font-bold text-text-title" x-text="gateways[gwKey].name"></span>
-                                <span class="text-[10px] text-text-mute font-outfit" x-text="gateways[gwKey].ip"></span>
-                              </div>
-                              <span class="text-[10px] font-semibold text-green-700 bg-green-50 px-1.5 py-0.5 rounded">
-                                下车点(POP)：<span x-text="gateways[gwKey].source"></span>
-                              </span>
-                            </div>
-
-                            <!-- 卡片配置主体 -->
-                            <div class="p-4 space-y-4">
-                              
-                              <!-- 1. 加速群体选择 -->
-                              <div class="space-y-1.5" x-data="{ dropdownOpen: false }" @click.away="dropdownOpen = false">
-                                <label class="text-[11px] font-semibold text-[#6F7785]">选择目标加速群体 (多选)</label>
-                                <div class="sd-select sd-select-multiple w-full relative">
-                                  <div class="sd-select-selector w-full cursor-pointer flex items-center justify-between" :class="dropdownOpen && 'sd-select-focused'" @click.stop="dropdownOpen = !dropdownOpen">
-                                    <div class="flex flex-wrap gap-1 items-center flex-1 min-w-0">
-                                      <template x-if="gatewayConfigs[gwKey].selectedGroups.length === 0">
-                                        <span class="sd-select-selection-placeholder">请选择加速群体</span>
-                                      </template>
-                                      <template x-for="gKey in gatewayConfigs[gwKey].selectedGroups" :key="gKey">
-                                        <span class="sd-select-selection-item">
-                                          <span x-text="accelerationGroups[gKey].name"></span>
-                                          <span class="sd-select-selection-item-remove" @click.stop="removeGatewayGroup(gwKey, gKey)">×</span>
-                                        </span>
-                                      </template>
-                                    </div>
-                                    <svg class="w-3 h-3 text-slate-400 flex-shrink-0 transition-transform mr-1" :class="dropdownOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                    </svg>
-                                  </div>
-                                  
-                                  <!-- 加速群体下拉列表 -->
-                                  <div class="sd-select-dropdown w-full border border-border mt-1 rounded shadow-lg bg-white absolute left-0 right-0 z-50 overflow-y-auto max-h-[160px]" x-show="dropdownOpen" x-cloak>
-                                    <template x-for="(group, gKey) in accelerationGroups" :key="gKey">
-                                      <div class="sd-select-item flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-slate-50 transition-colors" 
-                                           :class="gatewayConfigs[gwKey].selectedGroups.includes(gKey) && 'sd-select-item-selected bg-[#F4F8FF] text-[#1C6EFF]'"
-                                           @click.stop="updateGatewayConfig(gwKey, gKey)">
-                                        <div class="flex items-center gap-2">
-                                          <span class="w-3.5 h-3.5 rounded flex items-center justify-center border" :class="gatewayConfigs[gwKey].selectedGroups.includes(gKey) ? 'border-brand bg-brand text-white' : 'border-slate-300 bg-white'">
-                                            <template x-if="gatewayConfigs[gwKey].selectedGroups.includes(gKey)">
-                                              <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                                              </svg>
-                                            </template>
-                                          </span>
-                                          <span class="text-xs" x-text="group.name"></span>
-                                        </div>
-                                        <span class="text-[10px] text-text-mute font-outfit" x-text="group.pop"></span>
-                                      </div>
-                                    </template>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <!-- 2. 智能上车点推荐气泡 -->
-                              <div class="bg-green-50/15 border border-dashed border-green-200/50 rounded-sm p-2 flex items-start gap-2">
-                                <span class="w-1.5 h-1.5 rounded-full bg-green-500 mt-1 flex-shrink-0"></span>
-                                <div class="space-y-0.5">
-                                  <div class="text-[10px] font-semibold text-[#6F7785]">根据群体地理位置推荐上车点 (POP)：</div>
-                                  <div class="text-[11px] text-green-700 font-medium leading-relaxed">
-                                    <template x-for="(gKey, idx) in gatewayConfigs[gwKey].selectedGroups" :key="gKey">
-                                      <span class="inline-flex items-center">
-                                        <span x-text="accelerationGroups[gKey].pop"></span>
-                                        <span x-show="idx < gatewayConfigs[gwKey].selectedGroups.length - 1" class="mx-1">、</span>
-                                      </span>
-                                    </template>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <!-- 3. 带宽分配与池状态 -->
-                              <div class="flex items-center justify-between gap-4 pt-1">
-                                <div class="space-y-0.5">
-                                  <div class="text-[11px] font-semibold text-[#6F7785]">划拨独享加速带宽</div>
-                                  <div class="text-[10px] text-text-mute">基准默认值已根据关联应用量与加速群体计算。</div>
-                                </div>
-                                <div class="flex items-center gap-2 flex-shrink-0">
-                                  <input type="number" class="sd-input w-20 text-center font-outfit" style="height: 30px;" 
-                                         min="1" max="40" x-model.number="gatewayConfigs[gwKey].bandwidth" @click.stop="">
-                                  <span class="text-xs text-text-mute font-semibold">Mbps</span>
-                                </div>
-                              </div>
-
-                            </div>
-
-                          </div>
-                        </template>
-                      </div>
-
-                      <!-- 带宽池预警通知 -->
-                      <div class="border border-red-200 bg-red-50/20 rounded-sm p-3 flex items-start gap-2.5" x-show="getRemainingBandwidth() === 0">
-                        <span class="w-5 h-5 rounded-full bg-red-100 text-red-700 flex items-center justify-center flex-shrink-0 text-xs font-bold">!</span>
-                        <div class="space-y-0.5">
-                          <div class="text-xs font-semibold text-red-700">全球加速带宽资源分配已达上限</div>
-                          <div class="text-[10px] text-text-mute">当前可用未分配带宽已耗尽（总限额 40 Mbps），请适当减少某一链路的划拨配额，或向管理员申请购买新的加速带宽池。</div>
-                        </div>
-                      </div>
-
-                    </div>
-
-                    <!-- ================== STEP 3 FORM ================== -->
-                    <div x-show="configStep === 3" class="space-y-4 flex flex-col h-full min-h-0" x-cloak>
-                      <div>
-                        <div class="text-sm font-semibold text-text-title mb-1">正在下发全球加速策略</div>
-                        <div class="text-xs text-text-mute">系统正向全国所有边缘加速节点同步配置并建立 SASE 虚拟专线。</div>
-                      </div>
-
-                      <!-- 进度条 -->
-                      <div class="space-y-2">
-                        <div class="flex justify-between text-xs font-semibold">
-                          <span class="text-brand" x-text="deploymentProgress === 100 ? '部署成功！' : '正在下发策略中...'"></span>
-                          <span class="font-outfit" x-text="deploymentProgress + '%'"></span>
-                        </div>
-                        <div class="h-2 bg-gray-100 rounded-full overflow-hidden w-full">
-                          <div class="h-full bg-brand rounded-full transition-all duration-300" :style="'width: ' + deploymentProgress + '%'"></div>
-                        </div>
-                      </div>
-
-                      <!-- 模拟终端日志界面 -->
-                      <div class="flex-1 min-h-[220px] bg-slate-950 rounded border border-slate-800 p-3 font-mono text-xs text-slate-300 flex flex-col overflow-hidden">
-                        <div class="flex items-center gap-2 border-b border-slate-900 pb-2 mb-2 flex-shrink-0">
-                          <span class="w-3 h-3 rounded-full bg-red-500"></span>
-                          <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
-                          <span class="w-3 h-3 rounded-full bg-green-500"></span>
-                          <span class="text-[10px] text-slate-500 ml-2">Console Deployment Log Viewer</span>
-                        </div>
-                        <div class="flex-1 overflow-y-auto space-y-1 select-text custom-scrollbar">
-                          <template x-for="log in deploymentLogs">
-                            <div class="leading-relaxed whitespace-pre-wrap" x-text="log"></div>
-                          </template>
-                          <div x-show="deploymentProgress < 100" class="text-brand animate-pulse">■ 正在下发策略规则...</div>
-                        </div>
-                      </div>
-
-                      <!-- 下发成功容器 -->
-                      <div class="border border-green-200 bg-green-50/20 rounded-sm p-4 flex items-start gap-3"
-                           x-show="deploymentProgress === 100" x-transition>
-                        <div class="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center flex-shrink-0">
-                          ✓
-                        </div>
-                        <div class="space-y-1">
-                          <div class="text-xs font-semibold text-green-700">SASE 加速骨干网链路部署完成</div>
-                          <div class="text-[11px] text-text-mute leading-relaxed">
-                            策略配置已分发至全球 150+ 边缘 POP 节点，[上海办公网关] 代理 of 12 个应用正通过 [广州 PoP 源站] 进行零信任接入加速，流量已上线并建立正常连接指标数据。
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                  </div>
-
-                </div>
-
-                <!-- 右栏：全球加速拓扑可视化地图 (2/5) -->
-                <div class="lg:col-span-2 flex flex-col bg-slate-50/20 min-h-0 overflow-y-auto">
-                  <!-- 右栏头部 (去除线条与白底，使其更融合) -->
-                  <div class="h-10 flex items-center px-5 justify-between flex-shrink-0 select-none">
-                    <span class="text-xs font-semibold text-text-title">全球加速网络拓扑</span>
-                    <div class="flex items-center gap-2 text-[10px] text-text-mute">
-                      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-brand"></span>网关节点</span>
-                      <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-500"></span>源站区域</span>
-                    </div>
-                  </div>
-
-                  <div class="flex flex-col p-5 space-y-4">
-                    <!-- 地图 SVG 视觉元素 (保持固定高度比例，不单独滚动) -->
-                    <div class="h-[280px] bg-slate-900 rounded-sm relative overflow-hidden flex items-center justify-center flex-shrink-0">
-                      
-                      <!-- 静态地图背景图片 -->
-                      <div class="absolute inset-0 bg-no-repeat bg-cover bg-center opacity-40 mix-blend-screen" style="background-image: url('assets/tech_map_bg.png');"></div>
-
-                      <!-- SVG 地理轮廓及连接线绘制 -->
-                      <svg class="w-full h-full absolute inset-0 z-10" :class="'active-' + selectedGateway" viewBox="0 0 400 360" xmlns="http://www.w3.org/2000/svg">
-                        
-                        <!-- 精致网点星尘背景 -->
-                        <defs>
-                          <pattern id="grid" width="10" width="20" height="20" patternUnits="userSpaceOnUse">
-                            <circle cx="2" cy="2" r="0.8" fill="#2d3748" />
-                          </pattern>
-                        </defs>
-                        <rect width="100%" height="100%" fill="url(#grid)" />
-
-                        <!-- 绘制虚拟骨干网专线路由 (Guangzhou - Shanghai) -->
-                        <path d="M 260 230 Q 285 200 300 170" fill="none" stroke="#2d3748" stroke-width="2" />
-                        <path d="M 260 230 Q 285 200 300 170" fill="none" stroke="#1C6EFF" stroke-width="3" class="route-shanghai animate-flow" />
-
-                        <!-- 绘制虚拟骨干网专线路由 (Guangzhou - Singapore) -->
-                        <path d="M 260 230 Q 220 270 190 310" fill="none" stroke="#2d3748" stroke-width="2" />
-                        <path d="M 260 230 Q 220 270 190 310" fill="none" stroke="#1C6EFF" stroke-width="3" class="route-singapore animate-flow" />
-
-                        <!-- 绘制虚拟骨干网专线路由 (Guangzhou - Beijing) -->
-                        <path d="M 260 230 Q 255 160 250 100" fill="none" stroke="#2d3748" stroke-width="2" />
-                        <path d="M 260 230 Q 255 160 250 100" fill="none" stroke="#1C6EFF" stroke-width="3" class="route-beijing animate-flow" />
-
-                        <!-- 绘制虚拟骨干网专线路由 (Guangzhou - Shenzhen) -->
-                        <path d="M 260 230 Q 275 220 290 225" fill="none" stroke="#2d3748" stroke-width="2" />
-                        <path d="M 260 230 Q 275 220 290 225" fill="none" stroke="#1C6EFF" stroke-width="3" class="route-shenzhen animate-flow" />
-
-                        <!-- 绘制虚拟骨干网专线路由 (Guangzhou - Hongkong) -->
-                        <path d="M 260 230 Q 285 245 310 250" fill="none" stroke="#2d3748" stroke-width="2" />
-                        <path d="M 260 230 Q 285 245 310 250" fill="none" stroke="#1C6EFF" stroke-width="3" class="route-hongkong animate-flow" />
-
-                        <!-- 源站节点 (广州) -->
-                        <circle cx="260" cy="230" r="6" fill="#12A679" />
-                        <circle cx="260" cy="230" r="14" fill="none" stroke="#12A679" stroke-width="1.5" class="radar-ring" style="transform-origin: 260px 230px;" />
-                        <text x="240" y="250" fill="#EDF1F7" font-size="10" font-family="PingFang SC">源站 (广州)</text>
-
-                        <!-- 上海办公网关 -->
-                        <circle cx="300" cy="170" r="5" fill="#454C59" class="shanghai-dot" />
-                        <circle cx="300" cy="170" r="12" fill="none" stroke="#1C6EFF" stroke-width="1" class="radar-ring shanghai-radar" style="transform-origin: 300px 170px;" />
-                        <text x="290" y="155" fill="#BEC3CC" font-size="10" font-weight="semibold" class="shanghai-text">上海</text>
-
-                        <!-- 北京研发网关 -->
-                        <circle cx="250" cy="100" r="5" fill="#454C59" class="beijing-dot" />
-                        <circle cx="250" cy="100" r="12" fill="none" stroke="#1C6EFF" stroke-width="1" class="radar-ring beijing-radar" style="transform-origin: 250px 100px;" />
-                        <text x="240" y="85" fill="#BEC3CC" font-size="10" font-weight="semibold" class="beijing-text">北京</text>
-
-                        <!-- 新加坡业务网关 -->
-                        <circle cx="190" cy="310" r="5" fill="#454C59" class="singapore-dot" />
-                        <circle cx="190" cy="310" r="12" fill="none" stroke="#1C6EFF" stroke-width="1" class="radar-ring singapore-radar" style="transform-origin: 190px 310px;" />
-                        <text x="180" y="295" fill="#BEC3CC" font-size="10" font-weight="semibold" class="singapore-text">新加坡</text>
-
-                        <!-- 深圳研发网关 -->
-                        <circle cx="290" cy="225" r="5" fill="#454C59" class="shenzhen-dot" />
-                        <circle cx="290" cy="225" r="12" fill="none" stroke="#1C6EFF" stroke-width="1" class="radar-ring shenzhen-radar" style="transform-origin: 290px 225px;" />
-                        <text x="292" y="215" fill="#BEC3CC" font-size="10" font-weight="semibold" class="shenzhen-text">深圳</text>
-
-                        <!-- 香港业务网关 -->
-                        <circle cx="310" cy="250" r="5" fill="#454C59" class="hongkong-dot" />
-                        <circle cx="310" cy="250" r="12" fill="none" stroke="#1C6EFF" stroke-width="1" class="radar-ring hongkong-radar" style="transform-origin: 310px 250px;" />
-                        <text x="315" y="260" fill="#BEC3CC" font-size="10" font-weight="semibold" class="hongkong-text">香港</text>
-
-                        <!-- ================== DYNAMIC INGRESS-EGRESS PATHS ================== -->
-                        <!-- USA Path -->
-                        <g x-show="configStep === 2 && gatewayConfigs[selectedGateway].selectedGroups.includes('us')">
-                          <path :d="getSvgPath(selectedGateway, 'us')" fill="none" stroke="#2d3748" stroke-width="1.5" />
-                          <path :d="getSvgPath(selectedGateway, 'us')" fill="none" stroke="#1C6EFF" stroke-width="2.5" stroke-dasharray="6,4" class="animate-flow" />
-                        </g>
-                        <!-- Canada Path -->
-                        <g x-show="configStep === 2 && gatewayConfigs[selectedGateway].selectedGroups.includes('ca')">
-                          <path :d="getSvgPath(selectedGateway, 'ca')" fill="none" stroke="#2d3748" stroke-width="1.5" />
-                          <path :d="getSvgPath(selectedGateway, 'ca')" fill="none" stroke="#1C6EFF" stroke-width="2.5" stroke-dasharray="6,4" class="animate-flow" />
-                        </g>
-                        <!-- Europe Path -->
-                        <g x-show="configStep === 2 && gatewayConfigs[selectedGateway].selectedGroups.includes('eu')">
-                          <path :d="getSvgPath(selectedGateway, 'eu')" fill="none" stroke="#2d3748" stroke-width="1.5" />
-                          <path :d="getSvgPath(selectedGateway, 'eu')" fill="none" stroke="#1C6EFF" stroke-width="2.5" stroke-dasharray="6,4" class="animate-flow" />
-                        </g>
-                        <!-- Singapore Path -->
-                        <g x-show="configStep === 2 && gatewayConfigs[selectedGateway].selectedGroups.includes('sg')">
-                          <path :d="getSvgPath(selectedGateway, 'sg')" fill="none" stroke="#2d3748" stroke-width="1.5" />
-                          <path :d="getSvgPath(selectedGateway, 'sg')" fill="none" stroke="#1C6EFF" stroke-width="2.5" stroke-dasharray="6,4" class="animate-flow" />
-                        </g>
-                        <!-- Hong Kong Path -->
-                        <g x-show="configStep === 2 && gatewayConfigs[selectedGateway].selectedGroups.includes('hk')">
-                          <path :d="getSvgPath(selectedGateway, 'hk')" fill="none" stroke="#2d3748" stroke-width="1.5" />
-                          <path :d="getSvgPath(selectedGateway, 'hk')" fill="none" stroke="#1C6EFF" stroke-width="2.5" stroke-dasharray="6,4" class="animate-flow" />
-                        </g>
-                        <!-- Domestic Mobile (Guangzhou) Path -->
-                        <g x-show="configStep === 2 && gatewayConfigs[selectedGateway].selectedGroups.includes('cn_mobile')">
-                          <path :d="getSvgPath(selectedGateway, 'cn_mobile')" fill="none" stroke="#2d3748" stroke-width="1.5" />
-                          <path :d="getSvgPath(selectedGateway, 'cn_mobile')" fill="none" stroke="#1C6EFF" stroke-width="2.5" stroke-dasharray="6,4" class="animate-flow" />
-                        </g>
-
-                        <!-- ================== INGRESS POP NODES (USA, Canada, Europe) ================== -->
-                        <!-- USA Node -->
-                        <g>
-                          <circle cx="50" cy="150" r="4" :fill="configStep === 2 && gatewayConfigs[selectedGateway].selectedGroups.includes('us') ? '#1C6EFF' : '#454C59'" />
-                          <circle cx="50" cy="150" r="10" fill="none" stroke="#1C6EFF" stroke-width="1.5" class="radar-ring" style="transform-origin: 50px 150px;" x-show="configStep === 2 && gatewayConfigs[selectedGateway].selectedGroups.includes('us')" />
-                          <text x="32" y="138" :fill="configStep === 2 && gatewayConfigs[selectedGateway].selectedGroups.includes('us') ? '#1C6EFF' : '#BEC3CC'" font-size="9" font-weight="semibold" font-family="PingFang SC">美国</text>
-                        </g>
-                        <!-- Canada Node -->
-                        <g>
-                          <circle cx="70" cy="120" r="4" :fill="configStep === 2 && gatewayConfigs[selectedGateway].selectedGroups.includes('ca') ? '#1C6EFF' : '#454C59'" />
-                          <circle cx="70" cy="120" r="10" fill="none" stroke="#1C6EFF" stroke-width="1.5" class="radar-ring" style="transform-origin: 70px 120px;" x-show="configStep === 2 && gatewayConfigs[selectedGateway].selectedGroups.includes('ca')" />
-                           <text x="52" y="108" :fill="configStep === 2 && gatewayConfigs[selectedGateway].selectedGroups.includes('ca') ? '#1C6EFF' : '#BEC3CC'" font-size="9" font-weight="semibold" font-family="PingFang SC">加拿大</text>
-                        </g>
-                        <!-- Europe Node -->
-                        <g>
-                          <circle cx="100" cy="80" r="4" :fill="configStep === 2 && gatewayConfigs[selectedGateway].selectedGroups.includes('eu') ? '#1C6EFF' : '#454C59'" />
-                          <circle cx="100" cy="80" r="10" fill="none" stroke="#1C6EFF" stroke-width="1.5" class="radar-ring" style="transform-origin: 100px 80px;" x-show="configStep === 2 && gatewayConfigs[selectedGateway].selectedGroups.includes('eu')" />
-                          <text x="82" y="68" :fill="configStep === 2 && gatewayConfigs[selectedGateway].selectedGroups.includes('eu') ? '#1C6EFF' : '#BEC3CC'" font-size="9" font-weight="semibold" font-family="PingFang SC">欧洲</text>
-                        </g>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <!-- 场景 1: 零信任访问加速 -->
+                  <div class="border rounded-sm p-4 cursor-pointer transition-all flex items-start gap-3 relative group"
+                       :class="selectedScenario === 'atrust' ? 'border-brand ring-1 ring-brand bg-[#F4F8FF]' : 'border-border hover:border-brand/50 hover:bg-bg-light'"
+                       @click="selectedScenario = 'atrust'">
+                    <div class="w-10 h-10 rounded-sm bg-brand/10 text-brand flex items-center justify-center flex-shrink-0">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                       </svg>
-                      
-                      <!-- 右上角性能指示标签 -->
-                      <div class="absolute right-3 top-3 bg-slate-950/80 border border-slate-800 text-[10px] text-slate-300 rounded p-2 font-mono space-y-1 z-20">
-                        <div x-text="'ACTIVE CORE: ' + gateways[selectedGateway].popCode"></div>
-                        <div class="flex items-center gap-1">
-                          <span>RTT DELAY:</span>
-                          <span class="text-green-400 font-semibold font-outfit" x-text="gateways[selectedGateway].rtt"></span>
-                        </div>
-                        <div class="flex items-center gap-1">
-                          <span>JITTER:</span>
-                          <span class="text-green-400 font-semibold font-outfit" x-text="gateways[selectedGateway].jitter"></span>
-                        </div>
-                      </div>
                     </div>
-
-                    <!-- 拓扑链路汇总卡片 -->
-                    <div class="border rounded-sm p-3 bg-bg-light space-y-2">
-                      <div class="text-[10px] font-semibold text-text-title uppercase select-none">实时拓扑分流链路摘要</div>
-                      <div class="flex items-center justify-between gap-1">
-                        
-                        <!-- 1. 前置省略项 (用户/终端 - 上车点) -->
-                        <div class="flex flex-col items-center bg-white border border-border p-2 rounded w-[50px] shadow-sm flex-shrink-0">
-                          <span class="text-[9px] text-text-mute mb-0.5">终端/上车</span>
-                          <span class="text-xs font-semibold text-text-mute">...</span>
-                        </div>
-
-                        <!-- 虚线连接 -->
-                        <div class="flex-1 flex flex-col items-center justify-center relative min-w-0">
-                          <div class="w-full flex items-center px-1">
-                            <div class="w-1 h-1 rounded-full bg-slate-300"></div>
-                            <div class="flex-1 h-[2px] bg-slate-200 border-dashed border-b"></div>
-                            <div class="w-1 h-1 rounded-full bg-slate-300"></div>
-                          </div>
-                        </div>
-
-                        <!-- 2. 下车点 (Egress POP Node) -->
-                        <div class="flex flex-col items-center bg-white border border-border p-2 rounded w-[95px] shadow-sm flex-shrink-0">
-                          <span class="text-[9px] text-text-mute mb-0.5">下车点 (POP)</span>
-                          <span class="text-xs font-semibold text-green-700 flex items-center gap-1 justify-center w-full">
-                            <span class="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span><span x-text="gateways[selectedGateway].source"></span>
-                          </span>
-                        </div>
-                        
-                        <!-- 骨干网隧道连接 -->
-                        <div class="flex-1 flex flex-col items-center justify-center relative min-w-0">
-                          <span class="text-[9px] font-outfit font-semibold text-brand truncate" x-text="(configStep === 2 ? gatewayConfigs[selectedGateway].bandwidth : bandwidthConfig) + ' Mbps'"></span>
-                          <div class="w-full flex items-center px-1">
-                            <div class="w-1 h-1 rounded-full bg-brand"></div>
-                            <div class="flex-1 h-[2px] bg-brand/50 border-dashed border-b"></div>
-                            <div class="w-1 h-1 rounded-full bg-brand"></div>
-                          </div>
-                          <span class="text-[9px] text-text-mute mt-0.5 truncate scale-90">骨干隧道</span>
-                        </div>
-
-                        <!-- 3. 所选代理网关 -->
-                        <div class="flex flex-col items-center bg-white border border-brand p-2 rounded w-[110px] shadow-sm flex-shrink-0">
-                          <span class="text-[9px] text-text-mute mb-0.5">所选代理网关</span>
-                          <span class="text-xs font-semibold text-brand truncate max-w-full text-center" x-text="gateways[selectedGateway].name"></span>
-                        </div>
-                        
-                        <!-- 内网路由连接 -->
-                        <div class="flex-1 flex flex-col items-center justify-center relative min-w-0">
-                          <div class="w-full flex items-center px-1">
-                            <div class="w-1 h-1 rounded-full bg-slate-400"></div>
-                            <div class="flex-1 h-[2px] bg-slate-400/50 border-dashed border-b"></div>
-                            <div class="w-1 h-1 rounded-full bg-slate-400"></div>
-                          </div>
-                          <span class="text-[9px] text-text-mute mt-0.5 truncate scale-90">内网路由</span>
-                        </div>
-
-                        <!-- 4. 关联应用 -->
-                        <div class="flex flex-col items-center bg-white border border-border p-2 rounded w-[75px] shadow-sm flex-shrink-0">
-                          <span class="text-[9px] text-text-mute mb-0.5">关联应用</span>
-                          <span class="text-xs font-semibold text-text-title font-outfit" x-text="gateways[selectedGateway].appCount + ' 个'"></span>
-                        </div>
-
+                    <div class="space-y-1 pr-8">
+                      <div class="flex items-center gap-2">
+                        <span class="text-sm font-semibold text-text-title">零信任访问加速</span>
+                        <span class="px-1.5 py-0.2 bg-gray-100 text-gray-500 rounded text-[10px]">aTrust</span>
                       </div>
+                      <div class="text-xs text-text-mute line-clamp-2">专为零信任网络优化，提升跨地域/跨境移动端 and 分支办公人员访问内部业务应用（如OA、CRM、代码仓库等）的安全接入体验，加速认证握手与内容加载。</div>
+                    </div>
+                    <div class="absolute right-3 top-3" x-show="selectedScenario === 'atrust'">
+                      <div class="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center text-[10px]">✓</div>
+                    </div>
+                  </div>
+
+                  <!-- 场景 2: 分组网加速 -->
+                  <div class="border rounded-sm p-4 cursor-pointer transition-all flex items-start gap-3 relative group"
+                       :class="selectedScenario === 'sdwan' ? 'border-brand ring-1 ring-brand bg-[#F4F8FF]' : 'border-border hover:border-brand/50 hover:bg-bg-light'"
+                       @click="selectedScenario = 'sdwan'">
+                    <div class="w-10 h-10 rounded-sm bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                      </svg>
+                    </div>
+                    <div class="space-y-1 pr-8">
+                      <div class="flex items-center gap-2">
+                        <span class="text-sm font-semibold text-text-title">分支组网加速</span>
+                        <span class="px-1.5 py-0.2 bg-gray-100 text-gray-500 rounded text-[10px]">AF / SD-WAN</span>
+                      </div>
+                      <div class="text-xs text-text-mute line-clamp-2">连接全球跨地域分支机构与企业总部、混合云数据中心，构建高性能、高安全性的骨干网段，实现跨境数据资源的高效安全共享。</div>
+                    </div>
+                    <div class="absolute right-3 top-3" x-show="selectedScenario === 'sdwan'">
+                      <div class="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center text-[10px]">✓</div>
+                    </div>
+                  </div>
+
+                  <!-- 场景 3: SaaS应用加速 -->
+                  <div class="border rounded-sm p-4 cursor-pointer transition-all flex items-start gap-3 relative group"
+                       :class="selectedScenario === 'saas' ? 'border-brand ring-1 ring-brand bg-[#F4F8FF]' : 'border-border hover:border-brand/50 hover:bg-bg-light'"
+                       @click="selectedScenario = 'saas'">
+                    <div class="w-10 h-10 rounded-sm bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h7l2 2 2-2h7a2 2 0 002-2V5a2 2 0 00-2-2H4z"/>
+                      </svg>
+                    </div>
+                    <div class="space-y-1 pr-8">
+                      <div class="flex items-center gap-2">
+                        <span class="text-sm font-semibold text-text-title">SaaS 应用加速</span>
+                      </div>
+                      <div class="text-xs text-text-mute line-clamp-2">针对企业常用的跨国 SaaS 办公软件（如 Microsoft 365, Salesforce, Zoom 等）进行智能链路优化，解决海外数据源加载慢、音视频丢包卡顿问题。</div>
+                    </div>
+                    <div class="absolute right-3 top-3" x-show="selectedScenario === 'saas'">
+                      <div class="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center text-[10px]">✓</div>
+                    </div>
+                  </div>
+
+                  <!-- 场景 4: 自定义IP/域名加速 -->
+                  <div class="border rounded-sm p-4 cursor-pointer transition-all flex items-start gap-3 relative group"
+                       :class="selectedScenario === 'custom' ? 'border-brand ring-1 ring-brand bg-[#F4F8FF]' : 'border-border hover:border-brand/50 hover:bg-bg-light'"
+                       @click="selectedScenario = 'custom'">
+                    <div class="w-10 h-10 rounded-sm bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                      </svg>
+                    </div>
+                    <div class="space-y-1 pr-8">
+                      <div class="flex items-center gap-2">
+                        <span class="text-sm font-semibold text-text-title">自定义 IP/域名加速</span>
+                      </div>
+                      <div class="text-xs text-text-mute line-clamp-2">按需定制专属 of 专线路由。您只需填写指定的公网/私网 IP 地址段或域名后缀，骨干网将根据流量特征实现跨地域无损传输。</div>
+                    </div>
+                    <div class="absolute right-3 top-3" x-show="selectedScenario === 'custom'">
+                      <div class="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center text-[10px]">✓</div>
                     </div>
                   </div>
                 </div>
-
               </div>
 
-              <!-- 全局统一底部动作栏 (跨越整个白色大卡片底部) -->
-              <div class="h-14 bg-white border-t border-border flex items-center px-5 gap-3 flex-shrink-0">
-                <!-- 下一步 / 下发配置 / 查看运行监控 (主按钮在左) -->
-                <button class="sd-btn sd-btn-primary w-[100px] text-white"
-                        x-show="configStep === 1"
-                        @click="configStep = 2">
-                  下一步
-                </button>
-                <button class="sd-btn sd-btn-primary w-[100px] text-white"
-                        x-show="configStep === 2"
-                        @click="configStep = 3; startDeployment();">
-                  下发配置
-                </button>
-                <button class="sd-btn sd-btn-primary w-[120px] text-white ai-pulsing-button"
-                        x-show="configStep === 3 && deploymentProgress === 100"
-                        @click="location.href = 'atrust_global_acceleration_deployed.html'">
-                  查看运行监控
-                </button>
+              <!-- 操作与学习区 -->
+              <div style="height:48px;"></div>
+              <div class="flex items-center justify-between px-1" style="position:relative;">
 
-                <!-- 取消 / 上一步 (次按钮在右) -->
-                <button class="sd-btn sd-btn-default w-[80px]"
-                        x-show="configStep === 1 || configStep === 3"
-                        @click="location.href = 'atrust_global_acceleration.html'">
-                  取消
-                </button>
-                <button class="sd-btn sd-btn-default w-[80px]"
-                        x-show="configStep === 2"
-                        @click="configStep = 1">
-                  上一步
-                </button>
+                <!-- 左侧：学习配置原理入口 + 气泡 -->
+                <div style="position:relative; display:inline-block;">
+
+                  <!-- 气泡引导：向下弹出，pointer-events 不干扰按钮 -->
+                  <div x-show="showLearnBubble"
+                       x-transition:enter="transition ease-out duration-200"
+                       x-transition:enter-start="opacity-0 translate-y-1"
+                       x-transition:enter-end="opacity-100 translate-y-0"
+                       x-transition:leave="transition ease-in duration-150"
+                       x-transition:leave-start="opacity-100"
+                       x-transition:leave-end="opacity-0"
+                       style="position:absolute; top:calc(100% + 10px); left:0; width:260px; background:#fff; border:1px solid #e5e7eb; border-radius:6px; box-shadow:0 4px 16px rgba(0,0,0,.12); padding:12px; z-index:20;">
+                    <!-- 向上的小箭头 -->
+                    <div style="position:absolute; top:-6px; left:20px; width:10px; height:10px; background:#fff; border-left:1px solid #e5e7eb; border-top:1px solid #e5e7eb; transform:rotate(45deg);"></div>
+                    <div class="flex items-start justify-between gap-2">
+                      <p class="text-xs text-text-mute leading-relaxed">如果您是首次配置，建议先学习配置原理；若您对 GA 加速很熟悉请忽略</p>
+                      <button @click.stop="showLearnBubble = false"
+                              class="flex-shrink-0 text-text-mute opacity-60 hover:opacity-100 focus:outline-none">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- 学习配置原理按钮 -->
+                  <button onclick="window.dispatchEvent(new CustomEvent('open-learn-modal'))"
+                          class="flex items-center gap-1 text-brand text-xs font-normal focus:outline-none hover:opacity-80 transition-opacity">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14v7"></path>
+                    </svg>
+                    <span>学习配置原理</span>
+                  </button>
+                </div>
+
+                <!-- 中间：创建加速按钮 -->
+                <div style="position:absolute; left:50%; transform:translateX(-50%);">
+                  <button class="sd-btn sd-btn-primary flex items-center justify-center shadow-md hover:scale-[1.02] active:scale-[0.98] transition-transform text-white"
+                          style="width: 240px !important; height: 44px !important; font-size: 14px !important; font-weight: bold !important;"
+                          @click="const routes = { 'atrust': 'GA-sdp-config.html', 'sdwan': 'GA-sdwan-config.html', 'saas': 'GA-saas-config.html', 'custom': 'GA-custom-config.html' }; location.href = routes[selectedScenario]">
+                    创建加速
+                  </button>
+                </div>
+
+                <!-- 右侧占位 -->
+                <div style="width:160px;"></div>
               </div>
 
             </div>
@@ -2081,7 +1460,234 @@
       </main>
     </div>
 
+    </div>
+
   </div>
+
+
+
+<!-- ======================================================
+  GA 原理学习弹窗：放在 body 外避免 overflow:hidden 裁剪
+======================================================= -->
+<div id="ga-learn-modal"
+     style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;padding:20px;">
+
+  <!-- Backdrop -->
+  <div style="position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);"
+       onclick="gaModal.hide()"></div>
+
+  <!-- Panel -->
+  <div
+       id="ga-learn-panel" style="position:relative;background:#fff;border-radius:10px;box-shadow:0 24px 64px rgba(0,0,0,.22);width:100%;max-width:920px;max-height:88vh;display:flex;flex-direction:column;z-index:1;overflow:hidden;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid #f0f2f5;background:linear-gradient(135deg,#f0f7ff 0%,#fff 60%);flex-shrink:0;">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:#1d2129;">
+          <svg style="width:20px;height:20px;color:#1C6EFF;flex-shrink:0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14v7"/>
+          </svg>
+          全球加速 (GA) 配置原理与名词学习
+        </div>
+        <p style="font-size:12px;color:#86909c;margin:5px 0 0;">由 SASE 组网专家为您解读，助您 3 分钟理清配置脉络</p>
+      </div>
+      <button onclick="document.getElementById('ga-learn-modal').style.display='none'"
+              style="background:transparent;border:none;cursor:pointer;padding:6px;border-radius:6px;display:flex;align-items:center;color:#86909c;"
+              onmouseover="this.style.background='#f2f3f5'" onmouseout="this.style.background='transparent'">
+        <svg style="width:20px;height:20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div style="flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:20px;">
+
+      <!-- Section 1: Flow Diagram -->
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#1d2129;margin-bottom:12px;">
+          <span style="width:4px;height:14px;background:#1C6EFF;border-radius:4px;display:inline-block;"></span>
+          1. 全球加速业务流向示意图
+        </div>
+
+        <!-- Expert tip (moved above diagram) -->
+        <div style="margin-bottom:16px;background:#EBF3FF;border:1px solid #c0d8ff;border-radius:6px;padding:12px 16px;display:flex;align-items:flex-start;gap:10px;">
+          <svg style="width:15px;height:15px;color:#1C6EFF;flex-shrink:0;margin-top:1px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+          <p style="font-size:11px;color:#1C5FCC;line-height:1.75;margin:0;">
+            <strong>SASE 网络专家的通俗比喻：</strong>全球加速访问内部应用，就像乘坐"高速铁路"。<strong>加速区域</strong>是员工在哪个城市的高铁站<strong>上车</strong>；<strong>源站区域</strong>是应用服务器所在城市的高铁站<strong>下车</strong>；<strong>源站对象</strong>则是下车后要拜访的<strong>具体门牌号</strong>。系统通过专线骨干网承载流量，省去公网长途颠簸，实现秒级访问！
+          </p>
+        </div>
+
+        <div style="background:#f7f8fa;border:1px solid #e5e7eb;border-radius:8px;padding:20px;position:relative;overflow:hidden;">
+          <!-- dot grid bg -->
+          <div style="position:absolute;inset:0;background-image:radial-gradient(#d4d7de 1px,transparent 1px);background-size:18px 18px;opacity:.5;pointer-events:none;"></div>
+
+          <div style="position:relative;display:flex;align-items:stretch;gap:0;">
+
+            <!-- Box 1: 加速区域 -->
+            <div style="flex:1;min-width:0;background:#fff;border:1.5px solid #e5e7eb;border-radius:6px;padding:14px;cursor:pointer;transition:border-color .2s,box-shadow .2s;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-size:10px;font-weight:600;color:#1C6EFF;background:#EBF3FF;padding:2px 7px;border-radius:3px;">就近上车点</span>
+                <svg style="width:17px;height:17px;color:#1C6EFF;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </div>
+              <div style="font-size:13px;font-weight:600;color:#1d2129;margin-bottom:5px;">加速区域</div>
+              <div style="font-size:11px;color:#86909c;line-height:1.65;">终端用户或分支网络所在的地理区域，部署有就近的 SASE POP 加速网关。</div>
+              <div style="margin-top:10px;padding-top:7px;border-top:1px dashed #e5e7eb;display:flex;align-items:center;justify-content:space-between;font-size:10px;color:#86909c;">
+                <span>分支终端 ➜ POP网关</span><span style="color:#1C6EFF;font-weight:600;">就近接入</span>
+              </div>
+            </div>
+
+            <!-- Arrow 1 -->
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 10px;flex-shrink:0;min-width:90px;">
+              <span style="font-size:9px;font-weight:600;color:#1C6EFF;background:#EBF3FF;padding:2px 7px;border-radius:3px;margin-bottom:5px;white-space:nowrap;">SASE 骨干网</span>
+              <svg width="68" height="10" viewBox="0 0 68 10" fill="none" style="animation:ga-pulse 1.4s ease-in-out infinite;">
+                <line x1="0" y1="5" x2="62" y2="5" stroke="#1C6EFF" stroke-width="2" stroke-dasharray="5,4"/>
+                <polyline points="58,2 64,5 58,8" fill="none" stroke="#1C6EFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span style="font-size:9px;color:#86909c;margin-top:5px;">加密专线</span>
+            </div>
+
+            <!-- Box 2: 源站区域 -->
+            <div style="flex:1;min-width:0;background:#fff;border:1.5px solid #e5e7eb;border-radius:6px;padding:14px;cursor:pointer;transition:border-color .2s,box-shadow .2s;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-size:10px;font-weight:600;color:#4e5fe0;background:#eef0fd;padding:2px 7px;border-radius:3px;">流量出口</span>
+                <svg style="width:17px;height:17px;color:#4e5fe0;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+              </div>
+              <div style="font-size:13px;font-weight:600;color:#1d2129;margin-bottom:5px;">源站区域</div>
+              <div style="font-size:11px;color:#86909c;line-height:1.65;">应用服务器所在的物理位置或网络出口（如深圳总部机房、腾讯云 VPC）。</div>
+              <div style="margin-top:10px;padding-top:7px;border-top:1px dashed #e5e7eb;display:flex;align-items:center;justify-content:space-between;font-size:10px;color:#86909c;">
+                <span>骨干网出口 ➜ 局域网</span><span style="color:#4e5fe0;font-weight:600;">安全直连</span>
+              </div>
+            </div>
+
+            <!-- Arrow 2 -->
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 10px;flex-shrink:0;min-width:90px;">
+              <span style="font-size:9px;font-weight:600;color:#7c3aed;background:#f5f3ff;padding:2px 7px;border-radius:3px;margin-bottom:5px;white-space:nowrap;">安全对接</span>
+              <svg width="68" height="10" viewBox="0 0 68 10" fill="none">
+                <line x1="0" y1="5" x2="62" y2="5" stroke="#4e5fe0" stroke-width="1.5"/>
+                <polyline points="58,2 64,5 58,8" fill="none" stroke="#4e5fe0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span style="font-size:9px;color:#86909c;margin-top:5px;">零信任安全</span>
+            </div>
+
+            <!-- Box 3: 源站对象 -->
+            <div style="flex:1;min-width:0;background:#fff;border:1.5px solid #e5e7eb;border-radius:6px;padding:14px;cursor:pointer;transition:border-color .2s,box-shadow .2s;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-size:10px;font-weight:600;color:#7c3aed;background:#f5f3ff;padding:2px 7px;border-radius:3px;">目的地</span>
+                <svg style="width:17px;height:17px;color:#7c3aed;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              </div>
+              <div style="font-size:13px;font-weight:600;color:#1d2129;margin-bottom:5px;">源站对象</div>
+              <div style="font-size:11px;color:#86909c;line-height:1.65;">最终要访问的具体业务系统目标，可精细定义到具体的 IP 或域名。</div>
+              <div style="margin-top:10px;padding-top:7px;border-top:1px dashed #e5e7eb;display:flex;align-items:center;justify-content:space-between;font-size:10px;color:#86909c;">
+                <span>精确 IP / 域名 / 应用</span><span style="color:#7c3aed;font-weight:600;">最小化暴露</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Concept Cards -->
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#1d2129;margin-bottom:12px;">
+          <span style="width:4px;height:14px;background:#1C6EFF;border-radius:4px;display:inline-block;"></span>
+          2. 概念名词解释
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+
+          <!-- Card 1: 加速区域 -->
+          <div style="border:1.5px solid #e5e7eb;border-radius:6px;padding:16px;cursor:pointer;transition:all .2s;background:#fff;display:flex;flex-direction:column;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="width:22px;height:22px;border-radius:50%;background:#EBF3FF;color:#1C6EFF;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">01</span>
+              <span style="font-size:12px;font-weight:600;color:#1d2129;">加速区域 (Acceleration Area)</span>
+            </div>
+            <div style="font-size:11px;color:#4e5969;line-height:1.75;">
+              <p style="margin:0 0 8px;"><strong style="color:#1d2129;">标准解释：</strong>分支机构或移动端员工所在的网络地理区域。配置后，该地区流量将从就近的 SASE POP 边缘节点上车进入加速干线。</p>
+              <div style="background:#f7f8fa;border:1px solid #e5e7eb;border-radius:4px;padding:8px;">
+                <span style="color:#1C6EFF;font-weight:600;">💡 通俗白话：</span>谁需要加速、他们在哪里？比如国外分支就开通"亚太"或"欧美"区域，让员工在最近的高铁站上车。
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Card 2: 源站区域 -->
+          <div style="border:1.5px solid #e5e7eb;border-radius:6px;padding:16px;cursor:pointer;transition:all .2s;background:#fff;display:flex;flex-direction:column;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="width:22px;height:22px;border-radius:50%;background:#eef0fd;color:#4e5fe0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">02</span>
+              <span style="font-size:12px;font-weight:600;color:#1d2129;">源站区域 (Origin Area)</span>
+            </div>
+            <div style="font-size:11px;color:#4e5969;line-height:1.75;">
+              <p style="margin:0 0 8px;"><strong style="color:#1d2129;">标准解释：</strong>后端业务服务器所在的物理或逻辑网络区域，是 SASE 骨干加速网段与客户局域网 / 云 VPC 的安全对接点。</p>
+              <div style="background:#f7f8fa;border:1px solid #e5e7eb;border-radius:4px;padding:8px;">
+                <span style="color:#4e5fe0;font-weight:600;">💡 通俗白话：</span>应用服务器在哪个机房。比如总部服务器在广州，广州就是"源站区域"，专线从这里把流量送出。
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Card 3: 源站对象 -->
+          <div style="border:1.5px solid #e5e7eb;border-radius:6px;padding:16px;cursor:pointer;transition:all .2s;background:#fff;display:flex;flex-direction:column;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+              <span style="width:22px;height:22px;border-radius:50%;background:#f5f3ff;color:#7c3aed;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">03</span>
+              <span style="font-size:12px;font-weight:600;color:#1d2129;">源站对象 (Origin Object)</span>
+            </div>
+            <div style="font-size:11px;color:#4e5969;line-height:1.75;">
+              <p style="margin:0 0 8px;"><strong style="color:#1d2129;">标准解释：</strong>最终要访问并进行加速的具体应用实体。可以是个别公网 / 私网 IP 地址段、特定域名或 SaaS 应用。</p>
+              <div style="background:#f7f8fa;border:1px solid #e5e7eb;border-radius:4px;padding:8px;">
+                <span style="color:#7c3aed;font-weight:600;">💡 通俗白话：</span>目标应用的精准门牌号。如内部 OA 的 IP <code style="background:#eee;padding:1px 4px;border-radius:3px;font-size:10px;">10.12.1.80</code>，或 <code style="background:#eee;padding:1px 4px;border-radius:3px;font-size:10px;">jira.company.com</code>。
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:14px 24px;border-top:1px solid #f0f2f5;background:#fafafa;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div></div>
+      <button onclick="document.getElementById('ga-learn-modal').style.display='none'"
+              style="background:#1C6EFF;color:#fff;border:none;border-radius:6px;padding:0 24px;height:36px;font-size:13px;font-weight:500;cursor:pointer;letter-spacing:.3px;transition:opacity .15s;"
+              onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        我懂了，开始配置
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<style>
+  @keyframes ga-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .45; }
+  }
+</style>
+
+
+
+<script>
+var gaModal = {
+  show: function() {
+    var el = document.getElementById('ga-learn-modal');
+    el.style.display = 'flex';
+    setTimeout(function() {
+      var panel = document.getElementById('ga-learn-panel');
+      if (panel) { panel.style.opacity = '1'; panel.style.transform = 'scale(1) translateY(0)'; }
+    }, 10);
+  },
+  hide: function() {
+    var el = document.getElementById('ga-learn-modal');
+    el.style.display = 'none';
+  }
+};
+window.addEventListener('open-learn-modal', function() { gaModal.show(); });
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') gaModal.hide(); });
+</script>
+
 
 </body>
 

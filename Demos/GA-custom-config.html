@@ -12,7 +12,7 @@
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>aTrust 零信任控制中心 - 导航框架模版</title>
+  <title>aTrust 零信任控制中心 - 自定义IP/域名加速配置</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -40,6 +40,12 @@
           },
           spacing: {
             "4.5": "1.125rem"
+          },
+          keyframes: {
+            flowRight: {
+              '0%': { transform: 'translateX(-100%)' },
+              '100%': { transform: 'translateX(300%)' }
+            }
           }
         }
       }
@@ -58,6 +64,15 @@
 
   <!-- 引入 SASE 全球加速 Alpine 状态与逻辑 -->
   <script src="assets/atrust-data.js"></script>
+  <style>
+    @keyframes flowRight {
+      0% { transform: translateX(-150%); }
+      100% { transform: translateX(250%); }
+    }
+    .animate-flow-fast {
+      animation: flowRight 0.8s linear infinite;
+    }
+  </style>
 </head>
 
 <body class="bg-bg-light text-text font-sans overflow-hidden w-screen h-screen">
@@ -82,7 +97,159 @@
     用途：维护顶部导航、左侧菜单展开项、当前叶子菜单、全局抽屉开关等 Alpine 状态。
     排障提示：如导航切换、菜单高亮、抽屉打开异常，优先检查此 x-data。
   ======================================================= -->
-  <div class="flex flex-col w-full h-full" x-data="Object.assign(globalAccelerationApp(), { pageMode: 'initial' })">
+  <div class="flex flex-col w-full h-full" x-data="Object.assign(globalAccelerationApp(), { pageMode: 'custom-config', configStep: 1, exclusiveIp: false, showAdvancedConfig: false, showLinkPreviewDrawer: false, showExampleModal: false, accelerationSubtype: 'tunnel', step1TunnelSource: '', step1TunnelLocation: '', step1WebSource: '', step1WebLocation: '', step1AuthSource: 'https://www.atrust.sangfor.com:8888', step1AuthLocation: '', step1RuleName: '', step1Description: '', step1Ingress: '', step1Egress: '', step1SourceObj: '' })">
+
+    <div x-show="showPublishToast"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 -translate-y-3"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 -translate-y-3"
+         class="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-white border border-green-200 shadow-xl rounded px-4 py-3 flex items-center gap-3"
+         x-cloak>
+      <div class="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-sm font-bold">✓</div>
+      <div class="space-y-0.5">
+        <div class="text-xs font-semibold text-slate-800">全球加速策略发布成功</div>
+        <div class="text-[10px] text-slate-500">配置已在后台同步至 SASE 全球骨干加速节点。</div>
+      </div>
+    </div>
+
+    <div x-show="showLinkPreviewDrawer" x-transition.opacity class="fixed inset-0 z-50 bg-slate-900/30" @click="showLinkPreviewDrawer = false" x-cloak></div>
+    <aside x-show="showLinkPreviewDrawer"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="translate-x-full"
+           x-transition:enter-end="translate-x-0"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="translate-x-0"
+           x-transition:leave-end="translate-x-full"
+           class="fixed right-0 top-0 bottom-0 z-50 w-[560px] bg-white shadow-2xl border-l border-slate-200 flex flex-col"
+           x-cloak>
+      <div class="h-14 px-4 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
+        <div>
+          <div class="text-sm font-semibold text-text-title">全部加速链路</div>
+          <div class="text-[10px] text-text-mute">按代理网关展示本次配置的上车点、下车点与带宽。</div>
+        </div>
+        <button @click="showLinkPreviewDrawer = false" class="w-7 h-7 rounded hover:bg-slate-100 text-slate-400 flex items-center justify-center">×</button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+        <template x-for="gwKey in activeGateways" :key="'drawer-link-' + gwKey">
+          <div class="border border-slate-200 rounded bg-white p-3 space-y-3 shadow-sm">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-xs font-semibold text-text-title" x-text="gateways[gwKey].name"></div>
+                <div class="text-[10px] text-text-mute font-outfit" x-text="gateways[gwKey].ip"></div>
+              </div>
+              <div class="text-right">
+                <div class="text-[10px] text-text-mute">分配带宽</div>
+                <div class="text-xs font-outfit font-semibold text-brand" x-text="gatewayConfigs[gwKey].bandwidth + ' Mbps'"></div>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <template x-for="gKey in gatewayConfigs[gwKey].selectedGroups" :key="gKey">
+                <div class="grid grid-cols-[1fr_58px_1fr_58px_1fr] items-center gap-2 text-[10px]">
+                  <div class="h-8 bg-slate-50 border border-slate-100 rounded flex items-center justify-center text-slate-600" x-text="accelerationGroups[gKey].name"></div>
+                  <div class="h-px bg-slate-300 relative"><span class="absolute -right-0.5 -top-1 w-2 h-2 border-t border-r border-slate-300 rotate-45"></span></div>
+                  <div class="h-8 bg-emerald-50 border border-emerald-100 rounded flex items-center justify-center font-semibold text-emerald-700" x-text="accelerationGroups[gKey].pop"></div>
+                  <div class="h-px bg-brand/60 relative"><span class="absolute -right-0.5 -top-1 w-2 h-2 border-t border-r border-brand/60 rotate-45"></span></div>
+                  <div class="h-8 bg-blue-50 border border-blue-100 rounded flex items-center justify-center font-semibold text-brand truncate px-2" x-text="gateways[gwKey].source + ' → ' + gateways[gwKey].name"></div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+    </aside>
+
+    <!-- 查看示例 Modal -->
+    <div x-show="showExampleModal" class="fixed inset-0 z-50 flex items-center justify-center" x-cloak>
+      <!-- 背景遮罩 -->
+      <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="showExampleModal = false"></div>
+      
+      <!-- 弹窗主体 -->
+      <div class="relative bg-white rounded-xl shadow-2xl border border-slate-200 w-[640px] max-w-full overflow-hidden"
+           x-show="showExampleModal"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 scale-95"
+           x-transition:enter-end="opacity-100 scale-100"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100 scale-100"
+           x-transition:leave-end="opacity-0 scale-95">
+        <!-- 头部 -->
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-slate-800 flex items-center gap-2">
+            <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            同步显示位置示例
+          </h3>
+          <button @click="showExampleModal = false" class="text-slate-400 hover:text-slate-600 text-lg font-medium p-1">×</button>
+        </div>
+        <!-- 内容 -->
+        <div class="p-6 bg-slate-50 space-y-4">
+          <p class="text-xs text-slate-600 leading-relaxed">
+            加速策略保存后，系统将自动分配专有加速 IP。您可以在以下路径查看和编辑对应的加速 IP 信息：
+          </p>
+          <div class="bg-slate-100 p-2.5 rounded border border-slate-200 font-mono text-[11px] text-slate-700 flex items-center gap-1.5">
+            <span class="text-brand">系统管理</span>
+            <span class="text-slate-400">/</span>
+            <span class="text-brand">代理网关管理</span>
+            <span class="text-slate-400">/</span>
+            <span class="text-slate-800">[对应网关]</span>
+            <span class="text-slate-400">/</span>
+            <span class="text-slate-600">编辑</span>
+          </div>
+          <!-- 示意图容器 -->
+          <div class="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm flex flex-col">
+            <!-- 模拟左侧树 -->
+            <div class="flex h-[240px] text-xs">
+              <div class="w-1/3 border-r border-slate-100 bg-slate-50/50 p-3 space-y-2">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">网关区域</div>
+                <div class="p-1.5 rounded bg-brand/5 border border-brand/10 text-brand font-medium flex items-center justify-between">
+                  <span>上海办公区域</span>
+                  <span class="text-[9px] bg-brand text-white px-1 rounded">已加速</span>
+                </div>
+                <div class="p-1.5 text-slate-600">北京办公区域</div>
+                <div class="p-1.5 text-slate-600">海外办公区域</div>
+              </div>
+              <!-- 模拟右侧表单 -->
+              <div class="flex-1 p-4 space-y-3">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">区域加速配置详情</div>
+                <div class="space-y-2.5">
+                  <div class="grid grid-cols-3 gap-2 items-center">
+                    <span class="text-slate-500 text-[11px]">上车点PoP:</span>
+                    <span class="text-slate-800 font-medium col-span-2">深圳 PoP</span>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2 items-center">
+                    <span class="text-slate-500 text-[11px]">专网带宽:</span>
+                    <span class="text-slate-800 font-medium col-span-2">15 Mbps</span>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2 items-start">
+                    <span class="text-slate-500 text-[11px] mt-0.5">分配加速IP:</span>
+                    <div class="col-span-2 space-y-1">
+                      <div class="px-2 py-1 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded text-[11px] font-mono flex items-center justify-between">
+                        <span>10.44.23.1</span>
+                        <span class="text-[9px] text-emerald-600 uppercase font-bold">专线承载</span>
+                      </div>
+                      <div class="px-2 py-0.5 text-slate-400 text-[10px]">
+                        * 对应源站 IP：10.23.22.4
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- 底部 -->
+        <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end">
+          <button @click="showExampleModal = false" class="h-8 px-4 rounded text-xs bg-brand text-white font-medium hover:bg-brand-hover transition-colors">
+            我知道了
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- ======================================================
       Header / 顶部导航栏，固定高度 56px
@@ -1183,231 +1350,45 @@
         </div>
       </aside>
 
+
       <!-- ======================================================
         Main Workspace / 右侧主工作区
+        场景：自定义 IP/域名加速配置页
+        TODO: 在此区域填充 Custom 场景的配置内容
       ======================================================= -->
-      <main class="flex-1 flex flex-col min-w-0 bg-bg-base overflow-hidden">
-        
-        <!-- Breadcrumb / 面包屑导航 -->
-        <div class="h-[40px] px-6 border-b border-bg-line bg-white flex items-center justify-between flex-shrink-0 text-xs">
-          <div class="flex items-center gap-1.5 text-text-mute">
-            <span>全球安全互联</span>
-            <span class="text-text-mute opacity-60">/</span>
-            <span class="text-text-title">全球加速</span>
-            <template x-if="pageMode === 'config'">
-              <div class="flex items-center gap-1.5">
-                <span class="text-text-mute opacity-60">/</span>
-                <span class="text-text-mute">加速配置</span>
-                <span class="text-text-mute opacity-60">/</span>
-                <span class="text-text-title">新建加速策略</span>
-              </div>
-            </template>
-            <template x-if="pageMode === 'deployed'">
-              <div class="flex items-center gap-1.5">
-                <span class="text-text-mute opacity-60">/</span>
-                <span class="text-text-title">状态监控</span>
-              </div>
-            </template>
-          </div>
-          <!-- 右侧面包屑操作 -->
-          <div class="flex items-center gap-3" x-show="pageMode !== 'initial'">
-            <button class="text-brand hover:underline font-medium" @click="location.href = 'atrust_global_acceleration.html'">返回首页</button>
-          </div>
-        </div>
+      <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-white">
 
-        <!-- Scrollable content area / 滚动内容区域 -->
-        <div class="flex-1 overflow-y-auto p-6 flex flex-col min-h-0 space-y-4" x-show="activeLeaf === 'm_1_2_1'">
-          <div x-show="pageMode === 'initial'" class="bg-white rounded-sm border border-border shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-4 space-y-0" x-cloak>
-            
-              <!-- 1. 已开通的加速资源面板 -->
-              <div>
-                <div class="flex items-center gap-2 mb-4">
-                  <span class="text-sm font-semibold text-text-title">已开通的加速资源</span>
-                  <span class="text-xs text-text-mute cursor-pointer" title="展示当前订阅已分配 the 专属网络加速带宽资源池">❓</span>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                  <!-- 大陆卡片 -->
-                  <div class="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-sm p-4 hover:shadow-md transition-shadow relative overflow-hidden group">
-                    <div class="absolute right-0 bottom-0 translate-x-3 translate-y-3 opacity-10 group-hover:scale-110 transition-transform">
-                      <svg class="w-16 h-16 text-brand" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-                    </div>
-                    <div class="text-xs text-text-mute mb-1">中国大陆</div>
-                    <div class="flex items-baseline gap-1">
-                      <span class="text-2xl font-bold font-outfit text-brand">40</span>
-                      <span class="text-xs text-text-mute">Mbps</span>
-                    </div>
-                    <div class="text-[11px] text-text-mute mt-2">到期时间: 2026-12-09</div>
-                  </div>
-
-                  <!-- 亚太卡片 -->
-                  <div class="bg-gradient-to-br from-blue-50/50 to-white border border-blue-100/50 rounded-sm p-4 hover:shadow-md transition-shadow relative overflow-hidden group">
-                    <div class="text-xs text-text-mute mb-1">亚太地区</div>
-                    <div class="flex items-baseline gap-1">
-                      <span class="text-2xl font-bold font-outfit text-text-title">40</span>
-                      <span class="text-xs text-text-mute">Mbps</span>
-                    </div>
-                    <div class="text-[11px] text-text-mute mt-2">到期时间: 2026-12-09</div>
-                  </div>
-
-                  <!-- 欧美卡片 -->
-                  <div class="bg-gradient-to-br from-blue-50/50 to-white border border-blue-100/50 rounded-sm p-4 hover:shadow-md transition-shadow relative overflow-hidden group">
-                    <div class="text-xs text-text-mute mb-1">欧美地区</div>
-                    <div class="flex items-baseline gap-1">
-                      <span class="text-2xl font-bold font-outfit text-text-title">60</span>
-                      <span class="text-xs text-text-mute">Mbps</span>
-                    </div>
-                    <div class="text-[11px] text-text-mute mt-2">到期时间: 2026-12-09</div>
-                  </div>
-
-                  <!-- 其他地区卡片 -->
-                  <div class="bg-gradient-to-br from-blue-50/50 to-white border border-blue-100/50 rounded-sm p-4 hover:shadow-md transition-shadow relative overflow-hidden group">
-                    <div class="text-xs text-text-mute mb-1">其他地区</div>
-                    <div class="flex items-baseline gap-1">
-                      <span class="text-2xl font-bold font-outfit text-text-title">60</span>
-                      <span class="text-xs text-text-mute">Mbps</span>
-                    </div>
-                    <div class="text-[11px] text-text-mute mt-2">到期时间: 2026-12-09</div>
-                  </div>
-
-                  <!-- 独享IP数卡片 -->
-                  <div class="bg-gradient-to-br from-blue-50/50 to-white border border-blue-100/50 rounded-sm p-4 hover:shadow-md transition-shadow relative overflow-hidden group">
-                    <div class="text-xs text-text-mute mb-1">独享固定 IP 数</div>
-                    <div class="flex items-baseline gap-1">
-                      <span class="text-2xl font-bold font-outfit text-text-title">3</span>
-                      <span class="text-xs text-text-mute ml-1">个</span>
-                      <span class="text-xs text-green-600 font-semibold ml-2 font-outfit">↑</span>
-                    </div>
-                    <div class="text-[11px] text-text-mute mt-2">已分配 0 个 / 剩余 3 个</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 两部分间隔距离保有 48px -->
-              <div style="height: 48px;"></div>
-
-              <!-- 2. 选择加速场景区域 -->
-              <div>
-                <div class="text-sm font-semibold text-text-title mb-4">选择加速场景</div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <!-- 场景 1: 零信任访问加速 -->
-                  <div class="border rounded-sm p-4 cursor-pointer transition-all flex items-start gap-3 relative group"
-                       :class="selectedScenario === 'atrust' ? 'border-brand ring-1 ring-brand bg-[#F4F8FF]' : 'border-border hover:border-brand/50 hover:bg-bg-light'"
-                       @click="selectedScenario = 'atrust'">
-                    <div class="w-10 h-10 rounded-sm bg-brand/10 text-brand flex items-center justify-center flex-shrink-0">
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                      </svg>
-                    </div>
-                    <div class="space-y-1 pr-8">
-                      <div class="flex items-center gap-2">
-                        <span class="text-sm font-semibold text-text-title">零信任访问加速</span>
-                        <span class="px-1.5 py-0.2 bg-gray-100 text-gray-500 rounded text-[10px]">aTrust</span>
-                      </div>
-                      <div class="text-xs text-text-mute line-clamp-2">专为零信任网络优化，提升跨地域/跨境移动端 and 分支办公人员访问内部业务应用（如OA、CRM、代码仓库等）的安全接入体验，加速认证握手与内容加载。</div>
-                    </div>
-                    <div class="absolute right-3 top-3" x-show="selectedScenario === 'atrust'">
-                      <div class="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center text-[10px]">✓</div>
-                    </div>
-                  </div>
-
-                  <!-- 场景 2: 分组网加速 -->
-                  <div class="border rounded-sm p-4 cursor-pointer transition-all flex items-start gap-3 relative group"
-                       :class="selectedScenario === 'sdwan' ? 'border-brand ring-1 ring-brand bg-[#F4F8FF]' : 'border-border hover:border-brand/50 hover:bg-bg-light'"
-                       @click="selectedScenario = 'sdwan'">
-                    <div class="w-10 h-10 rounded-sm bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                      </svg>
-                    </div>
-                    <div class="space-y-1 pr-8">
-                      <div class="flex items-center gap-2">
-                        <span class="text-sm font-semibold text-text-title">分支组网加速</span>
-                        <span class="px-1.5 py-0.2 bg-gray-100 text-gray-500 rounded text-[10px]">AF / SD-WAN</span>
-                      </div>
-                      <div class="text-xs text-text-mute line-clamp-2">连接全球跨地域分支机构与企业总部、混合云数据中心，构建高性能、高安全性的骨干网段，实现跨境数据资源的高效安全共享。</div>
-                    </div>
-                    <div class="absolute right-3 top-3" x-show="selectedScenario === 'sdwan'">
-                      <div class="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center text-[10px]">✓</div>
-                    </div>
-                  </div>
-
-                  <!-- 场景 3: SaaS应用加速 -->
-                  <div class="border rounded-sm p-4 cursor-pointer transition-all flex items-start gap-3 relative group"
-                       :class="selectedScenario === 'saas' ? 'border-brand ring-1 ring-brand bg-[#F4F8FF]' : 'border-border hover:border-brand/50 hover:bg-bg-light'"
-                       @click="selectedScenario = 'saas'">
-                    <div class="w-10 h-10 rounded-sm bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h7l2 2 2-2h7a2 2 0 002-2V5a2 2 0 00-2-2H4z"/>
-                      </svg>
-                    </div>
-                    <div class="space-y-1 pr-8">
-                      <div class="flex items-center gap-2">
-                        <span class="text-sm font-semibold text-text-title">SaaS 应用加速</span>
-                      </div>
-                      <div class="text-xs text-text-mute line-clamp-2">针对企业常用的跨国 SaaS 办公软件（如 Microsoft 365, Salesforce, Zoom 等）进行智能链路优化，解决海外数据源加载慢、音视频丢包卡顿问题。</div>
-                    </div>
-                    <div class="absolute right-3 top-3" x-show="selectedScenario === 'saas'">
-                      <div class="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center text-[10px]">✓</div>
-                    </div>
-                  </div>
-
-                  <!-- 场景 4: 自定义IP/域名加速 -->
-                  <div class="border rounded-sm p-4 cursor-pointer transition-all flex items-start gap-3 relative group"
-                       :class="selectedScenario === 'custom' ? 'border-brand ring-1 ring-brand bg-[#F4F8FF]' : 'border-border hover:border-brand/50 hover:bg-bg-light'"
-                       @click="selectedScenario = 'custom'">
-                    <div class="w-10 h-10 rounded-sm bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
-                      </svg>
-                    </div>
-                    <div class="space-y-1 pr-8">
-                      <div class="flex items-center gap-2">
-                        <span class="text-sm font-semibold text-text-title">自定义 IP/域名加速</span>
-                      </div>
-                      <div class="text-xs text-text-mute line-clamp-2">按需定制专属 of 专线路由。您只需填写指定的公网/私网 IP 地址段或域名后缀，骨干网将根据流量特征实现跨地域无损传输。</div>
-                    </div>
-                    <div class="absolute right-3 top-3" x-show="selectedScenario === 'custom'">
-                      <div class="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center text-[10px]">✓</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 两部分间隔距离保有 48px -->
-              <div style="height: 48px;"></div>
-
-              <!-- 创建按钮 -->
-              <div class="flex justify-center">
-                <button class="sd-btn sd-btn-primary w-[200px] h-10 flex items-center justify-center font-medium shadow-md hover:scale-[1.02] active:scale-[0.98] transition-transform text-white"
-                        @click="location.href = 'atrust_global_acceleration_config.html'">
-                  创建加速
-                </button>
-              </div>
-
-            </div>
-        </div>
-
-        <!-- 非加速配置菜单激活时的占位说明 -->
-          <div x-show="activeLeaf !== 'm_1_2_1'" class="flex-1 flex flex-col items-center justify-center text-text-mute text-xs rounded-control gap-3 bg-white border border-border shadow-[0_1px_3px_rgba(0,0,0,0.05)]" x-cloak>
-            <svg class="w-12 h-12 text-text-mute opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+        <!-- 面包屑头部 -->
+        <div class="h-[40px] px-5 border-b border-slate-200 bg-white flex items-center gap-3 flex-shrink-0 text-sm">
+          <button @click="location.href='GA-initial.html'"
+            class="text-brand hover:opacity-75 flex items-center justify-center transition-opacity">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
             </svg>
-            <span class="text-sm font-semibold text-text-title mt-2">【 业务功能建设中 】</span>
-            <span class="text-xs text-text-mute font-sans">本页面为“全球加速 - 加速配置”的交互式 Demo 页面。</span>
-            <span class="text-xs text-text-mute font-sans">当前选中了侧边栏菜单项：<span class="text-brand font-semibold font-outfit" x-text="activeLeaf"></span></span>
-            <button class="sd-btn sd-btn-primary text-white mt-3" @click="activeLeaf = 'm_1_2_1'; expandedL2 = 'm_1_2'; topNav = '全球安全互联';">
-              返回加速配置流程
-            </button>
-          </div>
+          </button>
+          <span class="text-slate-300 font-light">|</span>
+          <span class="font-semibold text-slate-800">新建加速规则</span>
+        </div>
 
+        <!-- ======================================================
+          业务内容区（待填充）
+          TODO: 在此处实现 自定义 IP/域名加速配置页 的具体配置 UI
+        ======================================================= -->
+        <div class="flex-1 flex items-center justify-center text-text-mute text-sm">
+          <div class="text-center space-y-2">
+            <div class="text-2xl">🚧</div>
+            <div class="font-medium">自定义 IP/域名加速配置页</div>
+            <div class="text-xs text-text-mute">配置内容待填充</div>
+          </div>
         </div>
 
       </main>
-    </div>
 
-  </div>
+    </main>
+
+    </div> <!-- / App Layout Shell -->
+
+  </div> <!-- / App Root -->
 
 </body>
 

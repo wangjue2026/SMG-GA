@@ -12,7 +12,7 @@
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>aTrust 零信任控制中心 - 导航框架模版</title>
+  <title>aTrust 零信任控制中心 - SaaS应用加速配置</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -40,6 +40,12 @@
           },
           spacing: {
             "4.5": "1.125rem"
+          },
+          keyframes: {
+            flowRight: {
+              '0%': { transform: 'translateX(-100%)' },
+              '100%': { transform: 'translateX(300%)' }
+            }
           }
         }
       }
@@ -58,6 +64,15 @@
 
   <!-- 引入 SASE 全球加速 Alpine 状态与逻辑 -->
   <script src="assets/atrust-data.js"></script>
+  <style>
+    @keyframes flowRight {
+      0% { transform: translateX(-150%); }
+      100% { transform: translateX(250%); }
+    }
+    .animate-flow-fast {
+      animation: flowRight 0.8s linear infinite;
+    }
+  </style>
 </head>
 
 <body class="bg-bg-light text-text font-sans overflow-hidden w-screen h-screen">
@@ -82,7 +97,159 @@
     用途：维护顶部导航、左侧菜单展开项、当前叶子菜单、全局抽屉开关等 Alpine 状态。
     排障提示：如导航切换、菜单高亮、抽屉打开异常，优先检查此 x-data。
   ======================================================= -->
-  <div class="flex flex-col w-full h-full" x-data="Object.assign(globalAccelerationApp(), { pageMode: 'deployed' })">
+  <div class="flex flex-col w-full h-full" x-data="Object.assign(globalAccelerationApp(), { pageMode: 'saas-config', configStep: 1, exclusiveIp: false, showAdvancedConfig: false, showLinkPreviewDrawer: false, showExampleModal: false, accelerationSubtype: 'tunnel', step1TunnelSource: '', step1TunnelLocation: '', step1WebSource: '', step1WebLocation: '', step1AuthSource: 'https://www.atrust.sangfor.com:8888', step1AuthLocation: '', step1RuleName: '', step1Description: '', step1Ingress: '', step1Egress: '', step1SourceObj: '' })">
+
+    <div x-show="showPublishToast"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 -translate-y-3"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 -translate-y-3"
+         class="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-white border border-green-200 shadow-xl rounded px-4 py-3 flex items-center gap-3"
+         x-cloak>
+      <div class="w-6 h-6 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-sm font-bold">✓</div>
+      <div class="space-y-0.5">
+        <div class="text-xs font-semibold text-slate-800">全球加速策略发布成功</div>
+        <div class="text-[10px] text-slate-500">配置已在后台同步至 SASE 全球骨干加速节点。</div>
+      </div>
+    </div>
+
+    <div x-show="showLinkPreviewDrawer" x-transition.opacity class="fixed inset-0 z-50 bg-slate-900/30" @click="showLinkPreviewDrawer = false" x-cloak></div>
+    <aside x-show="showLinkPreviewDrawer"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="translate-x-full"
+           x-transition:enter-end="translate-x-0"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="translate-x-0"
+           x-transition:leave-end="translate-x-full"
+           class="fixed right-0 top-0 bottom-0 z-50 w-[560px] bg-white shadow-2xl border-l border-slate-200 flex flex-col"
+           x-cloak>
+      <div class="h-14 px-4 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
+        <div>
+          <div class="text-sm font-semibold text-text-title">全部加速链路</div>
+          <div class="text-[10px] text-text-mute">按代理网关展示本次配置的上车点、下车点与带宽。</div>
+        </div>
+        <button @click="showLinkPreviewDrawer = false" class="w-7 h-7 rounded hover:bg-slate-100 text-slate-400 flex items-center justify-center">×</button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+        <template x-for="gwKey in activeGateways" :key="'drawer-link-' + gwKey">
+          <div class="border border-slate-200 rounded bg-white p-3 space-y-3 shadow-sm">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-xs font-semibold text-text-title" x-text="gateways[gwKey].name"></div>
+                <div class="text-[10px] text-text-mute font-outfit" x-text="gateways[gwKey].ip"></div>
+              </div>
+              <div class="text-right">
+                <div class="text-[10px] text-text-mute">分配带宽</div>
+                <div class="text-xs font-outfit font-semibold text-brand" x-text="gatewayConfigs[gwKey].bandwidth + ' Mbps'"></div>
+              </div>
+            </div>
+            <div class="space-y-2">
+              <template x-for="gKey in gatewayConfigs[gwKey].selectedGroups" :key="gKey">
+                <div class="grid grid-cols-[1fr_58px_1fr_58px_1fr] items-center gap-2 text-[10px]">
+                  <div class="h-8 bg-slate-50 border border-slate-100 rounded flex items-center justify-center text-slate-600" x-text="accelerationGroups[gKey].name"></div>
+                  <div class="h-px bg-slate-300 relative"><span class="absolute -right-0.5 -top-1 w-2 h-2 border-t border-r border-slate-300 rotate-45"></span></div>
+                  <div class="h-8 bg-emerald-50 border border-emerald-100 rounded flex items-center justify-center font-semibold text-emerald-700" x-text="accelerationGroups[gKey].pop"></div>
+                  <div class="h-px bg-brand/60 relative"><span class="absolute -right-0.5 -top-1 w-2 h-2 border-t border-r border-brand/60 rotate-45"></span></div>
+                  <div class="h-8 bg-blue-50 border border-blue-100 rounded flex items-center justify-center font-semibold text-brand truncate px-2" x-text="gateways[gwKey].source + ' → ' + gateways[gwKey].name"></div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+    </aside>
+
+    <!-- 查看示例 Modal -->
+    <div x-show="showExampleModal" class="fixed inset-0 z-50 flex items-center justify-center" x-cloak>
+      <!-- 背景遮罩 -->
+      <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="showExampleModal = false"></div>
+      
+      <!-- 弹窗主体 -->
+      <div class="relative bg-white rounded-xl shadow-2xl border border-slate-200 w-[640px] max-w-full overflow-hidden"
+           x-show="showExampleModal"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 scale-95"
+           x-transition:enter-end="opacity-100 scale-100"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100 scale-100"
+           x-transition:leave-end="opacity-0 scale-95">
+        <!-- 头部 -->
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-slate-800 flex items-center gap-2">
+            <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            同步显示位置示例
+          </h3>
+          <button @click="showExampleModal = false" class="text-slate-400 hover:text-slate-600 text-lg font-medium p-1">×</button>
+        </div>
+        <!-- 内容 -->
+        <div class="p-6 bg-slate-50 space-y-4">
+          <p class="text-xs text-slate-600 leading-relaxed">
+            加速策略保存后，系统将自动分配专有加速 IP。您可以在以下路径查看和编辑对应的加速 IP 信息：
+          </p>
+          <div class="bg-slate-100 p-2.5 rounded border border-slate-200 font-mono text-[11px] text-slate-700 flex items-center gap-1.5">
+            <span class="text-brand">系统管理</span>
+            <span class="text-slate-400">/</span>
+            <span class="text-brand">代理网关管理</span>
+            <span class="text-slate-400">/</span>
+            <span class="text-slate-800">[对应网关]</span>
+            <span class="text-slate-400">/</span>
+            <span class="text-slate-600">编辑</span>
+          </div>
+          <!-- 示意图容器 -->
+          <div class="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm flex flex-col">
+            <!-- 模拟左侧树 -->
+            <div class="flex h-[240px] text-xs">
+              <div class="w-1/3 border-r border-slate-100 bg-slate-50/50 p-3 space-y-2">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">网关区域</div>
+                <div class="p-1.5 rounded bg-brand/5 border border-brand/10 text-brand font-medium flex items-center justify-between">
+                  <span>上海办公区域</span>
+                  <span class="text-[9px] bg-brand text-white px-1 rounded">已加速</span>
+                </div>
+                <div class="p-1.5 text-slate-600">北京办公区域</div>
+                <div class="p-1.5 text-slate-600">海外办公区域</div>
+              </div>
+              <!-- 模拟右侧表单 -->
+              <div class="flex-1 p-4 space-y-3">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">区域加速配置详情</div>
+                <div class="space-y-2.5">
+                  <div class="grid grid-cols-3 gap-2 items-center">
+                    <span class="text-slate-500 text-[11px]">上车点PoP:</span>
+                    <span class="text-slate-800 font-medium col-span-2">深圳 PoP</span>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2 items-center">
+                    <span class="text-slate-500 text-[11px]">专网带宽:</span>
+                    <span class="text-slate-800 font-medium col-span-2">15 Mbps</span>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2 items-start">
+                    <span class="text-slate-500 text-[11px] mt-0.5">分配加速IP:</span>
+                    <div class="col-span-2 space-y-1">
+                      <div class="px-2 py-1 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded text-[11px] font-mono flex items-center justify-between">
+                        <span>10.44.23.1</span>
+                        <span class="text-[9px] text-emerald-600 uppercase font-bold">专线承载</span>
+                      </div>
+                      <div class="px-2 py-0.5 text-slate-400 text-[10px]">
+                        * 对应源站 IP：10.23.22.4
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- 底部 -->
+        <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end">
+          <button @click="showExampleModal = false" class="h-8 px-4 rounded text-xs bg-brand text-white font-medium hover:bg-brand-hover transition-colors">
+            我知道了
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- ======================================================
       Header / 顶部导航栏，固定高度 56px
@@ -1183,247 +1350,45 @@
         </div>
       </aside>
 
+
       <!-- ======================================================
         Main Workspace / 右侧主工作区
+        场景：SaaS 应用加速配置页
+        TODO: 在此区域填充 SaaS 场景的配置内容
       ======================================================= -->
-      <main class="flex-1 flex flex-col min-w-0 bg-bg-base overflow-hidden">
-        
-        <!-- Breadcrumb / 面包屑导航 -->
-        <div class="h-[40px] px-6 border-b border-bg-line bg-white flex items-center justify-between flex-shrink-0 text-xs">
-          <div class="flex items-center gap-1.5 text-text-mute">
-            <span>全球安全互联</span>
-            <span class="text-text-mute opacity-60">/</span>
-            <span class="text-text-title">全球加速</span>
-            <template x-if="pageMode === 'config'">
-              <div class="flex items-center gap-1.5">
-                <span class="text-text-mute opacity-60">/</span>
-                <span class="text-text-mute">加速配置</span>
-                <span class="text-text-mute opacity-60">/</span>
-                <span class="text-text-title">新建加速策略</span>
-              </div>
-            </template>
-            <template x-if="pageMode === 'deployed'">
-              <div class="flex items-center gap-1.5">
-                <span class="text-text-mute opacity-60">/</span>
-                <span class="text-text-title">状态监控</span>
-              </div>
-            </template>
-          </div>
-          <!-- 右侧面包屑操作 -->
-          <div class="flex items-center gap-3" x-show="pageMode !== 'initial'">
-            <button class="text-brand hover:underline font-medium" @click="location.href = 'atrust_global_acceleration.html'">返回首页</button>
-          </div>
-        </div>
+      <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-white">
 
-        <!-- Scrollable content area / 滚动内容区域 -->
-        <div class="flex-1 overflow-y-auto p-6 flex flex-col min-h-0 space-y-4" x-show="activeLeaf === 'm_1_2_1'">
-          <!-- ==========================================
-            STATE 3: 已启用状态监控看板 (pageMode === 'deployed')
-          =========================================== -->
-          <div x-show="pageMode === 'deployed'" class="space-y-4" x-cloak>
-            
-            <!-- 加速全局总览面板 -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white rounded-sm border border-border shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-4 select-none">
-              <div class="flex flex-col">
-                <span class="text-xs text-text-mute mb-1">正在加速的网关</span>
-                <span class="text-sm font-semibold text-text-title flex items-center gap-1.5">
-                  <span class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
-                  <span x-text="gateways[selectedGateway].name"></span>
-                </span>
-                <span class="text-[11px] text-text-mute mt-1 font-outfit" x-text="gateways[selectedGateway].ip"></span>
-              </div>
-              <div class="flex flex-col border-l border-border pl-4">
-                <span class="text-xs text-text-mute mb-1">最佳分配源站 PoP</span>
-                <span class="text-sm font-semibold text-text-title">中国 广州 PoP 节点</span>
-                <span class="text-[11px] text-text-mute mt-1">SASE 专属骨干网中转</span>
-              </div>
-              <div class="flex flex-col border-l border-border pl-4">
-                <span class="text-xs text-text-mute mb-1">当前分配独享带宽</span>
-                <span class="text-sm font-semibold text-brand font-outfit" x-text="bandwidthConfig + ' Mbps'"></span>
-                <span class="text-[11px] text-text-mute mt-1">带宽资源池剩余 25 Mbps</span>
-              </div>
-              <div class="flex flex-col border-l border-border pl-4">
-                <span class="text-xs text-text-mute mb-1">加速时延改善率</span>
-                <span class="text-sm font-semibold text-green-700 font-outfit">71.8%</span>
-                <span class="text-[11px] text-text-mute mt-1">往返时延：22ms (直连 78ms)</span>
-              </div>
-            </div>
-
-            <!-- 数据监测图表组 (SVG 画图模拟) -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              
-              <!-- 图表 1: 带宽吞吐曲线 -->
-              <div class="bg-white rounded-sm border border-border shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-4 flex flex-col h-[220px]">
-                <div class="flex items-center justify-between mb-3 select-none">
-                  <span class="text-xs font-semibold text-text-title">实时流量带宽吞吐 (Mbps)</span>
-                  <span class="text-[10px] text-text-mute font-outfit">MAX: 12.4 Mbps</span>
-                </div>
-                <div class="flex-1 min-h-0 relative">
-                  <!-- 虚拟折线 SVG -->
-                  <svg class="w-full h-full" viewBox="0 0 300 120" preserveAspectRatio="none">
-                    <defs>
-                      <linearGradient id="chart-grad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#1C6EFF" stop-opacity="0.3"/>
-                        <stop offset="100%" stop-color="#1C6EFF" stop-opacity="0"/>
-                      </linearGradient>
-                    </defs>
-                    <path d="M 0 100 Q 30 70 60 85 T 120 40 T 180 60 T 240 30 T 300 45 L 300 120 L 0 120 Z" fill="url(#chart-grad)" />
-                    <path d="M 0 100 Q 30 70 60 85 T 120 40 T 180 60 T 240 30 T 300 45" fill="none" stroke="#1C6EFF" stroke-width="2" />
-                    <!-- 辅网格线 -->
-                    <line x1="0" y1="30" x2="300" y2="30" stroke="#E1E5EB" stroke-width="0.5" stroke-dasharray="2,2"/>
-                    <line x1="0" y1="60" x2="300" y2="60" stroke="#E1E5EB" stroke-width="0.5" stroke-dasharray="2,2"/>
-                    <line x1="0" y1="90" x2="300" y2="90" stroke="#E1E5EB" stroke-width="0.5" stroke-dasharray="2,2"/>
-                  </svg>
-                </div>
-                <div class="flex justify-between text-[9px] text-text-mute mt-1 font-outfit select-none">
-                  <span>11:45</span>
-                  <span>11:46</span>
-                  <span>11:47</span>
-                  <span>11:48</span>
-                  <span>11:49</span>
-                  <span>11:50</span>
-                </div>
-              </div>
-
-              <!-- 图表 2: 时延监控对比 -->
-              <div class="bg-white rounded-sm border border-border shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-4 flex flex-col h-[220px]">
-                <div class="flex items-center justify-between mb-3 select-none">
-                  <span class="text-xs font-semibold text-text-title">探测时延改善趋势 (ms)</span>
-                  <span class="text-[10px] text-text-mute font-outfit">平均改善：56ms</span>
-                </div>
-                <div class="flex-1 min-h-0 relative">
-                  <svg class="w-full h-full" viewBox="0 0 300 120" preserveAspectRatio="none">
-                    <!-- 直连延迟线 -->
-                    <path d="M 0 30 L 50 35 L 100 25 L 150 40 L 200 32 L 250 45 L 300 35" fill="none" stroke="#F52727" stroke-width="1.5" stroke-dasharray="3,3" />
-                    <!-- 加速延迟线 -->
-                    <path d="M 0 105 L 50 108 L 100 104 L 150 106 L 200 103 L 250 105 L 300 104" fill="none" stroke="#12A679" stroke-width="2" />
-                    <!-- 辅助线 -->
-                    <line x1="0" y1="104" x2="300" y2="104" stroke="#EDF1F7" stroke-width="0.5" />
-                  </svg>
-                  <!-- 标签 -->
-                  <div class="absolute left-2 top-2 bg-[#F52727]/10 text-[#F52727] text-[8px] px-1 rounded select-none">直连接入 (78ms)</div>
-                  <div class="absolute left-2 bottom-6 bg-[#12A679]/10 text-[#12A679] text-[8px] px-1 rounded select-none font-semibold">SASE骨干加速 (22ms)</div>
-                </div>
-                <div class="flex justify-between text-[9px] text-text-mute mt-1 font-outfit select-none">
-                  <span>11:45</span>
-                  <span>11:46</span>
-                  <span>11:47</span>
-                  <span>11:48</span>
-                  <span>11:49</span>
-                  <span>11:50</span>
-                </div>
-              </div>
-
-              <!-- 图表 3: 丢包率表现对比 -->
-              <div class="bg-white rounded-sm border border-border shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-4 flex flex-col h-[220px]">
-                <div class="flex items-center justify-between mb-3 select-none">
-                  <span class="text-xs font-semibold text-text-title">链路丢包率表现 (%)</span>
-                  <span class="text-[10px] text-text-mute font-outfit">重传成功率: 100%</span>
-                </div>
-                <div class="flex-1 min-h-0 relative">
-                  <svg class="w-full h-full" viewBox="0 0 300 120" preserveAspectRatio="none">
-                    <!-- 直连丢包柱状图 -->
-                    <rect x="20" y="40" width="12" height="80" fill="#FDAA1D" opacity="0.6"/>
-                    <rect x="70" y="20" width="12" height="100" fill="#FDAA1D" opacity="0.6"/>
-                    <rect x="120" y="60" width="12" height="60" fill="#FDAA1D" opacity="0.6"/>
-                    <rect x="170" y="30" width="12" height="90" fill="#FDAA1D" opacity="0.6"/>
-                    <rect x="220" y="50" width="12" height="70" fill="#FDAA1D" opacity="0.6"/>
-                    <rect x="270" y="45" width="12" height="75" fill="#FDAA1D" opacity="0.6"/>
-                    
-                    <!-- 加速丢包（几乎为 0%） -->
-                    <rect x="34" y="118" width="12" height="2" fill="#12A679"/>
-                    <rect x="84" y="119" width="12" height="1" fill="#12A679"/>
-                    <rect x="134" y="119" width="12" height="1" fill="#12A679"/>
-                    <rect x="184" y="118" width="12" height="2" fill="#12A679"/>
-                    <rect x="234" y="119" width="12" height="1" fill="#12A679"/>
-                    <rect x="284" y="118" width="12" height="2" fill="#12A679"/>
-                  </svg>
-                  <div class="absolute left-2 top-2 bg-yellow-100 text-yellow-700 text-[8px] px-1 rounded select-none">公网丢包 (平均 4.2%)</div>
-                  <div class="absolute right-2 top-2 bg-green-100 text-green-700 text-[8px] px-1 rounded select-none font-semibold">SASE骨干丢包 (约 0.08%)</div>
-                </div>
-                <div class="flex justify-between text-[9px] text-text-mute mt-1 font-outfit select-none">
-                  <span>11:45</span>
-                  <span>11:46</span>
-                  <span>11:47</span>
-                  <span>11:48</span>
-                  <span>11:49</span>
-                  <span>11:50</span>
-                </div>
-              </div>
-
-            </div>
-
-            <!-- 加速策略配置列表表格 -->
-            <div class="bg-white rounded-sm border border-border shadow-[0_1px_3px_rgba(0,0,0,0.05)] p-4">
-              <div class="flex items-center justify-between mb-4">
-                <span class="text-xs font-semibold text-text-title" style="font-size: 13px;">配置的加速通道列表</span>
-                <button class="sd-btn sd-btn-primary h-8" @click="pageMode = 'config'; configStep = 1;">
-                  + 新增加速配置
-                </button>
-              </div>
-
-              <div class="overflow-x-auto">
-                <table class="sd-table">
-                  <thead>
-                    <tr>
-                      <th>策略 ID</th>
-                      <th>加速策略名称</th>
-                      <th>场景类型</th>
-                      <th>所选代理网关</th>
-                      <th>源站 PoP 区域</th>
-                      <th>分配带宽</th>
-                      <th>状态</th>
-                      <th>下发时间</th>
-                      <th>操作</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <template x-for="policy in deployedPolicies">
-                      <tr>
-                        <td class="font-outfit text-text-mute" x-text="policy.id"></td>
-                        <td class="font-semibold text-text-title" x-text="policy.name"></td>
-                        <td x-text="policy.type"></td>
-                        <td x-text="policy.gateway"></td>
-                        <td x-text="policy.source"></td>
-                        <td class="font-outfit font-semibold text-brand" x-text="policy.bandwidth"></td>
-                        <td>
-                          <span class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-100 text-green-800">
-                            运行中
-                          </span>
-                        </td>
-                        <td class="font-outfit text-text-mute" x-text="policy.time"></td>
-                        <td>
-                          <a href="#" class="action-link" @click.prevent="location.href = 'atrust_global_acceleration_config.html'">修改配置</a>
-                          <a href="#" class="action-link" style="color: var(--color-red) !important;" 
-                             @click.prevent="deletePolicy(policy.id)">停用删除</a>
-                        </td>
-                      </tr>
-                    </template>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-        </div>
-
-        <!-- 非加速配置菜单激活时的占位说明 -->
-          <div x-show="activeLeaf !== 'm_1_2_1'" class="flex-1 flex flex-col items-center justify-center text-text-mute text-xs rounded-control gap-3 bg-white border border-border shadow-[0_1px_3px_rgba(0,0,0,0.05)]" x-cloak>
-            <svg class="w-12 h-12 text-text-mute opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+        <!-- 面包屑头部 -->
+        <div class="h-[40px] px-5 border-b border-slate-200 bg-white flex items-center gap-3 flex-shrink-0 text-sm">
+          <button @click="location.href='GA-initial.html'"
+            class="text-brand hover:opacity-75 flex items-center justify-center transition-opacity">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
             </svg>
-            <span class="text-sm font-semibold text-text-title mt-2">【 业务功能建设中 】</span>
-            <span class="text-xs text-text-mute font-sans">本页面为“全球加速 - 加速配置”的交互式 Demo 页面。</span>
-            <span class="text-xs text-text-mute font-sans">当前选中了侧边栏菜单项：<span class="text-brand font-semibold font-outfit" x-text="activeLeaf"></span></span>
-            <button class="sd-btn sd-btn-primary text-white mt-3" @click="activeLeaf = 'm_1_2_1'; expandedL2 = 'm_1_2'; topNav = '全球安全互联';">
-              返回加速配置流程
-            </button>
-          </div>
+          </button>
+          <span class="text-slate-300 font-light">|</span>
+          <span class="font-semibold text-slate-800">新建加速规则</span>
+        </div>
 
+        <!-- ======================================================
+          业务内容区（待填充）
+          TODO: 在此处实现 SaaS 应用加速配置页 的具体配置 UI
+        ======================================================= -->
+        <div class="flex-1 flex items-center justify-center text-text-mute text-sm">
+          <div class="text-center space-y-2">
+            <div class="text-2xl">🚧</div>
+            <div class="font-medium">SaaS 应用加速配置页</div>
+            <div class="text-xs text-text-mute">配置内容待填充</div>
+          </div>
         </div>
 
       </main>
-    </div>
 
-  </div>
+    </main>
+
+    </div> <!-- / App Layout Shell -->
+
+  </div> <!-- / App Root -->
 
 </body>
 

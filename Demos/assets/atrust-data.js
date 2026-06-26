@@ -41,8 +41,8 @@ window.globalAccelerationApp = function() {
       this.activeLeaf = key; 
       if (key === 'm_1_2_1') {
         const path = window.location.pathname;
-        if (!path.endsWith('atrust_global_acceleration.html') && !path.endsWith('/Demos/') && path !== '/') {
-          window.location.href = 'atrust_global_acceleration.html';
+        if (!path.endsWith('GA-initial.html') && !path.endsWith('/Demos/') && path !== '/') {
+          window.location.href = 'GA-initial.html';
         }
       }
     },
@@ -344,7 +344,7 @@ window.globalAccelerationApp = function() {
         localStorage.setItem('atrust_deployed_policies', JSON.stringify(this.deployedPolicies));
       } catch(e) {}
       if(this.deployedPolicies.length === 0) {
-        window.location.href = 'atrust_global_acceleration.html';
+        window.location.href = 'GA-initial.html';
       }
     },
 
