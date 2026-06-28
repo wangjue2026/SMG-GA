@@ -1354,9 +1354,387 @@
       <!-- ======================================================
         Main Workspace / 右侧主工作区
         场景：自定义 IP/域名加速配置页
-        TODO: 在此区域填充 Custom 场景的配置内容
       ======================================================= -->
-      <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-white">
+      <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-white"
+        x-data="{
+          /* ---- 向导状态 ---- */
+          step: 1,
+          customType: 'ip', // 'ip' or 'domain'
+          editingRuleId: null,
+          editingName: '',
+          editingDesc: '',
+
+          /* ---- CNAME 引导弹窗状态 ---- */
+          showCnameModal: false,
+          copiedRowId: null,
+
+          /* ---- Step 1 — 源站行列表 ---- */
+          sourceRows: [{ id: 1, target: '', location: '', ports: [{ id: 1, protocol: 'TCP/TCP', listenPort: '待自动生成', originPort: '' }] }],
+          nextRowId: 2,
+
+          /* ---- Step 2 — 每个源站的加速范围配置 key=id ---- */
+          popConfigs: {},
+          selectedRowId: null,
+
+          /* ---- 默认端口行ID计数器 ---- */
+          nextPortRowId: 2,
+
+          /* ---- 各子类型独立的数据备份 ---- */
+          typeData: {
+            ip: {
+              sourceRows: [{ id: 1, target: '', location: '', ports: [{ id: 1, protocol: 'TCP/TCP', listenPort: '待自动生成', originPort: '' }] }],
+              nextRowId: 2,
+              popConfigs: {},
+              selectedRowId: null
+            },
+            domain: {
+              sourceRows: [{ id: 1, target: '', location: '', ports: [{ id: 1, protocol: 'TCP/TCP', listenPort: '待自动生成', originPort: '' }] }],
+              nextRowId: 2,
+              popConfigs: {},
+              selectedRowId: null
+            }
+          },
+
+          init() {
+            this.$watch('customType', (newVal, oldVal) => {
+              if (oldVal && newVal !== oldVal) {
+                // 保存旧 Tab 状态
+                this.typeData[oldVal] = {
+                  sourceRows: JSON.parse(JSON.stringify(this.sourceRows)),
+                  nextRowId: this.nextRowId,
+                  popConfigs: JSON.parse(JSON.stringify(this.popConfigs)),
+                  selectedRowId: this.selectedRowId
+                };
+                // 加载新 Tab 状态
+                const data = this.typeData[newVal];
+                this.sourceRows = JSON.parse(JSON.stringify(data.sourceRows));
+                this.nextRowId = data.nextRowId;
+                this.popConfigs = JSON.parse(JSON.stringify(data.popConfigs));
+                this.selectedRowId = data.selectedRowId;
+                this.openDropdown = null;
+              }
+            });
+          },
+
+          /* ---- 端口方法 ---- */
+          addPortRow(row) {
+            row.ports.push({ id: this.nextPortRowId++, protocol: 'TCP/TCP', listenPort: '待自动生成', originPort: '' });
+          },
+          removePortRow(row, portId) {
+            if (row.ports.length <= 1) return;
+            row.ports = row.ports.filter(p => p.id !== portId);
+          },
+
+          /* ---- 源站行方法 ---- */
+          addRow() {
+            if (this.sourceRows.length >= 5) return;
+            this.sourceRows.push({ id: this.nextRowId++, target: '', location: '', ports: [{ id: 1, protocol: 'TCP/TCP', listenPort: '待自动生成', originPort: '' }] });
+          },
+          removeRow(id) {
+            if (this.sourceRows.length <= 1) return;
+            this.sourceRows = this.sourceRows.filter(r => r.id !== id);
+          },
+
+          getPopConfig(id) {
+            if (!this.popConfigs[id]) {
+              this.popConfigs[id] = {
+                selectedPops: [],
+                advancedOpen: false,
+                exclusiveIp: false,
+                sourceIpPassthrough: true,
+                transportOptimize: true,
+                healthCheck: true,
+                healthInterval: '2s',
+                healthDuration: '1m'
+              };
+            }
+            return this.popConfigs[id];
+          },
+
+          rowCoverageInfo(rowId) {
+            const cfg = this.getPopConfig(rowId);
+            if (!cfg || !cfg.selectedPops || cfg.selectedPops.length === 0) {
+              return { names: '', count: 0 };
+            }
+            const selectedKeys = cfg.selectedPops;
+            const coveredCities = new Set();
+            for (const region of Object.values(this.mockPops)) {
+              for (const pop of region) {
+                if (selectedKeys.includes(pop.key)) {
+                  pop.cities.forEach(c => coveredCities.add(c));
+                }
+              }
+            }
+            const list = Array.from(coveredCities);
+            if (list.length === 0) {
+              return { names: '', count: 0 };
+            }
+            const examples = list.slice(0, 4).join('、');
+            return {
+              names: examples,
+              count: list.length
+            };
+          },
+
+          togglePop(rowId, popKey) {
+            const cfg = this.getPopConfig(rowId);
+            const idx = cfg.selectedPops.indexOf(popKey);
+            if (idx >= 0) cfg.selectedPops.splice(idx, 1);
+            else cfg.selectedPops.push(popKey);
+          },
+
+          popLabel(key) {
+            for (const region of Object.values(this.mockPops)) {
+              const found = region.find(p => p.key === key);
+              if (found) return found.name;
+            }
+            return key;
+          },
+
+          visiblePops(rowId) {
+            return this.getPopConfig(rowId).selectedPops.slice(0, 6);
+          },
+
+          extraPops(rowId) {
+            return Math.max(0, this.getPopConfig(rowId).selectedPops.length - 6);
+          },
+
+          rowTargetDisplay(row) {
+            return row.target || '–';
+          },
+
+          step2CardTitle(row) {
+            return row.target || '–';
+          },
+
+          step3Rules() {
+            return this.sourceRows.filter(r => r.target && r.location).map(r => {
+              const cfg = this.getPopConfig(r.id);
+              return {
+                id: r.id,
+                name: r.customName || (r.target ? `${r.target}加速规则` : '加速规则'),
+                description: r.description || '–',
+                target: r.target,
+                location: r.location,
+                ports: r.ports,
+                pops: cfg ? cfg.selectedPops : [],
+              };
+            });
+          },
+
+          getPreviewRow() {
+            if (this.step === 2 && this.selectedRowId) {
+              const found = this.sourceRows.find(r => r.id === this.selectedRowId);
+              if (found) return found;
+            }
+            return this.sourceRows.find(r => r.target) || this.sourceRows[0] || null;
+          },
+
+          canNext() {
+            if (this.step === 1) {
+              return this.sourceRows.some(r => r.target && r.location);
+            }
+            return true;
+          },
+
+          goNext() {
+            if (this.canNext() && this.step < 3) {
+              this.step++;
+              if (this.step === 2) {
+                const firstRow = this.sourceRows.find(r => r.target);
+                if (firstRow) {
+                  this.selectedRowId = firstRow.id;
+                }
+              }
+            }
+          },
+
+          goPrev() {
+            if (this.step > 1) {
+              this.step--;
+              if (this.step === 2) {
+                const firstRow = this.sourceRows.find(r => r.target);
+                if (firstRow) {
+                  this.selectedRowId = firstRow.id;
+                }
+              }
+            }
+          },
+
+          saveConfig() {
+            const firstRow = this.sourceRows.find(r => r.target) || this.sourceRows[0] || { target: '', location: '', ports: [] };
+            let targetObj = firstRow.target || '';
+            let targetLoc = firstRow.location || '';
+            
+            // 收集加速区域
+            let popNames = [];
+            for (let row of this.sourceRows) {
+              const cfg = this.getPopConfig(row.id);
+              if (cfg && cfg.selectedPops && cfg.selectedPops.length > 0) {
+                cfg.selectedPops.forEach(popKey => {
+                  for (let region in this.mockPops) {
+                    const found = this.mockPops[region].find(p => p.key === popKey);
+                    if (found && !popNames.includes(found.name)) {
+                      popNames.push(found.name);
+                    }
+                  }
+                });
+              }
+            }
+            let accRegionStr = '-';
+            if (popNames.length > 0) {
+              if (popNames.length <= 2) {
+                accRegionStr = popNames.join('、');
+              } else {
+                accRegionStr = popNames.slice(0, 2).join('、') + `等${popNames.length}个`;
+              }
+            } else {
+              accRegionStr = '伦敦、法兰克福等5个'; // 默认值
+            }
+
+            let hasExclusiveIp = false;
+            for (let row of this.sourceRows) {
+              const cfg = this.getPopConfig(row.id);
+              if (cfg && cfg.exclusiveIp) {
+                hasExclusiveIp = true;
+                break;
+              }
+            }
+            let exclusiveIpStr = '-';
+            if (hasExclusiveIp) {
+              exclusiveIpStr = `10.23.45.${Math.floor(Math.random() * 200 + 10)}:441`;
+            }
+
+            // 端口拼接，形式如 target:port1/port2/port3...
+            let portStr = '';
+            if (firstRow.ports && firstRow.ports.length > 0) {
+              const portVals = firstRow.ports.filter(p => p.originPort).map(p => p.originPort);
+              if (portVals.length > 0) {
+                portStr = ':' + portVals.join('/');
+              }
+            }
+
+            let newPolicy = {
+              id: 'POL-' + Math.floor(Math.random() * 900 + 100),
+              name: targetObj,
+              desc: '自定义IP/域名加速',
+              scenario: '自定义IP/域名加速',
+              status: '加速中',
+              accRegion: accRegionStr,
+              srcRegion: targetLoc || '深圳',
+              srcObject: targetObj + (portStr || ':443'),
+              accDomain: this.customType === 'domain' ? this.getWebCname(firstRow) : '-',
+              exclusiveIp: exclusiveIpStr
+            };
+
+            localStorage.setItem('ga_save_success', 'true');
+            localStorage.setItem('ga_new_policy', JSON.stringify(newPolicy));
+          },
+          addToTodoList() {
+            const newPolicyStr = localStorage.getItem('ga_new_policy');
+            if (newPolicyStr) {
+              try {
+                const policy = JSON.parse(newPolicyStr);
+                if (this.customType === 'domain') {
+                  const savedTodos = localStorage.getItem('ga_todo_items');
+                  let todos = savedTodos ? JSON.parse(savedTodos) : [];
+                  if (!todos.some(t => t.id === policy.id)) {
+                    todos.unshift({
+                      id: policy.id,
+                      name: policy.name,
+                      scenario: policy.scenario,
+                      srcObject: policy.srcObject,
+                      accDomain: policy.accDomain,
+                      cname: policy.accDomain,
+                      time: new Date().toISOString().replace('T', ' ').substring(0, 16)
+                    });
+                    localStorage.setItem('ga_todo_items', JSON.stringify(todos));
+                  }
+                }
+              } catch (e) {
+                console.error(e);
+              }
+            }
+          },
+
+          getWebTargetUrl(target) {
+            if (!target) return '';
+            if (target.startsWith('http://') || target.startsWith('https://')) {
+              return target;
+            }
+            if (target.includes('.')) {
+              return 'https://' + target;
+            }
+            return 'https://' + target;
+          },
+
+          getWebCname(row) {
+            if (!row || !row.target) return '';
+            let url = this.getWebTargetUrl(row.target);
+            let clean = url.replace(/https?:\/\//, '').split('/')[0].split(':')[0];
+            let str = row.id + clean;
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+              hash = (hash << 5) - hash + str.charCodeAt(i);
+              hash |= 0;
+            }
+            let hex = Math.abs(hash).toString(36).substring(0, 6);
+            return 'https://saauth.sangfor.com.cn/sa/auth/yu' + hex + '.cname.sangfor.com';
+          },
+
+          copyText(text, rowId) {
+            try {
+              const el = document.createElement('textarea');
+              el.value = text;
+              document.body.appendChild(el);
+              el.select();
+              document.execCommand('copy');
+              document.body.removeChild(el);
+              this.copiedRowId = rowId;
+              setTimeout(() => { this.copiedRowId = null; }, 1500);
+            } catch(e) {
+              this.copiedRowId = rowId;
+              setTimeout(() => { this.copiedRowId = null; }, 1500);
+            }
+          },
+
+          /* ---- 模拟数据 ---- */
+          mockPops: {
+            '中国大陆': [
+              { key: 'gz', name: '广州', cities: ['深圳', '东莞', '佛山', '中山', '珠海', '江门', '肇庆', '清远'] },
+              { key: 'sz', name: '深圳', cities: ['广州', '东莞', '惠州', '汕头', '潮州', '揭阳', '汕尾', '河源'] },
+              { key: 'bj', name: '北京', cities: ['天津', '廊坊', '唐山', '保定', '石家庄', '沧州', '承德', '张家口'] },
+              { key: 'tj', name: '天津', cities: ['北京', '廊坊', '沧州', '唐山', '秦皇岛', '德州', '滨州', '东营'] },
+              { key: 'wh', name: '武汉', cities: ['黄冈', '鄂州', '孝感', '咸宁', '仙桃', '天门', '潜江', '随州'] },
+            ],
+            '亚太地区': [
+              { key: 'sg', name: '新加坡', cities: ['吉隆坡', '雅加达', '曼谷', '西贡', '马尼拉', '文莱'] },
+              { key: 'kl', name: '吉隆坡', cities: ['新加坡', '槟城', '新山', '怡保', '马六甲'] },
+              { key: 'to', name: '东京', cities: ['横滨', '大阪', '京都', '名古屋', '神户', '福冈'] },
+              { key: 'seoul', name: '首尔', cities: ['釜山', '仁川', '大邱', '大田', '光州', '蔚山', '水原', '济州'] },
+              { key: 'sydney', name: '悉尼', cities: ['墨尔本', '布里斯班', '阿德莱德', '珀斯', '堪培拉', '霍巴特', '达尔文', '黄金海岸'] },
+              { key: 'bangkok', name: '曼谷', cities: ['清迈', '芭提雅', '普吉', '甲米', '大城', '华欣', '清莱', '万象'] },
+              { key: 'manila', name: '马尼拉', cities: ['宿务', '达沃', '奎松', '卡洛奥坎', '达斯马里尼亚斯', '八打雁', '伊洛伊洛', '巴科洛德'] },
+              { key: 'mumbai', name: '孟买', cities: ['新德里', '班加罗尔', '海得拉巴', '浦那', '金奈', '加尔各答', '艾哈迈达巴德', '苏拉特'] },
+            ],
+            '欧美地区': [
+              { key: 'la', name: '洛杉矶', cities: ['旧金山', '圣迭戈', '拉斯维加斯', '凤凰城', '西雅图', '波特兰', '盐湖城', '萨克拉门托'] },
+              { key: 'se', name: '西雅图', cities: ['温哥华', '波特兰', '斯波坎', '塔科马', '贝尔维尤', '奥林匹亚', '维多利亚', '卡尔加里'] },
+              { key: 'ca', name: '加利福尼亚', cities: ['圣何塞', '奥克兰', '萨克拉门托', '弗雷斯诺', '贝克斯菲尔德', '安纳海姆', '长滩', '河滨'] },
+              { key: 'lo', name: '伦敦', cities: ['伯明翰', '曼彻斯特', '利兹', '利物浦', '格拉斯哥', '爱丁堡', '布里斯托', '贝尔法斯特'] },
+              { key: 'pa', name: '巴黎', cities: ['马赛', '里昂', '图卢兹', '尼斯', '南特', '斯特拉斯堡', '蒙彼利埃', '波尔多'] },
+              { key: 'be', name: '柏林', cities: ['汉堡', '慕尼黑', '科隆', '法兰克福', '斯图加特', '杜塞尔多夫', '多特蒙德', '埃森'] },
+            ],
+            '其他地区': [
+              { key: 'du', name: '迪拜', cities: ['阿布扎比', '沙迦', '艾因', '阿治曼'] },
+            ],
+          },
+
+          openDropdown: null,
+          openRegion: {},
+          openPopDropdown: null,
+        }"
+      >
 
         <!-- 面包屑头部 -->
         <div class="h-[40px] px-5 border-b border-slate-200 bg-white flex items-center gap-3 flex-shrink-0 text-sm">
@@ -1368,28 +1746,1404 @@
           </button>
           <span class="text-slate-300 font-light">|</span>
           <span class="font-semibold text-slate-800">新建加速规则</span>
+          <div class="ml-auto" style="position:relative; display:inline-block;"
+               x-data="{ showLearnBubble: safeStorage.getItem('hideLearnBubble') !== 'true' }"
+               @hide-learn-bubble.window="showLearnBubble = false">
+            <!-- 气泡引导 -->
+            <div x-show="showLearnBubble" x-cloak
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 translate-y-1"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 style="position:absolute; top:calc(100% + 10px); right:0; width:260px; background:#fff; border:1px solid #e5e7eb; border-radius:6px; box-shadow:0 4px 16px rgba(0,0,0,.12); padding:12px; z-index:20;">
+              <div style="position:absolute; top:-6px; right:20px; width:10px; height:10px; background:#fff; border-left:1px solid #e5e7eb; border-top:1px solid #e5e7eb; transform:rotate(45deg);"></div>
+              <div class="flex items-start justify-between gap-2">
+                <p class="text-xs text-text-mute leading-relaxed">如果您是首次配置，建议先学习配置原理；若您对 GA 加速很熟悉请忽略</p>
+                <button @click.stop="showLearnBubble = false; safeStorage.setItem('hideLearnBubble', 'true');"
+                        class="flex-shrink-0 text-text-mute opacity-60 hover:opacity-100 focus:outline-none">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <!-- 学习配置原理按钮 -->
+            <button onclick="gaModal.show()"
+                    class="flex items-center gap-1 text-brand text-xs font-normal focus:outline-none hover:opacity-80 transition-opacity">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14v7"></path>
+              </svg>
+              <span>学习配置原理</span>
+            </button>
+          </div>
         </div>
 
-        <!-- ======================================================
-          业务内容区（待填充）
-          TODO: 在此处实现 自定义 IP/域名加速配置页 的具体配置 UI
-        ======================================================= -->
-        <div class="flex-1 flex items-center justify-center text-text-mute text-sm">
-          <div class="text-center space-y-2">
-            <div class="text-2xl">🚧</div>
-            <div class="font-medium">自定义 IP/域名加速配置页</div>
-            <div class="text-xs text-text-mute">配置内容待填充</div>
+        <!-- 主内容区：左表单 + 右预览 两栏 -->
+        <div class="flex-1 flex overflow-hidden">
+
+          <!-- ── 左侧表单区 ── -->
+          <div :class="step === 3 ? 'w-full' : 'w-[60%]'" class="flex-shrink-0 flex flex-col min-w-0 overflow-hidden transition-all duration-300">
+
+            <!-- 步骤条 Stepper -->
+            <div class="px-6 pt-4 pb-4 flex-shrink-0">
+              <div class="flex items-center gap-0 text-xs select-none">
+                <!-- Step 1 -->
+                <div class="flex items-center gap-2">
+                  <div class="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors"
+                    :class="step === 1 ? 'bg-brand text-white' : step > 1 ? 'bg-slate-200 text-slate-500' : 'bg-slate-200 text-slate-500'">
+                    1
+                  </div>
+                  <span :class="step === 1 ? 'text-slate-800 font-semibold' : 'text-slate-400'">选择加速目标</span>
+                </div>
+                <span class="mx-3 text-slate-300">/</span>
+                <!-- Step 2 -->
+                <div class="flex items-center gap-2">
+                  <div class="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors"
+                    :class="step === 2 ? 'bg-brand text-white' : step > 2 ? 'bg-slate-200 text-slate-500' : 'bg-slate-200 text-slate-400'">
+                    2
+                  </div>
+                  <span :class="step === 2 ? 'text-slate-800 font-semibold' : 'text-slate-400'">确定加速范围及资源</span>
+                </div>
+                <span class="mx-3 text-slate-300">/</span>
+                <!-- Step 3 -->
+                <div class="flex items-center gap-2">
+                  <div class="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors"
+                    :class="step === 3 ? 'bg-brand text-white' : 'bg-slate-200 text-slate-400'">
+                    3
+                  </div>
+                  <span :class="step === 3 ? 'text-slate-800 font-semibold' : 'text-slate-400'">发布</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 内容滚动区 -->
+            <div class="flex-1 overflow-y-auto px-6 pb-4 space-y-5" style="scrollbar-width:thin">
+
+              <!-- ============================================================
+                STEP 1：选择加速目标
+              ============================================================ -->
+              <div x-show="step === 1" x-cloak class="space-y-4">
+                
+                <!-- 头部标题 -->
+                <div>
+                  <div class="flex items-center gap-1.5 mb-2">
+                    <div class="w-0.5 h-3.5 bg-brand rounded-full"></div>
+                    <span class="text-sm font-semibold text-slate-800">选择加速目标</span>
+                  </div>
+                  
+                  <!-- Tab 栏切换 -->
+                  <div class="flex items-center mb-4 select-none">
+                    <button @click="customType = 'ip'"
+                      :class="customType === 'ip' ? 'border-brand text-brand bg-white relative z-10' : 'border-slate-200 text-slate-600 bg-slate-50/50 hover:bg-slate-50'"
+                      class="h-8 px-6 text-xs border transition-all flex items-center justify-center font-medium">
+                      IP地址配置
+                    </button>
+                    <button @click="customType = 'domain'"
+                      :class="customType === 'domain' ? 'border-brand text-brand bg-white relative z-10' : 'border-slate-200 text-slate-600 bg-slate-50/50 hover:bg-slate-50'"
+                      class="h-8 px-6 text-xs border -ml-px transition-all flex items-center justify-center font-medium">
+                      域名地址配置
+                    </button>
+                  </div>
+                  
+                  <!-- 提示文案 -->
+                  <p class="text-xs text-slate-500 mb-3 leading-relaxed" x-text="customType === 'ip' ? '请手动填写需要被加速的业务IP地址作为源站对象：' : '请手动填写需要被加速的业务域名作为源站对象：'"></p>
+
+                  <!-- 源站行列表 -->
+                  <div class="space-y-2.5">
+                    <template x-for="(row, idx) in sourceRows" :key="row.id">
+                      <div class="border border-slate-200 rounded bg-[#FAFBFD] p-3">
+                        <div class="flex gap-3 items-start">
+                          <!-- 源站对象 -->
+                          <div class="flex-1 min-w-0">
+                            <div class="text-[11px] text-slate-500 mb-1">
+                              <span class="text-red-500">*</span>源站对象
+                            </div>
+                            <input type="text"
+                              :placeholder="customType === 'ip' ? '请输入IP' : '请输入域名'"
+                              x-model="row.target"
+                              class="w-full h-8 border border-slate-200 rounded px-3 text-xs text-slate-700 placeholder-slate-300 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20">
+                          </div>
+
+                          <!-- 源站地理位置 -->
+                          <div class="flex-1 min-w-0">
+                            <div class="text-[11px] text-slate-500 mb-1">
+                              <span class="text-red-500">*</span>源站地理位置
+                              <span class="text-slate-400 font-normal ml-1">（不存在则选源站最近的选项）</span>
+                            </div>
+                            <div class="relative">
+                              <div @click="if (openDropdown === ('l-'+row.id)) { openDropdown = null; } else { openDropdown = 'l-'+row.id; openRegion[row.id] = '中国大陆'; }"
+                                class="h-8 border border-slate-200 rounded bg-white px-3 flex items-center justify-between cursor-pointer hover:border-slate-300 text-xs"
+                                :class="row.location ? 'text-slate-700' : 'text-slate-300'">
+                                <span class="flex items-center gap-1.5">
+                                  <template x-if="row.location">
+                                    <span class="text-brand font-medium">🌐</span>
+                                  </template>
+                                  <span x-text="row.location || '请选择源站最近的加速位置'"></span>
+                                </span>
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                              </div>
+                              <!-- 二级下拉 -->
+                              <div x-show="openDropdown === ('l-'+row.id)" @click.away="openDropdown=null" x-cloak
+                                class="absolute z-30 top-9 left-0 w-80 bg-white border border-slate-200 rounded shadow-lg text-xs flex">
+                                <!-- 左列区域 -->
+                                <div class="w-24 border-r border-slate-100 flex-shrink-0">
+                                  <template x-for="region in Object.keys(mockPops)" :key="region">
+                                    <div class="px-3 py-2 cursor-pointer flex items-center justify-between hover:bg-slate-50"
+                                      :class="openRegion[row.id] === region ? 'text-brand font-semibold bg-blue-50' : 'text-slate-600'"
+                                      @mouseenter="openRegion[row.id] = region">
+                                      <span x-text="region"></span>
+                                      <svg class="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                    </div>
+                                  </template>
+                                </div>
+                                <!-- 右列城市 -->
+                                <div class="flex-1 overflow-y-auto max-h-52">
+                                  <template x-if="openRegion[row.id]">
+                                    <template x-for="pop in mockPops[openRegion[row.id]]" :key="pop.key">
+                                      <div @click="row.location = pop.name; openDropdown = null"
+                                        class="px-3 py-2 hover:bg-blue-50 cursor-pointer flex items-center gap-2"
+                                        :class="row.location === pop.name ? 'text-brand' : 'text-slate-700'">
+                                        <span class="text-brand text-base">🌐</span>
+                                        <span x-text="pop.name"></span>
+                                        <span class="ml-auto text-slate-400 text-[10px] flex items-center gap-0.5 select-none">
+                                          <span>覆盖</span>
+                                          <span x-text="pop.cities[0]"></span>
+                                          <span>等</span>
+                                          <span class="text-brand font-semibold border-b border-dashed border-brand/50 px-0.5" x-text="pop.cities.length"></span>
+                                          <span>个位置</span>
+                                        </span>
+                                      </div>
+                                    </template>
+                                  </template>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <!-- 删除按钮 -->
+                          <button x-show="sourceRows.length > 1" @click="removeRow(row.id)" x-cloak
+                            class="mt-5 w-5 h-5 flex items-center justify-center text-slate-400 hover:text-red-400 transition-colors flex-shrink-0">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                          </button>
+                          <div x-show="sourceRows.length <= 1" class="w-5 flex-shrink-0"></div>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+
+                  <!-- 添加按钮 -->
+                  <button @click="addRow()"
+                    :disabled="sourceRows.length >= 5"
+                    class="mt-2 flex items-center gap-1.5 text-xs text-brand hover:opacity-75 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    <span>添加</span>
+                    <span class="text-slate-400" x-text="'(' + sourceRows.length + '/5)'"></span>
+                  </button>
+                </div>
+              </div><!-- /step 1 -->
+
+              <!-- ============================================================
+                STEP 2：确定加速范围及资源
+              ============================================================ -->
+              <div x-show="step === 2" x-cloak class="space-y-3">
+                <div class="flex items-center gap-1.5">
+                  <div class="w-0.5 h-3.5 bg-brand rounded-full"></div>
+                  <span class="text-sm font-semibold text-slate-800">确定加速范围及资源</span>
+                </div>
+
+                <!-- 卡片列表 -->
+                <template x-for="row in sourceRows.filter(r => r.target)" :key="'s2-'+row.id">
+                  <div class="border rounded bg-white transition-all cursor-pointer mb-3"
+                    :class="selectedRowId === row.id ? 'border-[#1C6EFF] shadow-[0_0_0_1px_rgba(28,110,255,0.15)]' : 'border-slate-200'"
+                    @click="selectedRowId = row.id">
+
+                    <!-- 卡片头 -->
+                    <div class="px-4 py-2.5 flex items-center justify-between border-b border-slate-100 bg-[#EDF1F7] rounded-t">
+                      <div class="flex items-center gap-2">
+                        <div class="w-1.5 h-1.5 rounded-full"
+                          :class="selectedRowId === row.id ? 'bg-[#1C6EFF]' : 'bg-slate-300'"></div>
+                        <span class="text-xs font-semibold text-slate-800" x-text="step2CardTitle(row)"></span>
+                      </div>
+                      <div class="flex items-center gap-1.5 text-xs text-slate-500 bg-white border border-slate-200 rounded px-2.5 py-0.5">
+                        <span class="text-[10px] text-slate-400">源站区域：</span>
+                        <span class="text-brand text-xs">🌐</span>
+                        <span class="text-slate-700 font-medium text-[11px]" x-text="row.location"></span>
+                      </div>
+                    </div>
+
+                    <!-- 卡片体 -->
+                    <div class="p-4 space-y-4">
+                      <!-- 1. 加速区域 -->
+                      <div>
+                        <div class="text-xs text-slate-500 mb-1.5"><span class="text-black font-medium">1. 选择加速区域</span>（上车点加速pop）</div>
+                        <div class="relative">
+                          <div @click.stop="openPopDropdown = (openPopDropdown === row.id ? null : row.id); openRegion['pop-'+row.id] = '中国大陆'"
+                            class="min-h-8 border border-slate-200 rounded bg-white px-3 py-1 flex flex-wrap items-center gap-1.5 cursor-pointer hover:border-slate-300 text-xs">
+                            <span x-show="getPopConfig(row.id).selectedPops.length === 0" class="text-slate-300">请选择加速位置（可多选）</span>
+                            <template x-for="key in visiblePops(row.id)" :key="key">
+                              <span class="bg-blue-50 border border-blue-200 text-brand rounded px-1.5 py-0.5 text-[10px] font-medium flex items-center gap-1">
+                                <span x-text="popLabel(key)"></span>
+                                <span @click.stop="togglePop(row.id, key)" class="text-slate-400 hover:text-brand font-bold">×</span>
+                              </span>
+                            </template>
+                            <template x-if="extraPops(row.id) > 0">
+                              <span class="bg-slate-100 text-slate-600 rounded px-1.5 py-0.5 text-[10px]" x-text="'+' + extraPops(row.id)"></span>
+                            </template>
+                            <svg class="ml-auto w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                          </div>
+
+                          <!-- PoP多选下拉 -->
+                          <div x-show="openPopDropdown === row.id" @click.away="openPopDropdown = null" x-cloak
+                            class="absolute z-20 left-0 right-0 top-10 bg-white border border-slate-200 rounded shadow-lg text-xs flex max-h-52 overflow-hidden">
+                            <!-- 左列区域 -->
+                            <div class="w-24 border-r border-slate-100 flex-shrink-0 overflow-y-auto">
+                              <template x-for="region in Object.keys(mockPops)" :key="region">
+                                <div class="px-3 py-2 cursor-pointer flex items-center justify-between hover:bg-slate-50"
+                                  :class="openRegion['pop-'+row.id] === region ? 'text-brand font-semibold bg-blue-50' : 'text-slate-600'"
+                                  @click="openRegion['pop-'+row.id] = region">
+                                  <span x-text="region"></span>
+                                  <svg class="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                </div>
+                              </template>
+                            </div>
+                            <!-- 右列城市 (多选) -->
+                            <div class="flex-1 overflow-y-auto">
+                              <template x-if="openRegion['pop-'+row.id]">
+                                <template x-for="pop in mockPops[openRegion['pop-'+row.id]]" :key="pop.key">
+                                  <div @click.stop="togglePop(row.id, pop.key)"
+                                    class="px-3 py-2 hover:bg-blue-50 cursor-pointer flex items-center gap-2">
+                                    <div class="w-3.5 h-3.5 border rounded flex items-center justify-center flex-shrink-0"
+                                      :class="getPopConfig(row.id).selectedPops.includes(pop.key) ? 'bg-brand border-brand' : 'border-slate-300'">
+                                      <svg x-show="getPopConfig(row.id).selectedPops.includes(pop.key)" class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                    </div>
+                                    <span class="text-brand text-xs">🌐</span>
+                                    <span :class="getPopConfig(row.id).selectedPops.includes(pop.key) ? 'text-brand font-medium' : 'text-slate-700'" x-text="pop.name"></span>
+                                    <span class="ml-auto text-slate-400 text-[10px] flex items-center gap-0.5 select-none">
+                                      <span>覆盖</span>
+                                      <span x-text="pop.cities[0]"></span>
+                                      <span>等</span>
+                                      <span class="text-brand font-semibold border-b border-dashed border-brand/50 px-0.5" x-text="pop.cities.length"></span>
+                                      <span>个位置</span>
+                                    </span>
+                                  </div>
+                                </template>
+                              </template>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- 覆盖范围提示 (间距为4px，即mt-1) -->
+                        <div class="h-8 bg-[#F7F9FC] rounded px-3 flex items-center text-xs text-slate-500 mt-1">
+                          <span>
+                            根据已选的加速区域可覆盖 
+                            <template x-if="getPopConfig(row.id).selectedPops.length > 0">
+                              <span>
+                                <span class="text-slate-600 font-semibold" x-text="rowCoverageInfo(row.id).names"></span>等 
+                                <strong class="text-brand" x-text="rowCoverageInfo(row.id).count"></strong> 个地区的终端请求
+                              </span>
+                            </template>
+                            <template x-if="getPopConfig(row.id).selectedPops.length === 0">
+                              <span><strong class="text-slate-400">0</strong> 个地区的终端请求</span>
+                            </template>
+                          </span>
+                        </div>
+                      </div>
+
+                      <!-- 2. 加速端口配置 -->
+                      <div class="space-y-2">
+                        <div class="text-xs text-slate-500"><span class="text-black font-medium">2. 加速端口配置</span></div>
+                        
+                        <div class="border border-slate-200 rounded overflow-hidden bg-white">
+                          <table class="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr class="bg-slate-50 text-slate-500 font-medium border-b border-slate-200 select-none">
+                                <th class="py-2.5 px-3 w-1/4">协议 <span class="text-slate-400 cursor-help" title="选择端口代理协议">ⓘ</span></th>
+                                <th class="py-2.5 px-3 w-1/4">监听端口</th>
+                                <th class="py-2.5 px-3 w-1/4">回源端口</th>
+                                <th class="py-2.5 px-3 w-[80px] text-center">操作</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <template x-for="(pRow, pIdx) in row.ports" :key="pRow.id">
+                                <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
+                                  <td class="py-2 px-3">
+                                    <div class="relative">
+                                      <select x-model="pRow.protocol" class="w-full h-8 pl-2 pr-6 border border-slate-200 rounded bg-white text-slate-700 focus:outline-none text-xs appearance-none cursor-pointer">
+                                        <option value="TCP/TCP">TCP/TCP</option>
+                                        <option value="UDP/UDP">UDP/UDP</option>
+                                        <option value="TCP+UDP">TCP+UDP</option>
+                                      </select>
+                                      <span class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-slate-400">▼</span>
+                                    </div>
+                                  </td>
+                                  <td class="py-2 px-3">
+                                    <input type="text" readonly x-model="pRow.listenPort" class="w-full h-8 px-3 border border-slate-100 rounded bg-slate-50 text-slate-400 focus:outline-none text-xs font-mono select-none" />
+                                  </td>
+                                  <td class="py-2 px-3">
+                                    <input type="number" placeholder="请输入" x-model="pRow.originPort" class="w-full h-8 px-3 border border-slate-200 rounded text-slate-700 focus:outline-none text-xs font-mono focus:border-brand focus:ring-1 focus:ring-brand/20" />
+                                  </td>
+                                  <td class="py-2 px-3 text-center">
+                                    <div class="flex items-center justify-center gap-1.5">
+                                      <button @click.stop="addPortRow(row)" class="w-6 h-6 rounded border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors font-bold">
+                                        +
+                                      </button>
+                                      <button x-show="row.ports.length > 1" @click.stop="removePortRow(row, pRow.id)" class="w-6 h-6 rounded border border-slate-200 hover:bg-red-50 flex items-center justify-center text-slate-400 hover:text-red-600 transition-colors">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              </template>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      <!-- 高级配置 (折叠) -->
+                      <div>
+                        <button @click.stop="getPopConfig(row.id).advancedOpen = !getPopConfig(row.id).advancedOpen"
+                          class="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 transition-colors select-none">
+                          <span>高级配置</span>
+                          <svg class="w-3.5 h-3.5 transition-transform" :class="getPopConfig(row.id).advancedOpen ? 'rotate-180' : ''"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div x-show="getPopConfig(row.id).advancedOpen" x-cloak class="mt-2 pt-3 border-t border-slate-100 space-y-3 text-xs text-slate-700">
+                          <!-- 独享IP -->
+                          <div class="flex items-center gap-3">
+                            <span class="w-[80px] text-slate-500 flex-shrink-0">独享IP</span>
+                            <button @click.stop="getPopConfig(row.id).exclusiveIp = !getPopConfig(row.id).exclusiveIp"
+                              class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
+                              :class="getPopConfig(row.id).exclusiveIp ? 'bg-brand' : 'bg-slate-200'">
+                              <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                                :class="getPopConfig(row.id).exclusiveIp ? 'left-4.5' : 'left-0.5'"></div>
+                            </button>
+                            <span class="text-slate-400">隔离风控，源站专用独立公网出口 IP</span>
+                            <span class="text-slate-400 ml-auto select-none">（全局容量剩余：8/20）</span>
+                          </div>
+                          <!-- 源IP透传 -->
+                          <div class="flex items-center gap-3">
+                            <span class="w-[80px] text-slate-500 flex-shrink-0">源IP透传</span>
+                            <button @click.stop="getPopConfig(row.id).sourceIpPassthrough = !getPopConfig(row.id).sourceIpPassthrough"
+                              class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
+                              :class="getPopConfig(row.id).sourceIpPassthrough ? 'bg-brand' : 'bg-slate-200'">
+                              <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                                :class="getPopConfig(row.id).sourceIpPassthrough ? 'left-4.5' : 'left-0.5'"></div>
+                            </button>
+                            <span class="text-slate-400">基于PP协议透传终端真实 IP，支撑零信任安全策略与访问审计溯源</span>
+                          </div>
+                          <!-- 传输优化 -->
+                          <div class="flex items-center gap-3">
+                            <span class="w-[80px] text-slate-500 flex-shrink-0">传输优化</span>
+                            <button @click.stop="getPopConfig(row.id).transportOptimize = !getPopConfig(row.id).transportOptimize"
+                              class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
+                              :class="getPopConfig(row.id).transportOptimize ? 'bg-brand' : 'bg-slate-200'">
+                              <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                                :class="getPopConfig(row.id).transportOptimize ? 'left-4.5' : 'left-0.5'"></div>
+                            </button>
+                            <span class="text-slate-400">跨境弱网链路传输增强，降低延迟与丢包</span>
+                          </div>
+                          <!-- 健康检查 -->
+                          <div class="flex items-center gap-3 flex-wrap">
+                            <span class="w-[80px] text-slate-500 flex-shrink-0">健康检查</span>
+                            <button @click.stop="getPopConfig(row.id).healthCheck = !getPopConfig(row.id).healthCheck"
+                              class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
+                              :class="getPopConfig(row.id).healthCheck ? 'bg-brand' : 'bg-slate-200'">
+                              <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                                :class="getPopConfig(row.id).healthCheck ? 'left-4.5' : 'left-0.5'"></div>
+                            </button>
+                            <div x-show="getPopConfig(row.id).healthCheck" x-transition class="flex items-center gap-2 text-slate-500 text-xs">
+                              <span>每间隔</span>
+                              <div class="relative">
+                                <select x-model="getPopConfig(row.id).healthInterval" class="h-6 pl-2 pr-6 border border-slate-200 rounded bg-white text-slate-700 text-xs focus:outline-none appearance-none cursor-pointer">
+                                  <option value="1s">1秒</option>
+                                  <option value="2s">2秒</option>
+                                  <option value="5s">5秒</option>
+                                  <option value="10s">10秒</option>
+                                </select>
+                                <span class="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-slate-400">▼</span>
+                              </div>
+                              <span>计算最近</span>
+                              <div class="relative">
+                                <select x-model="getPopConfig(row.id).healthDuration" class="h-6 pl-2 pr-6 border border-slate-200 rounded bg-white text-slate-700 text-xs focus:outline-none appearance-none cursor-pointer">
+                                  <option value="30s">30秒内</option>
+                                  <option value="1m">1分钟内</option>
+                                  <option value="5m">5分钟内</option>
+                                </select>
+                                <span class="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-slate-400">▼</span>
+                              </div>
+                              <span>源站区域-业务的资源健康度</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+                </template>
+
+                <!-- 无源站提示 -->
+                <div x-show="sourceRows.filter(r => r.target).length === 0" x-cloak
+                  class="text-center py-8 text-xs text-slate-400 select-none">
+                  请在上一步配置源站对象后再进行加速范围设置
+                </div>
+              </div><!-- /step 2 -->
+
+              <!-- ============================================================
+                STEP 3：发布 — 加加速链路预览
+              ============================================================ -->
+              <div x-show="step === 3" x-cloak class="space-y-3">
+                <div class="flex items-baseline gap-2">
+                  <span class="text-sm font-semibold text-slate-800">加速链路预览</span>
+                  <span class="text-xs text-slate-400"
+                    x-text="'（本次配置加速路径规则 ' + step3Rules().length + ' 条）'"></span>
+                </div>
+
+                <!-- 链路规则卡片列表 -->
+                <template x-for="rule in step3Rules()" :key="'s3-'+rule.id">
+                  <div class="border border-slate-200 rounded-lg bg-white overflow-hidden">
+                    <!-- 卡片头 (非编辑态) -->
+                    <div x-show="editingRuleId !== rule.id" class="px-4 py-2.5 border-b border-slate-100 flex items-center gap-4">
+                      <span class="text-xs text-slate-500">规则名称：</span>
+                      <span class="text-xs font-semibold text-slate-800" x-text="rule.name"></span>
+                      <span class="text-xs text-slate-400 ml-2" x-text="'描述：' + rule.description"></span>
+                      <button @click="editingRuleId = rule.id; editingName = rule.name; editingDesc = rule.description === '–' ? '' : rule.description" class="ml-auto text-slate-300 hover:text-slate-500 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                      </button>
+                    </div>
+
+                    <!-- 卡片头 (编辑态) -->
+                    <div x-show="editingRuleId === rule.id" class="px-4 py-2 border-b border-slate-100 flex items-center gap-4 bg-slate-50/50" x-cloak>
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500 flex-shrink-0">规则名称：</span>
+                        <input type="text" class="h-7 px-2 border border-blue-400 rounded text-xs text-slate-800 bg-white focus:outline-none w-[240px]" x-model="editingName" placeholder="请输入规则名称">
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs text-slate-500 flex-shrink-0">描述：</span>
+                        <input type="text" class="h-7 px-2 border border-slate-300 rounded text-xs text-slate-800 bg-white focus:outline-none w-[200px]" x-model="editingDesc" placeholder="请输入描述信息">
+                      </div>
+                      <div class="ml-auto flex items-center gap-2">
+                        <button @click="const row = sourceRows.find(r => r.id === rule.id); if (row) { row.customName = editingName; row.description = editingDesc || '–'; }; editingRuleId = null" class="h-6 px-2.5 rounded bg-brand text-white text-[11px] font-medium hover:bg-brand-hover transition-colors">
+                          保存
+                        </button>
+                        <button @click="editingRuleId = null" class="h-6 px-2.5 rounded border border-slate-200 text-slate-500 text-[11px] font-medium hover:bg-slate-50 transition-colors">
+                          取消
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- 链路可视化行 -->
+                    <div class="p-6 flex items-center justify-between gap-2 text-xs bg-slate-50/40 rounded-b-lg overflow-x-auto min-w-[850px]">
+                      <!-- 1. 覆盖区域 -->
+                      <div class="flex-1 min-w-[140px] max-w-[200px] space-y-1">
+                        <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400 select-none">终端请求覆盖</div>
+                        <div class="text-xs text-slate-500 leading-relaxed">
+                          <template x-if="rule.pops.length > 0">
+                            <div class="flex items-center gap-1.5">
+                              <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
+                              <span>
+                                <span class="text-slate-500" x-text="rowCoverageInfo(rule.id).names"></span>等
+                                <span class="text-brand text-xs font-semibold" x-text="rowCoverageInfo(rule.id).count"></span> 个地区
+                              </span>
+                            </div>
+                          </template>
+                          <template x-if="rule.pops.length === 0">
+                            <div class="flex items-center gap-1.5 text-slate-400">
+                              <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                              <span>0 个地区</span>
+                            </div>
+                          </template>
+                        </div>
+                      </div>
+
+                      <!-- 箭头 1 -->
+                      <div class="flex items-center justify-center flex-shrink-0 w-8">
+                        <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+
+                      <!-- 2. 加速区域（上车点） -->
+                      <div class="flex-shrink-0 flex flex-col items-center min-w-[120px]">
+                        <div class="text-[10px] font-medium text-slate-400 mb-1.5 select-none">加速区域 (上车点)</div>
+                        <template x-if="rule.pops.length > 0">
+                          <div class="w-full px-3 py-2 rounded-xl border border-blue-200 bg-gradient-to-b from-blue-50 to-blue-100/50 text-blue-700 font-semibold text-xs shadow-sm flex items-center justify-center gap-2 relative group hover:border-blue-400 transition-colors">
+                            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            <span x-text="popLabel(rule.pops[0])"></span>
+                            <template x-if="rule.pops.length > 1">
+                              <span class="absolute -top-2 -right-2 bg-brand text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold border border-white shadow-md scale-95" x-text="'+' + (rule.pops.length - 1)"></span>
+                            </template>
+                          </div>
+                        </template>
+                        <template x-if="rule.pops.length === 0">
+                          <div class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-400 text-xs shadow-inner flex items-center justify-center gap-2 select-none">
+                            <span>未配置</span>
+                          </div>
+                        </template>
+                      </div>
+
+                      <!-- 极速管道 1 -->
+                      <div class="flex-1 mx-2 relative flex items-center min-w-[50px] max-w-[120px] translate-y-[10px]">
+                        <div class="h-1 w-full bg-cyan-100/80 rounded-full overflow-hidden relative shadow-inner">
+                          <div class="absolute top-0 bottom-0 w-[40px] bg-gradient-to-r from-transparent via-[#06B6D4] to-transparent animate-flow-fast"></div>
+                        </div>
+                      </div>
+
+                      <!-- 3. 骨干网传输 -->
+                      <div class="flex-shrink-0 flex flex-col items-center">
+                        <div class="text-[10px] font-medium text-slate-400 mb-1.5 select-none">全球传输骨干网</div>
+                        <div class="relative px-4 py-2 rounded-xl border border-emerald-300 bg-gradient-to-b from-[#ECFDF5] to-[#D1FAE5] text-emerald-800 text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                          <span class="text-amber-500 animate-pulse">⚡</span>
+                          <span>全球骨干专线网</span>
+                          <span class="bg-emerald-500 text-white text-[8px] font-extrabold px-1 rounded-sm scale-90 select-none">SASE</span>
+                        </div>
+                      </div>
+
+                      <!-- 极速管道 2 -->
+                      <div class="flex-1 mx-2 relative flex items-center min-w-[50px] max-w-[120px] translate-y-[10px]">
+                        <div class="h-1 w-full bg-cyan-100/80 rounded-full overflow-hidden relative shadow-inner">
+                          <div class="absolute top-0 bottom-0 w-[40px] bg-gradient-to-r from-transparent via-[#06B6D4] to-transparent animate-flow-fast"></div>
+                        </div>
+                      </div>
+
+                      <!-- 4. 源站区域（下车点） -->
+                      <div class="flex-shrink-0 flex flex-col items-center min-w-[120px]">
+                        <div class="text-[10px] font-medium text-slate-400 mb-1.5 select-none">源站区域 (下车点)</div>
+                        <div class="w-full px-3 py-2 rounded-xl border border-emerald-200 bg-gradient-to-b from-[#F0FDF4] to-[#DCFCE7] text-[#15803D] font-semibold text-xs shadow-sm flex items-center justify-center gap-2 hover:border-emerald-400 transition-colors">
+                          <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                          </svg>
+                          <span x-text="rule.location + ' PoP'"></span>
+                        </div>
+                      </div>
+
+                      <!-- 箭头 2 -->
+                      <div class="flex items-center justify-center flex-shrink-0 w-8">
+                        <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+
+                      <!-- 5. 源站对象 -->
+                      <div class="flex-1 min-w-[150px] max-w-[220px] space-y-1">
+                        <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400 select-none">源站对象</div>
+                        <div class="flex items-center gap-2.5">
+                          <div class="w-9 h-9 rounded-xl border border-slate-200 bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                            </svg>
+                          </div>
+                          <div class="min-w-0 flex-1">
+                            <div class="text-xs font-bold text-slate-800 line-clamp-2 break-all" x-text="rule.target"></div>
+                            <!-- 端口列表摘要 -->
+                            <div class="text-[10px] text-slate-400 mt-0.5 truncate">
+                              端口：<template x-for="(p, pi) in rule.ports" :key="p.id">
+                                <span x-text="(pi > 0 ? '/' : '') + (p.originPort || '443')"></span>
+                              </template>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div><!-- /step 3 -->
+
+            </div><!-- /内容滚动区 -->
+
+            <!-- 底部操作栏 -->
+            <div class="flex-shrink-0 px-6 py-3.5 border-t border-slate-100 bg-white flex items-center gap-3">
+              <!-- 第一步 -->
+              <template x-if="step === 1">
+                <div class="flex items-center gap-3">
+                  <button @click="goNext()"
+                    :disabled="!canNext()"
+                    class="h-8 px-5 rounded text-sm font-medium text-white bg-brand hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    下一步
+                  </button>
+                  <button @click="location.href='GA-initial.html'"
+                    class="h-8 px-4 rounded text-sm border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+                    取消
+                  </button>
+                </div>
+              </template>
+              <!-- 第二步 -->
+              <template x-if="step === 2">
+                <div class="flex items-center gap-3">
+                  <button @click="goNext()"
+                    class="h-8 px-5 rounded text-sm font-medium text-white bg-brand hover:bg-brand-hover transition-colors">
+                    下一步
+                  </button>
+                  <button @click="goPrev()"
+                    class="h-8 px-4 rounded text-sm border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+                    上一步
+                  </button>
+                  <button @click="location.href='GA-initial.html'"
+                    class="h-8 px-4 rounded text-sm border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+                    取消
+                  </button>
+                </div>
+              </template>
+              <!-- 第三步 -->
+              <template x-if="step === 3">
+                <div class="flex items-center gap-3">
+                  <button @click="if (customType === 'domain') { showCnameModal = true; } else { saveConfig(); location.href='GA-display.html'; }"
+                    class="h-8 px-5 rounded text-sm font-medium text-white bg-brand hover:bg-brand-hover transition-colors">
+                    保存
+                  </button>
+                  <button @click="goPrev()"
+                    class="h-8 px-4 rounded text-sm border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+                    上一步
+                  </button>
+                  <button @click="location.href='GA-initial.html'"
+                    class="h-8 px-4 rounded text-sm border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+                    取消
+                  </button>
+                </div>
+              </template>
+            </div>
+
+          </div><!-- /左侧表单区 -->
+
+          <!-- ── 右侧预览区 ── -->
+          <div x-show="step !== 3" x-cloak class="w-[40%] flex-shrink-0 border-l border-slate-200 bg-white flex flex-col overflow-hidden">
+
+            <!-- 配置预览标题 -->
+            <div class="px-4 pt-4 pb-0 flex-shrink-0 flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-700">配置预览</span>
+            </div>
+
+            <!-- 图例 -->
+            <div class="flex-shrink-0 flex items-center justify-start gap-4 px-4 mt-4 mb-4 text-[10px] text-slate-500 select-none">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-[#1C6EFF]"></span>
+                <span>加速区域 (上车点)</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-[#12A679]"></span>
+                <span>源站区域 (下车点)</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-[#F59E0B]"></span>
+                <span>源站对象</span>
+              </div>
+            </div>
+
+            <!-- 地球 Canvas -->
+            <div class="flex-1 flex items-center justify-center px-4 min-h-0 relative select-none">
+              <canvas id="globeCanvas" class="cursor-grab active:cursor-grabbing" style="aspect-ratio: 1/1;"></canvas>
+            </div>
+
+            <!-- 链路摘要 -->
+            <div class="flex-shrink-0 px-4 pb-4">
+              <div class="text-[11px] text-slate-500 font-medium mb-2.5">链路摘要</div>
+              <div class="flex items-center justify-between gap-1 text-[11px]">
+                
+                <!-- 1. 上车点 -->
+                <div class="flex-1 bg-slate-50/50 p-2.5 border border-slate-200 rounded-lg relative min-w-0">
+                  <div class="text-slate-400 mb-1">加速区域（上车点）</div>
+                  <div x-show="getPreviewRow() && getPopConfig(getPreviewRow().id).selectedPops.length > 0" x-cloak>
+                    <div class="font-medium text-brand truncate">
+                      • <span x-text="popLabel(getPopConfig(getPreviewRow().id).selectedPops[0])"></span>
+                      <span x-show="getPopConfig(getPreviewRow().id).selectedPops.length > 1" class="text-slate-500 font-normal">等<span x-text="getPopConfig(getPreviewRow().id).selectedPops.length"></span>个</span>
+                    </div>
+                  </div>
+                  <div x-show="!getPreviewRow() || getPopConfig(getPreviewRow().id).selectedPops.length === 0" class="text-slate-300">–</div>
+                </div>
+
+                <!-- 连线 1 -->
+                <div class="flex-shrink-0 w-8 h-4 relative flex items-center justify-center">
+                  <div class="h-0.5 w-full bg-cyan-100 rounded-full relative overflow-hidden">
+                    <div class="absolute top-0 bottom-0 w-[12px] bg-brand animate-flow-fast"></div>
+                  </div>
+                </div>
+
+                <!-- 2. 下车点 -->
+                <div class="flex-1 bg-slate-50/50 p-2.5 border border-slate-200 rounded-lg relative min-w-0">
+                  <div class="text-slate-400 mb-1">源站区域（下车点）</div>
+                  <div x-show="getPreviewRow() && getPreviewRow().location" x-cloak>
+                    <div class="font-medium text-brand truncate">• <span x-text="getPreviewRow().location"></span></div>
+                  </div>
+                  <div x-show="!getPreviewRow() || !getPreviewRow().location" class="text-slate-300">–</div>
+                </div>
+
+                <!-- 连线 2 -->
+                <div class="flex-shrink-0 w-8 h-4 relative flex items-center justify-center">
+                  <div class="h-0.5 w-full bg-cyan-100 rounded-full relative overflow-hidden">
+                    <div class="absolute top-0 bottom-0 w-[12px] bg-brand animate-flow-fast"></div>
+                  </div>
+                </div>
+
+                <!-- 3. 源站 -->
+                <div class="flex-1 bg-slate-50/50 p-2.5 border border-slate-200 rounded-lg relative min-w-0">
+                  <div class="text-slate-400 mb-1">源站对象</div>
+                  <div x-show="getPreviewRow() && getPreviewRow().target" x-cloak>
+                    <div class="font-medium text-brand truncate" x-text="getPreviewRow().target"></div>
+                  </div>
+                  <div x-show="!getPreviewRow() || !getPreviewRow().target" class="text-slate-300">–</div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Spacer to push link summary up by 56px -->
+            <div class="h-[56px] w-full flex-shrink-0"></div>
+
+          </div><!-- /右侧预览区 -->
+
+        </div><!-- /两栏 -->
+
+        <!-- 发布加速配置 CNAME Modal -->
+        <div x-show="showCnameModal" class="fixed inset-0 z-50 flex items-center justify-center" x-cloak>
+          <!-- 背景遮罩 -->
+          <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="showCnameModal = false"></div>
+          
+          <!-- 弹窗主体 -->
+          <div class="relative bg-white rounded-xl shadow-2xl border border-slate-200 w-[680px] max-w-full overflow-hidden flex flex-col"
+               x-show="showCnameModal"
+               x-transition:enter="transition ease-out duration-200"
+               x-transition:enter-start="opacity-0 scale-95"
+               x-transition:enter-end="opacity-100 scale-100"
+               x-transition:leave="transition ease-in duration-150"
+               x-transition:leave-start="opacity-100 scale-100"
+               x-transition:leave-end="opacity-0 scale-95">
+            <!-- 头部 -->
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+              <h3 class="text-sm font-semibold text-slate-800">
+                发布加速配置
+              </h3>
+              <button @click="showCnameModal = false" class="text-slate-400 hover:text-slate-600 text-lg font-medium p-1">×</button>
+            </div>
+            <!-- 内容 -->
+            <div class="p-6 space-y-4 overflow-y-auto max-h-[calc(80vh-100px)] custom-scrollbar">
+              <!-- 绿标提示 -->
+              <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full bg-[#10B981] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">✓</div>
+                <div class="text-sm font-semibold text-slate-800">配置已保存，请发布CNAME记录使加速生效</div>
+              </div>
+              
+              <!-- 蓝底原理 Alert 框 -->
+              <div class="p-4 bg-blue-50/40 border border-blue-100 rounded-lg flex flex-col gap-3">
+                <!-- 标题 -->
+                <div class="flex items-center gap-2 text-xs font-semibold text-brand">
+                  <svg class="w-3.5 h-3.5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                  </svg>
+                  <span>为什么配置了源站域名，还需要发布 CNAME?</span>
+                </div>
+                
+                <!-- 拓扑/示意图 -->
+                <div class="flex items-center justify-between px-6 py-2.5 bg-white rounded-lg border border-slate-100/80 shadow-sm text-[11px] select-none">
+                  <!-- User Node -->
+                  <div class="flex flex-col items-center gap-1 w-16">
+                    <div class="w-7 h-7 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <span class="text-slate-500 font-medium scale-95">终端用户</span>
+                  </div>
+                  
+                  <!-- Arrow 1 -->
+                  <div class="flex-1 flex flex-col items-center gap-1 mx-2">
+                    <span class="text-[9px] text-[#F97316] font-medium bg-[#FFF7ED] border border-[#FFEDD5] px-1.5 py-0.5 rounded scale-90 select-none">2. CNAME 引流 (待操作)</span>
+                    <div class="w-full relative flex items-center h-1">
+                      <div class="w-full border-t border-dashed border-orange-300"></div>
+                      <span class="absolute right-0 -top-[3.5px] w-2 h-2 border-t border-r border-orange-400 rotate-45"></span>
+                    </div>
+                  </div>
+                  
+                  <!-- SASE Node -->
+                  <div class="flex flex-col items-center gap-1 w-16">
+                    <div class="w-7 h-7 rounded-full bg-blue-50 flex items-center justify-center text-brand border border-blue-100 shadow-sm">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                    </div>
+                    <span class="text-brand font-semibold scale-95">SASE 节点</span>
+                  </div>
+                  
+                  <!-- Arrow 2 -->
+                  <div class="flex-1 flex flex-col items-center gap-1 mx-2">
+                    <span class="text-[9px] text-emerald-600 font-medium bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded scale-90 select-none">1. 识别源站 (已配置)</span>
+                    <div class="w-full relative flex items-center h-1">
+                      <div class="w-full border-t border-emerald-400"></div>
+                      <span class="absolute right-0 -top-[3.5px] w-2 h-2 border-t border-r border-emerald-500 rotate-45"></span>
+                    </div>
+                  </div>
+                  
+                  <!-- Real Source Node -->
+                  <div class="flex flex-col items-center gap-1 w-16">
+                    <div class="w-7 h-7 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                      </svg>
+                    </div>
+                    <span class="text-slate-500 font-medium scale-95">真实源站</span>
+                  </div>
+                </div>
+                
+                <!-- 文字释义 -->
+                <div class="text-[11px] text-slate-500 leading-normal space-y-1">
+                  <div>您刚才填写的<span class="text-brand font-medium">源站域名</span>，只是告诉了 SASE 节点 <span class="text-emerald-600 font-semibold bg-emerald-50 px-1 rounded">去哪里获取您的真实数据</span> (图示步骤1)。</div>
+                  <div>但此时用户的访问仍直接绕过防护打在您的源站上。您必须前往 DNS 服务商添加 <strong>CNAME 记录</strong>，这相当于在公网设立一个路牌，将用户流量 <span class="text-orange-500 font-semibold bg-orange-50 px-1 rounded">牵引到 SASE 节点上</span> (图示步骤2)，加速与防护能力才能真正生效。</div>
+                </div>
+              </div>
+              
+              <!-- 第一步：复制加速域名 -->
+              <div class="space-y-2">
+                <div class="flex items-center gap-2 text-xs font-semibold text-slate-800">
+                  <span class="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center text-[10px]">1</span>
+                  <span>复制以下加速域名（CNAME）</span>
+                </div>
+                
+                <!-- 表格 -->
+                <div class="border border-slate-100 rounded-lg overflow-hidden bg-white">
+                  <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr class="bg-slate-50 text-slate-400 font-semibold border-b border-slate-100 select-none">
+                        <th class="py-2.5 px-4 font-normal">源站对象</th>
+                        <th class="py-2.5 px-4 font-normal">加速域名</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template x-for="row in sourceRows.filter(r => r.target)" :key="'cname-'+row.id">
+                        <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
+                          <td class="py-2.5 px-4 text-slate-700 font-medium font-mono" x-text="getWebTargetUrl(row.target)"></td>
+                          <td class="py-2.5 px-4">
+                            <div class="flex items-center justify-between gap-3 bg-emerald-50/40 border border-emerald-100 rounded px-2.5 py-1 text-emerald-800 font-mono text-[11px] max-w-[360px]">
+                              <span class="flex items-center gap-1 min-w-0 flex-1">
+                                <span class="text-emerald-600 text-xs flex-shrink-0">⚡</span>
+                                <span class="truncate max-w-[280px]" x-text="getWebCname(row)" :title="getWebCname(row)"></span>
+                              </span>
+                              <button @click.stop="copyText(getWebCname(row), row.id)" class="text-emerald-600 hover:text-emerald-800 flex-shrink-0 relative group p-0.5 ml-2">
+                                <template x-if="copiedRowId === row.id">
+                                  <span class="text-[10px] text-emerald-600 font-sans font-bold flex items-center gap-0.5">
+                                    <span>✓</span>已复制
+                                  </span>
+                                </template>
+                                <template x-if="copiedRowId !== row.id">
+                                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                                  </svg>
+                                </template>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              <!-- 第二步：将加速域名发布至公网DNS服务器 -->
+              <div class="space-y-2">
+                <div class="flex items-center gap-2 text-xs font-semibold text-slate-800">
+                  <span class="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center text-[10px]">2</span>
+                  <span>将加速域名发布至公网DNS服务器的解析记录中</span>
+                </div>
+                
+                <div class="bg-slate-50 border border-slate-100 p-3 rounded-lg text-xs text-slate-600 leading-normal flex items-start gap-2 select-none">
+                  <span class="text-slate-400 select-none">•</span>
+                  <div>
+                    请在您的公网DNS中，将复制的域名添加到对应的CNAME记录中，后续用户将优先解析到加速域名进行访问
+                    <a href="#" class="text-brand hover:underline ml-1 cursor-pointer">如何发布?</a>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+            <!-- 底部按钮 -->
+            <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2.5 flex-shrink-0 select-none">
+              <button @click="saveConfig(); location.href='GA-display.html'" class="h-8 px-4 rounded text-xs bg-brand text-white font-medium hover:bg-brand-hover transition-colors shadow-sm">
+                已发布，测试加速
+              </button>
+              <button @click="saveConfig(); addToTodoList(); localStorage.setItem('ga_show_flyaway', 'true'); location.href='GA-display.html'" class="h-8 px-4 rounded text-xs border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors focus:outline-none">
+                稍后在列表发布
+              </button>
+            </div>
           </div>
         </div>
 
       </main>
 
-    </main>
-
     </div> <!-- / App Layout Shell -->
 
   </div> <!-- / App Root -->
 
+  <script src="GA-introduce.js"></script>
 </body>
+
+<!-- 地球 Canvas 渲染脚本 -->
+<script>
+  window.addEventListener('load', function () {
+    const canvas = document.getElementById('globeCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    function resize() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const size = Math.min(rect.width - 32, 280);
+      canvas.style.width = size + 'px';
+      canvas.style.height = size + 'px';
+      
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = size * dpr;
+      canvas.height = size * dpr;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const nodes = [
+      { lat: 40 * Math.PI / 180, lng: 116 * Math.PI / 180, name: '北京', key: 'bj', type: 'pop' },
+      { lat: 39.1 * Math.PI / 180, lng: 117.2 * Math.PI / 180, name: '天津', key: 'tj', type: 'pop' },
+      { lat: 30.6 * Math.PI / 180, lng: 114.3 * Math.PI / 180, name: '武汉', key: 'wh', type: 'pop' },
+      { lat: 23 * Math.PI / 180, lng: 113 * Math.PI / 180, name: '广州', key: 'gz', type: 'pop' },
+      { lat: 22.5 * Math.PI / 180, lng: 114 * Math.PI / 180, name: '深圳', key: 'sz', type: 'pop' },
+      { lat: 31 * Math.PI / 180, lng: 121 * Math.PI / 180, name: '上海', key: 'sh', type: 'pop' },
+      { lat: 1.3 * Math.PI / 180, lng: 104 * Math.PI / 180, name: '新加坡', key: 'sg', type: 'pop' },
+      { lat: 36 * Math.PI / 180, lng: 140 * Math.PI / 180, name: '东京', key: 'to', type: 'pop' },
+      { lat: 3 * Math.PI / 180, lng: 102 * Math.PI / 180, name: '吉隆坡', key: 'kl', type: 'pop' },
+      { lat: 37.5 * Math.PI / 180, lng: 127.0 * Math.PI / 180, name: '首尔', key: 'seoul', type: 'pop' },
+      { lat: 13.75 * Math.PI / 180, lng: 100.5 * Math.PI / 180, name: '曼谷', key: 'bangkok', type: 'pop' },
+      { lat: 14.6 * Math.PI / 180, lng: 121.0 * Math.PI / 180, name: '马尼拉', key: 'manila', type: 'pop' },
+      { lat: 19.0 * Math.PI / 180, lng: 72.8 * Math.PI / 180, name: '孟买', key: 'mumbai', type: 'pop' },
+      { lat: -33.86 * Math.PI / 180, lng: 151.2 * Math.PI / 180, name: '悉尼', key: 'sydney', type: 'pop' },
+      { lat: 51.5 * Math.PI / 180, lng: 0 * Math.PI / 180, name: '伦敦', key: 'lo', type: 'pop' },
+      { lat: 48.8 * Math.PI / 180, lng: 2.35 * Math.PI / 180, name: '巴黎', key: 'pa', type: 'pop' },
+      { lat: 52.5 * Math.PI / 180, lng: 13.4 * Math.PI / 180, name: '柏林', key: 'be', type: 'pop' },
+      { lat: 34 * Math.PI / 180, lng: -118 * Math.PI / 180, name: '洛杉矶', key: 'la', type: 'pop' },
+      { lat: 47.6 * Math.PI / 180, lng: -122.3 * Math.PI / 180, name: '西雅图', key: 'se', type: 'pop' },
+      { lat: 37.7 * Math.PI / 180, lng: -122.4 * Math.PI / 180, name: '加利福尼亚', key: 'ca', type: 'pop' },
+      { lat: 25.2 * Math.PI / 180, lng: 55.3 * Math.PI / 180, name: '迪拜', key: 'du', type: 'pop' },
+    ];
+
+    let frame = 0;
+    let isDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    let rotationY = 2.0;
+    let rotationX = 0.3;
+
+    canvas.addEventListener('mousedown', function (e) {
+      isDragging = true;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+
+    window.addEventListener('mousemove', function (e) {
+      if (!isDragging) return;
+      const dx = e.clientX - lastMouseX;
+      const dy = e.clientY - lastMouseY;
+      rotationY += dx * 0.005;
+      rotationX += dy * 0.005;
+      rotationX = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, rotationX));
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    });
+
+    window.addEventListener('mouseup', function () {
+      isDragging = false;
+    });
+
+    canvas.addEventListener('touchstart', function (e) {
+      if (e.touches.length === 1) {
+        isDragging = true;
+        lastMouseX = e.touches[0].clientX;
+        lastMouseY = e.touches[0].clientY;
+      }
+    });
+
+    window.addEventListener('touchmove', function (e) {
+      if (!isDragging || e.touches.length !== 1) return;
+      const dx = e.touches[0].clientX - lastMouseX;
+      const dy = e.touches[0].clientY - lastMouseY;
+      rotationY += dx * 0.005;
+      rotationX += dy * 0.005;
+      rotationX = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, rotationX));
+      lastMouseX = e.touches[0].clientX;
+      lastMouseY = e.touches[0].clientY;
+    });
+
+    window.addEventListener('touchend', function () {
+      isDragging = false;
+    });
+
+    function getAlpineState() {
+      const mainEl = document.querySelector('main[x-data]');
+      if (!mainEl) return null;
+      if (window.Alpine && window.Alpine.$data) {
+        return window.Alpine.$data(mainEl);
+      }
+      if (mainEl.__x && mainEl.__x.$data) {
+        return mainEl.__x.$data;
+      }
+      if (mainEl._x_dataStack) {
+        return Object.assign({}, ...mainEl._x_dataStack);
+      }
+      return null;
+    }
+
+    const nameToKeyMap = {
+      '北京': 'bj', '北京市': 'bj',
+      '天津': 'tj',
+      '武汉': 'wh',
+      '广州': 'gz',
+      '深圳': 'sz',
+      '上海': 'sh',
+      '新加坡': 'sg',
+      '东京': 'to',
+      '吉隆坡': 'kl',
+      '首尔': 'seoul',
+      '曼谷': 'bangkok',
+      '马尼拉': 'manila',
+      '孟买': 'mumbai',
+      '悉尼': 'sydney',
+      '伦敦': 'lo',
+      '巴黎': 'pa',
+      '柏林': 'be',
+      '洛杉矶': 'la',
+      '西雅图': 'se',
+      '加利福尼亚': 'ca',
+      '迪拜': 'du'
+    };
+    function getLocationKey(name) {
+      if (!name) return null;
+      for (const [k, v] of Object.entries(nameToKeyMap)) {
+        if (name.includes(k)) return v;
+      }
+      return null;
+    }
+
+    function drawGlobe() {
+      const dpr = window.devicePixelRatio || 1;
+      const W = canvas.width / dpr, H = canvas.height / dpr;
+      if (W <= 0 || H <= 0) {
+        frame++;
+        requestAnimationFrame(drawGlobe);
+        return;
+      }
+      const cx = W / 2, cy = H / 2;
+      const R = Math.min(W, H) * 0.44;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+
+      function project(lat, lng) {
+        const x0 = R * Math.cos(lat) * Math.sin(lng);
+        const y0 = R * Math.sin(lat);
+        const z0 = R * Math.cos(lat) * Math.cos(lng);
+
+        const x1 = x0 * Math.cos(rotationY) + z0 * Math.sin(rotationY);
+        const z1 = -x0 * Math.sin(rotationY) + z0 * Math.cos(rotationY);
+
+        const y2 = y0 * Math.cos(rotationX) - z1 * Math.sin(rotationX);
+        const z2 = y0 * Math.sin(rotationX) + z1 * Math.cos(rotationX);
+
+        return {
+          x: cx + x1,
+          y: cy - y2,
+          z: z2,
+          visible: z2 > 0
+        };
+      }
+
+      function projectWithHeight(lat, lng, height) {
+        const currentR = R + height;
+        const x0 = currentR * Math.cos(lat) * Math.sin(lng);
+        const y0 = currentR * Math.sin(lat);
+        const z0 = currentR * Math.cos(lat) * Math.cos(lng);
+
+        const x1 = x0 * Math.cos(rotationY) + z0 * Math.sin(rotationY);
+        const z1 = -x0 * Math.sin(rotationY) + z0 * Math.cos(rotationY);
+
+        const y2 = y0 * Math.cos(rotationX) - z1 * Math.sin(rotationX);
+        const z2 = y0 * Math.sin(rotationX) + z1 * Math.cos(rotationX);
+
+        return {
+          x: cx + x1,
+          y: cy - y2,
+          z: z2,
+          visible: z2 > 0
+        };
+      }
+
+      const glowGrad = ctx.createRadialGradient(cx, cy, R * 0.98, cx, cy, R * 1.06);
+      glowGrad.addColorStop(0, 'rgba(96, 165, 250, 0.35)');
+      glowGrad.addColorStop(1, 'rgba(96, 165, 250, 0)');
+      ctx.beginPath();
+      ctx.arc(cx, cy, R * 1.06, 0, 2 * Math.PI);
+      ctx.fillStyle = glowGrad;
+      ctx.fill();
+
+      const grad = ctx.createRadialGradient(cx - R * 0.28, cy - R * 0.28, R * 0.1, cx, cy, R);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.3, '#eff6ff');
+      grad.addColorStop(0.85, '#bfdbfe');
+      grad.addColorStop(1, '#60a5fa');
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, 2 * Math.PI);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      function drawGrid(drawBack) {
+        ctx.strokeStyle = drawBack ? 'rgba(186, 215, 253, 0.12)' : 'rgba(74, 144, 226, 0.25)';
+        ctx.lineWidth = 0.5;
+
+        for (let latDeg = -80; latDeg <= 80; latDeg += 20) {
+          const lat = latDeg * Math.PI / 180;
+          ctx.beginPath();
+          let first = true;
+          for (let lngDeg = 0; lngDeg <= 360; lngDeg += 5) {
+            const lng = lngDeg * Math.PI / 180;
+            const pt = project(lat, lng);
+            if (pt.visible === !drawBack) {
+              if (first) {
+                ctx.moveTo(pt.x, pt.y);
+                first = false;
+              } else {
+                ctx.lineTo(pt.x, pt.y);
+              }
+            } else {
+              first = true;
+            }
+          }
+          ctx.stroke();
+        }
+
+        for (let lngDeg = 0; lngDeg < 360; lngDeg += 30) {
+          const lng = lngDeg * Math.PI / 180;
+          ctx.beginPath();
+          let first = true;
+          for (let latDeg = -90; latDeg <= 90; latDeg += 5) {
+            const lat = latDeg * Math.PI / 180;
+            const pt = project(lat, lng);
+            if (pt.visible === !drawBack) {
+              if (first) {
+                ctx.moveTo(pt.x, pt.y);
+                first = false;
+              } else {
+                ctx.lineTo(pt.x, pt.y);
+              }
+            } else {
+              first = true;
+            }
+          }
+          ctx.stroke();
+        }
+      }
+
+      drawGrid(true);
+      drawGrid(false);
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      const state = getAlpineState();
+      let step = 1;
+      let activeRow = null;
+      if (state) {
+        step = state.step;
+        activeRow = state.getPreviewRow ? state.getPreviewRow() : null;
+      }
+
+      function drawCurve3D(nodeA, nodeB, color, active) {
+        if (!nodeA || !nodeB) return;
+        ctx.beginPath();
+        let first = true;
+        const steps = 40;
+        
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          const lat = nodeA.lat + (nodeB.lat - nodeA.lat) * t;
+          let lng = nodeA.lng + (nodeB.lng - nodeA.lng) * t;
+
+          if (Math.abs(nodeB.lng - nodeA.lng) > Math.PI) {
+            if (nodeB.lng > nodeA.lng) {
+              lng = nodeA.lng + (nodeB.lng - 2 * Math.PI - nodeA.lng) * t;
+            } else {
+              lng = nodeA.lng + (nodeB.lng + 2 * Math.PI - nodeA.lng) * t;
+            }
+          }
+
+          const height = Math.sin(t * Math.PI) * 15;
+          const pt = projectWithHeight(lat, lng, height);
+
+          if (pt.visible) {
+            if (first) {
+              ctx.moveTo(pt.x, pt.y);
+              first = false;
+            } else {
+              ctx.lineTo(pt.x, pt.y);
+            }
+          } else {
+            first = true;
+          }
+        }
+        ctx.strokeStyle = color;
+        ctx.lineWidth = active ? 2 : 1;
+        ctx.stroke();
+
+        if (active) {
+          const flowT = (frame % 60) / 60;
+          const lat = nodeA.lat + (nodeB.lat - nodeA.lat) * flowT;
+          let lng = nodeA.lng + (nodeB.lng - nodeA.lng) * flowT;
+          if (Math.abs(nodeB.lng - nodeA.lng) > Math.PI) {
+            if (nodeB.lng > nodeA.lng) {
+              lng = nodeA.lng + (nodeB.lng - 2 * Math.PI - nodeA.lng) * flowT;
+            } else {
+              lng = nodeA.lng + (nodeB.lng + 2 * Math.PI - nodeA.lng) * flowT;
+            }
+          }
+          const height = Math.sin(flowT * Math.PI) * 15;
+          const pt = projectWithHeight(lat, lng, height);
+          if (pt.visible) {
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, 3.5, 0, 2 * Math.PI);
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 6;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          }
+        }
+      }
+
+      let lowerNode = null;
+      if (activeRow && activeRow.location) {
+        const lowerKey = getLocationKey(activeRow.location);
+        lowerNode = nodes.find(n => n.key === lowerKey);
+      }
+
+      let hubNode = null;
+      const targetText = (activeRow && activeRow.target) ? activeRow.target : '源站对象';
+      
+      if (lowerNode) {
+        hubNode = {
+          lat: lowerNode.lat + 5 * Math.PI / 180,
+          lng: lowerNode.lng + 8 * Math.PI / 180,
+          name: targetText,
+          key: 'dynamic-hub',
+          type: 'hub'
+        };
+      } else {
+        hubNode = {
+          lat: 40 * Math.PI / 180,
+          lng: 116 * Math.PI / 180,
+          name: targetText,
+          key: 'dynamic-hub',
+          type: 'hub'
+        };
+      }
+
+      if (lowerNode && hubNode) {
+        drawCurve3D(lowerNode, hubNode, '#12A679', true);
+      }
+
+      if (activeRow && lowerNode) {
+        const rowCfg = state.getPopConfig(activeRow.id);
+        if (rowCfg && rowCfg.selectedPops) {
+          rowCfg.selectedPops.forEach(popKey => {
+            const popNode = nodes.find(n => n.key === popKey);
+            if (popNode && popNode !== lowerNode) {
+              drawCurve3D(popNode, lowerNode, '#1C6EFF', true);
+            }
+          });
+        }
+      }
+
+      const allDrawNodes = [...nodes];
+      if (hubNode) {
+        allDrawNodes.push(hubNode);
+      }
+      allDrawNodes.forEach(node => {
+        const pt = project(node.lat, node.lng);
+        if (!pt.visible) return;
+
+        const isHub = node.type === 'hub';
+        
+        let isLowerNode = false;
+        let isSelectedPop = false;
+        if (activeRow) {
+          const lowerKey = getLocationKey(activeRow.location);
+          isLowerNode = node.key === lowerKey;
+
+          const rowCfg = state ? state.getPopConfig(activeRow.id) : null;
+          if (rowCfg && rowCfg.selectedPops) {
+            isSelectedPop = rowCfg.selectedPops.includes(node.key);
+          }
+        }
+
+        const isMain = isHub || isLowerNode || isSelectedPop;
+        const r = isHub ? 5.5 : (isLowerNode ? 5 : (isSelectedPop ? 4.5 : 3));
+        
+        let color = '#94A3B8';
+        if (isHub) {
+          color = '#F59E0B';
+        } else if (isLowerNode) {
+          color = '#12A679';
+        } else if (isSelectedPop) {
+          color = '#1C6EFF';
+        }
+
+        if (isMain) {
+          const pulse = r + (frame % 40) * 0.3;
+          const pOpacity = 1 - (frame % 40) / 40;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, pulse, 0, 2 * Math.PI);
+          ctx.strokeStyle = isSelectedPop ? `rgba(28,110,255,${pOpacity * 0.45})` : (isHub ? `rgba(245,158,11,${pOpacity * 0.45})` : `rgba(18,166,121,${pOpacity * 0.45})`);
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, r, 0, 2 * Math.PI);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        if (isHub || isLowerNode || isSelectedPop) {
+          ctx.font = '10px "PingFang SC", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 3;
+          ctx.strokeText(node.name, pt.x, pt.y - r - 5);
+          ctx.fillStyle = '#1e293b';
+          ctx.fillText(node.name, pt.x, pt.y - r - 5);
+        }
+      });
+
+      if (!isDragging) {
+        rotationY += 0.0025;
+      }
+
+      ctx.restore();
+
+      frame++;
+      requestAnimationFrame(drawGlobe);
+    }
+
+    drawGlobe();
+  });
+</script>
 
 </html>
