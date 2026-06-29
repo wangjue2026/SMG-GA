@@ -271,6 +271,124 @@
 
         // Log Drawer state
         logDrawerOpen: false,
+
+        // Details Configuration Drawer States
+        detailDrawerOpen: false,
+        detailDrawerRule: null,
+        detailDrawerTab: 'usage', // 'usage', 'config'
+        detailDrawerUsageTab: 'bandwidth', // 'bandwidth', 'traffic', 'health'
+        detailDrawerConfigAdvancedOpen: false,
+        
+        detailDrawerOriginNodes: [],
+        detailDrawerAccRanges: [],
+        detailDrawerRulesList: [],
+        detailDrawerAdvanced: {
+          exclusiveIp: false,
+          sourceIpPassthrough: true,
+          transportOptimize: true,
+          healthCheck: true,
+          healthInterval: '2s',
+          healthDuration: '1m'
+        },
+
+        openDetailDrawer(rule) {
+          this.detailDrawerRule = rule;
+          this.detailDrawerOpen = true;
+          this.detailDrawerTab = 'usage';
+          this.detailDrawerUsageTab = 'bandwidth';
+          this.detailDrawerConfigAdvancedOpen = false;
+
+          // Mock data initialized based on selected rule
+          this.detailDrawerOriginNodes = [
+            { id: 1, node: rule.srcRegion || '广州', region: '中国大陆', ip: rule.srcObject && rule.srcObject.includes('.') ? rule.srcObject.split('（')[0] : '15.4.156.2', limit: '100Mbps' }
+          ];
+
+          this.detailDrawerAccRanges = [
+            { id: 1, node: '中国香港', region: '亚太地区', ip: '15.4.156.2', limit: '100Mbps' },
+            { id: 2, node: '中国澳门', region: '亚太地区', ip: '15.4.156.2', limit: '100Mbps' },
+            { id: 3, node: '新加坡', region: '亚太地区', ip: '15.4.156.2', limit: '40Mbps' },
+            { id: 4, node: '曼谷', region: '亚太地区', ip: '15.4.156.2', limit: '40Mbps' },
+            { id: 5, node: '洛杉矶', region: '欧美地区', ip: '15.4.156.2', limit: '40Mbps' },
+            { id: 6, node: '法兰克福', region: '欧美地区', ip: '15.4.156.2', limit: '40Mbps' }
+          ];
+
+          this.detailDrawerRulesList = [
+            { id: 1, protocol: 'TCP/UDP', port: '80', srcPort: '4001' }
+          ];
+
+          this.detailDrawerAdvanced = {
+            exclusiveIp: rule.exclusiveIp && rule.exclusiveIp !== '-',
+            sourceIpPassthrough: true,
+            transportOptimize: true,
+            healthCheck: true,
+            healthInterval: '2s',
+            healthDuration: '1m'
+          };
+        },
+
+        toggleDrawerRuleStatus() {
+          if (!this.detailDrawerRule) return;
+          if (this.detailDrawerRule.status === '未启用') {
+            this.detailDrawerRule.status = '加速中';
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: '启用成功', type: 'success' } }));
+          } else {
+            this.detailDrawerRule.status = '未启用';
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: '禁用成功', type: 'success' } }));
+          }
+        },
+
+        deleteOriginNode(id) {
+          this.detailDrawerOriginNodes = this.detailDrawerOriginNodes.filter(n => n.id !== id);
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: '删除源站节点成功', type: 'success' } }));
+        },
+
+        addOriginNode() {
+          const id = Date.now();
+          this.detailDrawerOriginNodes.push({
+            id: id,
+            node: '新增源站',
+            region: '中国大陆',
+            ip: '192.168.1.100',
+            limit: '100Mbps'
+          });
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: '新增源站节点成功', type: 'success' } }));
+        },
+
+        deleteAccRange(id) {
+          this.detailDrawerAccRanges = this.detailDrawerAccRanges.filter(r => r.id !== id);
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: '删除加速范围成功', type: 'success' } }));
+        },
+
+        addAccRange() {
+          const id = Date.now();
+          this.detailDrawerAccRanges.push({
+            id: id,
+            node: '东京',
+            region: '亚太地区',
+            ip: '15.4.156.9',
+            limit: '50Mbps'
+          });
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: '新增加速范围节点成功', type: 'success' } }));
+        },
+
+        deleteRuleItem(id) {
+          this.detailDrawerRulesList = this.detailDrawerRulesList.filter(r => r.id !== id);
+        },
+
+        addRuleItem() {
+          const id = Date.now();
+          this.detailDrawerRulesList.push({
+            id: id,
+            protocol: 'TCP/UDP',
+            port: '8080',
+            srcPort: '8080'
+          });
+        },
+
+        saveDrawerConfig() {
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: '保存成功', type: 'success' } }));
+          this.detailDrawerOpen = false;
+        },
         mockLogs: [
           { time: '2026-06-26 10:15:30', rule: '上海办公网关_零信任加速', event: '链路时延优化探测完成，改善率 71.8%', type: 'info' },
           { time: '2026-06-26 10:10:12', rule: '深圳分部_零信任数据库加速', event: '源站连接超时，探测异常，尝试重连中...', type: 'error' },
@@ -2136,7 +2254,7 @@
                   <template x-for="rule in filteredRules.slice((currentPage-1)*pageSize, currentPage*pageSize)" :key="rule.id">
                     <tr class="group hover:bg-bg-light border-b border-border/50 transition-colors">
                       <td class="px-4">
-                        <a href="#" class="text-brand hover:underline" x-text="rule.name"></a>
+                        <a href="#" class="text-brand hover:underline cursor-pointer" @click.prevent="openDetailDrawer(rule)" x-text="rule.name"></a>
                       </td>
                       <td class="px-4 text-text-title">
                         <template x-if="rule.scenario === '零信任业务加速'">
@@ -2245,7 +2363,7 @@
                       
                       <td class="sticky-op-col">
                         <div class="flex items-center gap-3">
-                          <a href="#" class="action-link text-brand cursor-pointer" @click.prevent="if (isTodo(rule.id)) { openTodoConfig(rule.id); } else { $dispatch('show-toast', { message: '暂未配置详情展示' }); }">详情</a>
+                          <a href="#" class="action-link text-brand cursor-pointer" @click.prevent="openDetailDrawer(rule)">详情</a>
                           <a href="#" class="action-link text-brand cursor-pointer" 
                              x-text="rule.status === '未启用' ? '启用' : '禁用'" 
                              @click.prevent="
@@ -2364,6 +2482,764 @@
                   </div>
                 </template>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 800px 规则详情与配置抽屉 -->
+        <div x-show="detailDrawerOpen" class="fixed inset-0 z-[200] overflow-hidden" x-cloak>
+          <!-- Backdrop -->
+          <div class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300"
+               x-show="detailDrawerOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+               x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+               @click="detailDrawerOpen = false"></div>
+          
+          <!-- Drawer Content Panel -->
+          <div class="absolute inset-y-0 right-0 pl-10 max-w-full flex">
+            <div class="w-screen max-w-[800px] bg-white shadow-2xl flex flex-col h-full transform transition-transform duration-300"
+                 x-show="detailDrawerOpen" x-transition:enter="transform ease-out duration-300 transition-all" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
+                 x-transition:leave="transform ease-in duration-200 transition-all" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full">
+              
+              <!-- 标题栏：高度固定 48px，无分割线，关闭按钮在最右侧 -->
+              <div class="h-12 min-h-[48px] px-8 flex items-center justify-between flex-shrink-0 select-none bg-white">
+                <span class="text-base font-semibold text-text-title">详情</span>
+                <button class="text-text-mute hover:text-text-title transition-colors focus:outline-none" @click="detailDrawerOpen = false">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+              </div>
+
+              <!-- 顶部概览区域：规则名、状态开关、源站等元数据 -->
+              <div class="px-8 pb-4 flex-shrink-0 select-none bg-white">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-base font-semibold text-text-title font-sans truncate max-w-[400px]" x-text="detailDrawerRule ? detailDrawerRule.name : ''" :title="detailDrawerRule ? detailDrawerRule.name : ''"></span>
+                    
+                    <!-- 状态标签 -->
+                    <template x-if="detailDrawerRule && detailDrawerRule.status === '加速中'">
+                      <span class="px-2 py-0.5 text-[11px] bg-green-50 text-success border border-green-200/50 rounded-control font-normal">加速中</span>
+                    </template>
+                    <template x-if="detailDrawerRule && detailDrawerRule.status === '未启用'">
+                      <span class="px-2 py-0.5 text-[11px] bg-slate-50 text-text-mute border border-slate-200/50 rounded-control font-normal">未启用</span>
+                    </template>
+                    <template x-if="detailDrawerRule && (detailDrawerRule.status === '运行异常' || detailDrawerRule.status === '异常')">
+                      <span class="px-2 py-0.5 text-[11px] bg-orange-50 text-warning border border-orange-200/50 rounded-control font-normal">运行异常</span>
+                    </template>
+                  </div>
+                  
+                  <!-- 状态切换开关 -->
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-text-mute">状态</span>
+                    <button @click.stop="toggleDrawerRuleStatus()"
+                      class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0 focus:outline-none"
+                      :class="detailDrawerRule && detailDrawerRule.status !== '未启用' ? 'bg-brand' : 'bg-slate-200'">
+                      <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                        :class="detailDrawerRule && detailDrawerRule.status !== '未启用' ? 'left-4.5' : 'left-0.5'"></div>
+                    </button>
+                  </div>
+                </div>
+                
+                <!-- 属性列表 -->
+                <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-text-mute">
+                  <div>源站地址：<span class="text-text font-outfit" x-text="detailDrawerRule ? (detailDrawerRule.srcObject || '-') : ''"></span></div>
+                  <div>类型：<span class="text-text" x-text="detailDrawerRule ? (detailDrawerRule.scenario + (detailDrawerRule.subType ? ' (' + detailDrawerRule.subType + ')' : '')) : ''"></span></div>
+                </div>
+              </div>
+
+              <!-- 主 Tabs (40px) -->
+              <div class="px-8 border-b border-bg-line flex gap-6 relative h-10 select-none flex-shrink-0 bg-white">
+                <div @click="detailDrawerTab = 'usage'" class="relative h-full flex items-center text-xs cursor-pointer pb-0.5"
+                     :class="detailDrawerTab === 'usage' ? 'text-brand font-semibold' : 'text-text'">
+                  <span>加速使用情况</span>
+                  <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-t-sm" x-show="detailDrawerTab === 'usage'"></span>
+                </div>
+                <div @click="detailDrawerTab = 'config'" class="relative h-full flex items-center text-xs cursor-pointer pb-0.5"
+                     :class="detailDrawerTab === 'config' ? 'text-brand font-semibold' : 'text-text'">
+                  <span>加速配置</span>
+                  <span class="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-t-sm" x-show="detailDrawerTab === 'config'"></span>
+                </div>
+              </div>
+
+              <!-- 抽屉体内容区域 (独立滚动) -->
+              <div class="flex-1 overflow-y-auto px-8 py-0 custom-scrollbar bg-white">
+                
+                <!-- 1. 加速使用情况 Tab -->
+                <div x-show="detailDrawerTab === 'usage'" class="py-4 space-y-6">
+                  
+                  <!-- 使用情况头部过滤器工具栏 -->
+                  <div class="flex items-center justify-between select-none">
+                    <!-- 分段 Tabs (统计类型) -->
+                    <div class="flex items-center gap-0.5 bg-bg-light border border-border p-[2px] rounded-control inline-flex">
+                      <button @click="detailDrawerUsageTab = 'bandwidth'" class="px-3 h-6 text-xs rounded-control transition-all font-normal focus:outline-none"
+                              :class="detailDrawerUsageTab === 'bandwidth' ? 'bg-brand text-white' : 'text-text hover:bg-brand/5'">带宽统计</button>
+                      <button @click="detailDrawerUsageTab = 'traffic'" class="px-3 h-6 text-xs rounded-control transition-all font-normal focus:outline-none"
+                              :class="detailDrawerUsageTab === 'traffic' ? 'bg-brand text-white' : 'text-text hover:bg-brand/5'">流量统计</button>
+                      <button @click="detailDrawerUsageTab = 'health'" class="px-3 h-6 text-xs rounded-control transition-all font-normal focus:outline-none"
+                              :class="detailDrawerUsageTab === 'health' ? 'bg-brand text-white' : 'text-text hover:bg-brand/5'">资源健康度</button>
+                    </div>
+                    
+                    <!-- 过滤器组 -->
+                    <div class="flex items-center gap-2">
+                      <!-- 时间段选择 -->
+                      <div class="relative" x-data="{ open: false, selected: '近7天' }" @click.outside="open = false">
+                        <div class="h-8 border border-border px-3 rounded-control flex items-center gap-1.5 cursor-pointer bg-white text-xs text-text" @click="open = !open">
+                          <span x-text="selected">近7天</span>
+                          <svg class="w-3.5 h-3.5 text-text-mute transition-transform" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                        <div class="absolute right-0 mt-1 w-24 bg-white border border-border rounded shadow-[0_4px_16px_rgba(30,35,43,0.14)] z-50 py-1" x-show="open" x-cloak>
+                          <div class="px-3 py-1.5 text-xs hover:bg-brand/5 cursor-pointer" :class="selected === '近24小时' && 'bg-brand/10 text-brand'" @click="selected = '近24小时'; open = false">近24小时</div>
+                          <div class="px-3 py-1.5 text-xs hover:bg-brand/5 cursor-pointer" :class="selected === '近7天' && 'bg-brand/10 text-brand'" @click="selected = '近7天'; open = false">近7天</div>
+                          <div class="px-3 py-1.5 text-xs hover:bg-brand/5 cursor-pointer" :class="selected === '近30天' && 'bg-brand/10 text-brand'" @click="selected = '近30天'; open = false">近30天</div>
+                        </div>
+                      </div>
+                      
+                      <!-- 日期范围选择模拟 -->
+                      <div class="h-8 border border-border px-3 rounded-control flex items-center gap-2 bg-white text-xs text-text-mute">
+                        <span class="font-outfit">2025-08-01 12:00:00 至 2025-09-01 12:00:00</span>
+                        <svg class="w-3.5 h-3.5 text-text-mute" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 1.1 带宽统计视图 -->
+                  <div x-show="detailDrawerUsageTab === 'bandwidth'" class="space-y-6">
+                    <!-- 加速区域 -->
+                    <div class="space-y-3">
+                      <div class="flex justify-between items-center select-none">
+                        <span class="text-xs font-semibold text-text-title relative pl-3">
+                          <span class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-3 bg-brand rounded-sm"></span>
+                          加速区域
+                        </span>
+                        <!-- 加速区域选择下拉 -->
+                        <div class="relative" x-data="{ open: false, selected: '全部加速区域' }" @click.outside="open = false">
+                          <div class="h-8 border border-border px-3 rounded-control flex items-center justify-between gap-2 cursor-pointer bg-white text-xs text-text w-36" @click="open = !open">
+                            <span class="truncate" x-text="selected">全部加速区域</span>
+                            <svg class="w-3.5 h-3.5 text-text-mute transition-transform flex-shrink-0" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                          </div>
+                          <div class="absolute right-0 mt-1 w-36 bg-white border border-border rounded shadow-[0_4px_16px_rgba(30,35,43,0.14)] z-40 py-1" x-show="open" x-cloak>
+                            <div class="px-3 py-1.5 text-xs hover:bg-brand/5 cursor-pointer truncate" :class="selected === '全部加速区域' && 'bg-brand/10 text-brand'" @click="selected = '全部加速区域'; open = false">全部加速区域</div>
+                            <div class="px-3 py-1.5 text-xs hover:bg-brand/5 cursor-pointer truncate" :class="selected === '中国香港 POP' && 'bg-brand/10 text-brand'" @click="selected = '中国香港 POP'; open = false">中国香港 POP</div>
+                            <div class="px-3 py-1.5 text-xs hover:bg-brand/5 cursor-pointer truncate" :class="selected === '新加坡 POP' && 'bg-brand/10 text-brand'" @click="selected = '新加坡 POP'; open = false">新加坡 POP</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- 带宽指标卡片 -->
+                      <div class="grid grid-cols-2 gap-4 select-none">
+                        <!-- 上行 -->
+                        <div class="bg-brand/5 rounded-control p-4 flex items-center justify-between">
+                          <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-green-500/10 text-green-600 flex items-center justify-center font-bold text-sm">↑</div>
+                            <div>
+                              <div class="text-[11px] text-text-mute">上行带宽 (Mbps)</div>
+                              <div class="text-xs text-text-title font-sans mt-0.5">
+                                最大 <span class="font-semibold font-outfit text-sm">105.6</span> &nbsp; 最小 <span class="font-semibold font-outfit text-sm">0.05</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <!-- 下行 -->
+                        <div class="bg-brand/5 rounded-control p-4 flex items-center justify-between">
+                          <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-brand/10 text-brand flex items-center justify-center font-bold text-sm">↓</div>
+                            <div>
+                              <div class="text-[11px] text-text-mute">下行带宽 (Mbps)</div>
+                              <div class="text-xs text-text-title font-sans mt-0.5">
+                                最大 <span class="font-semibold font-outfit text-sm">105.6</span> &nbsp; 最小 <span class="font-semibold font-outfit text-sm">0.03</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- 趋势图 (SVG) -->
+                      <div class="border border-border/60 rounded-container p-4 bg-white relative">
+                        <svg viewBox="0 0 700 160" class="w-full h-40">
+                          <!-- Grid Lines -->
+                          <line x1="40" y1="10" x2="680" y2="10" stroke="#F1F3F5" stroke-width="1"></line>
+                          <line x1="40" y1="40" x2="680" y2="40" stroke="#F1F3F5" stroke-width="1"></line>
+                          <line x1="40" y1="70" x2="680" y2="70" stroke="#F1F3F5" stroke-width="1"></line>
+                          <line x1="40" y1="100" x2="680" y2="100" stroke="#F1F3F5" stroke-width="1"></line>
+                          <line x1="40" y1="130" x2="680" y2="130" stroke="#F1F3F5" stroke-width="1"></line>
+                          
+                          <!-- Bandwidth Limit (Red Dotted Line) at 300Mbps (y=40) -->
+                          <line x1="40" y1="45" x2="680" y2="45" stroke="#FA721B" stroke-width="1" stroke-dasharray="3,3"></line>
+                          
+                          <!-- Upstream Curve (Blue) -->
+                          <path d="M 40 120 C 100 130, 150 70, 200 80 C 250 90, 300 120, 350 110 C 400 100, 450 40, 500 50 C 550 60, 600 120, 680 70" fill="none" stroke="#1C6EFF" stroke-width="1.5"></path>
+                          <path d="M 40 120 C 100 130, 150 70, 200 80 C 250 90, 300 120, 350 110 C 400 100, 450 40, 500 50 C 550 60, 600 120, 680 70 L 680 130 L 40 130 Z" fill="url(#bw-blue-gradient)" opacity="0.06"></path>
+                          
+                          <!-- Downstream Curve (Green) -->
+                          <path d="M 40 110 C 100 80, 150 90, 200 110 C 250 125, 300 90, 350 85 C 400 80, 450 120, 500 100 C 550 80, 600 60, 680 50" fill="none" stroke="#137333" stroke-width="1.5"></path>
+                          <path d="M 40 110 C 100 80, 150 90, 200 110 C 250 125, 300 90, 350 85 C 400 80, 450 120, 500 100 C 550 80, 600 60, 680 50 L 680 130 L 40 130 Z" fill="url(#bw-green-gradient)" opacity="0.06"></path>
+                          
+                          <defs>
+                            <linearGradient id="bw-blue-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stop-color="#1C6EFF"></stop>
+                              <stop offset="100%" stop-color="#ffffff"></stop>
+                            </linearGradient>
+                            <linearGradient id="bw-green-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                              <stop offset="0%" stop-color="#137333"></stop>
+                              <stop offset="100%" stop-color="#ffffff"></stop>
+                            </linearGradient>
+                          </defs>
+                          
+                          <!-- Y Axis Labels -->
+                          <text x="12" y="14" fill="#A1A7B3" font-size="9">Mbps</text>
+                          <text x="15" y="43" fill="#A1A7B3" font-size="9" class="font-outfit">300</text>
+                          <text x="15" y="73" fill="#A1A7B3" font-size="9" class="font-outfit">200</text>
+                          <text x="15" y="103" fill="#A1A7B3" font-size="9" class="font-outfit">100</text>
+                          <text x="15" y="133" fill="#A1A7B3" font-size="9" class="font-outfit">0</text>
+                          
+                          <!-- X Axis Labels -->
+                          <text x="40" y="148" fill="#A1A7B3" font-size="9" class="font-outfit">07-01</text>
+                          <text x="146" y="148" fill="#A1A7B3" font-size="9" class="font-outfit">07-02</text>
+                          <text x="253" y="148" fill="#A1A7B3" font-size="9" class="font-outfit">07-03</text>
+                          <text x="360" y="148" fill="#A1A7B3" font-size="9" class="font-outfit">07-04</text>
+                          <text x="466" y="148" fill="#A1A7B3" font-size="9" class="font-outfit">07-05</text>
+                          <text x="573" y="148" fill="#A1A7B3" font-size="9" class="font-outfit">07-06</text>
+                          <text x="652" y="148" fill="#A1A7B3" font-size="9" class="font-outfit">07-07</text>
+                        </svg>
+
+                        <!-- Legend and slider range indicator -->
+                        <div class="flex items-center justify-between mt-2 select-none border-t border-slate-100 pt-2">
+                          <div class="flex gap-4 text-[10px] text-text-mute">
+                            <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-1.5 bg-[#1C6EFF]"></span>上行带宽</span>
+                            <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-1.5 bg-[#137333]"></span>下行带宽</span>
+                            <span class="flex items-center gap-1"><span class="inline-block w-4 h-0.5 border-t border-dashed border-[#FA721B]"></span>带宽上限</span>
+                          </div>
+                          
+                          <!-- Custom timeline slider wrapper -->
+                          <div class="w-48 h-3.5 bg-slate-100 rounded-full relative flex items-center px-1">
+                            <div class="absolute left-1/4 right-1/4 h-1.5 bg-brand/30 rounded-full"></div>
+                            <div class="absolute left-1/4 w-3 h-3 bg-white border border-brand/50 rounded-full shadow cursor-pointer"></div>
+                            <div class="absolute right-1/4 w-3 h-3 bg-white border border-brand/50 rounded-full shadow cursor-pointer"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 源站区域 -->
+                    <div class="space-y-3 pt-2">
+                      <div class="flex justify-between items-center select-none">
+                        <span class="text-xs font-semibold text-text-title relative pl-3">
+                          <span class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-3 bg-brand rounded-sm"></span>
+                          源站区域
+                        </span>
+                        <!-- 源站区域选择下拉 -->
+                        <div class="relative" x-data="{ open: false, selected: '全部源站区域' }" @click.outside="open = false">
+                          <div class="h-8 border border-border px-3 rounded-control flex items-center justify-between gap-2 cursor-pointer bg-white text-xs text-text w-36" @click="open = !open">
+                            <span class="truncate" x-text="selected">全部源站区域</span>
+                            <svg class="w-3.5 h-3.5 text-text-mute transition-transform flex-shrink-0" :class="open && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                          </div>
+                          <div class="absolute right-0 mt-1 w-36 bg-white border border-border rounded shadow-[0_4px_16px_rgba(30,35,43,0.14)] z-40 py-1" x-show="open" x-cloak>
+                            <div class="px-3 py-1.5 text-xs hover:bg-brand/5 cursor-pointer truncate" :class="selected === '全部源站区域' && 'bg-brand/10 text-brand'" @click="selected = '全部源站区域'; open = false">全部源站区域</div>
+                            <div class="px-3 py-1.5 text-xs hover:bg-brand/5 cursor-pointer truncate" :class="selected === '广州源站' && 'bg-brand/10 text-brand'" @click="selected = '广州源站'; open = false">广州源站</div>
+                            <div class="px-3 py-1.5 text-xs hover:bg-brand/5 cursor-pointer truncate" :class="selected === '北京源站' && 'bg-brand/10 text-brand'" @click="selected = '北京源站'; open = false">北京源站</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- 带宽指标卡片 -->
+                      <div class="grid grid-cols-2 gap-4 select-none">
+                        <!-- 上行 -->
+                        <div class="bg-brand/5 rounded-control p-4 flex items-center justify-between">
+                          <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-green-500/10 text-green-600 flex items-center justify-center font-bold text-sm">↑</div>
+                            <div>
+                              <div class="text-[11px] text-text-mute">上行带宽 (Mbps)</div>
+                              <div class="text-xs text-text-title font-sans mt-0.5">
+                                最大 <span class="font-semibold font-outfit text-sm">105.6</span> &nbsp; 最小 <span class="font-semibold font-outfit text-sm">0.03</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <!-- 下行 -->
+                        <div class="bg-brand/5 rounded-control p-4 flex items-center justify-between">
+                          <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-brand/10 text-brand flex items-center justify-center font-bold text-sm">↓</div>
+                            <div>
+                              <div class="text-[11px] text-text-mute">下行带宽 (Mbps)</div>
+                              <div class="text-xs text-text-title font-sans mt-0.5">
+                                最大 <span class="font-semibold font-outfit text-sm">105.6</span> &nbsp; 最小 <span class="font-semibold font-outfit text-sm">0.05</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <!-- 趋势图 (SVG) -->
+                      <div class="border border-border/60 rounded-container p-4 bg-white relative">
+                        <svg viewBox="0 0 700 160" class="w-full h-40">
+                          <!-- Grid Lines -->
+                          <line x1="40" y1="10" x2="680" y2="10" stroke="#F1F3F5" stroke-width="1"></line>
+                          <line x1="40" y1="40" x2="680" y2="40" stroke="#F1F3F5" stroke-width="1"></line>
+                          <line x1="40" y1="70" x2="680" y2="70" stroke="#F1F3F5" stroke-width="1"></line>
+                          <line x1="40" y1="100" x2="680" y2="100" stroke="#F1F3F5" stroke-width="1"></line>
+                          <line x1="40" y1="130" x2="680" y2="130" stroke="#F1F3F5" stroke-width="1"></line>
+                          
+                          <!-- Bandwidth Limit (Red Dotted Line) at 300Mbps (y=40) -->
+                          <line x1="40" y1="45" x2="680" y2="45" stroke="#FA721B" stroke-width="1" stroke-dasharray="3,3"></line>
+                          
+                          <!-- Upstream Curve (Blue) -->
+                          <path d="M 40 100 C 100 110, 150 90, 200 95 C 250 110, 300 70, 350 80 C 400 90, 450 110, 500 60 C 550 50, 600 110, 680 80" fill="none" stroke="#1C6EFF" stroke-width="1.5"></path>
+                          <path d="M 40 100 C 100 110, 150 90, 200 95 C 250 110, 300 70, 350 80 C 400 90, 450 110, 500 60 C 550 50, 600 110, 680 80 L 680 130 L 40 130 Z" fill="url(#bw-blue-gradient)" opacity="0.06"></path>
+                          
+                          <!-- Downstream Curve (Green) -->
+                          <path d="M 40 120 C 100 130, 150 75, 200 60 C 250 80, 300 110, 350 105 C 400 100, 450 50, 500 70 C 550 90, 600 80, 680 60" fill="none" stroke="#137333" stroke-width="1.5"></path>
+                          <path d="M 40 120 C 100 130, 150 75, 200 60 C 250 80, 300 110, 350 105 C 400 100, 450 50, 500 70 C 550 90, 600 80, 680 60 L 680 130 L 40 130 Z" fill="url(#bw-green-gradient)" opacity="0.06"></path>
+                          
+                          <!-- Y Axis Labels -->
+                          <text x="12" y="14" fill="#A1A7B3" font-size="9">Mbps</text>
+                          <text x="15" y="43" fill="#A1A7B3" font-size="9" class="font-outfit">300</text>
+                          <text x="15" y="73" fill="#A1A7B3" font-size="9" class="font-outfit">200</text>
+                          <text x="15" y="103" fill="#A1A7B3" font-size="9" class="font-outfit">100</text>
+                          <text x="15" y="133" fill="#A1A7B3" font-size="9" class="font-outfit">0</text>
+                          
+                          <!-- X Axis Labels -->
+                          <text x="40" y="148" fill="#A1A7B3" font-size="9" class="font-outfit">07-01</text>
+                          <text x="146" y="148" fill="#A1A7B3" font-size="9" class="font-outfit">07-02</text>
+                          <text x="253" y="148" fill="#A1A7B3" font-size="9" class="font-outfit">07-03</text>
+                          <text x="360" y="148" fill="#A1A7B3" font-size="9" class="font-outfit">07-04</text>
+                          <text x="466" y="148" fill="#A1A7B3" font-size="9" class="font-outfit">07-05</text>
+                          <text x="573" y="148" fill="#A1A7B3" font-size="9" class="font-outfit">07-06</text>
+                          <text x="652" y="148" fill="#A1A7B3" font-size="9" class="font-outfit">07-07</text>
+                        </svg>
+
+                        <!-- Legend and slider range indicator -->
+                        <div class="flex items-center justify-between mt-2 select-none border-t border-slate-100 pt-2">
+                          <div class="flex gap-4 text-[10px] text-text-mute">
+                            <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-1.5 bg-[#1C6EFF]"></span>上行带宽</span>
+                            <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-1.5 bg-[#137333]"></span>下行带宽</span>
+                            <span class="flex items-center gap-1"><span class="inline-block w-4 h-0.5 border-t border-dashed border-[#FA721B]"></span>带宽上限</span>
+                          </div>
+                          
+                          <!-- Custom timeline slider wrapper -->
+                          <div class="w-48 h-3.5 bg-slate-100 rounded-full relative flex items-center px-1">
+                            <div class="absolute left-1/4 right-1/4 h-1.5 bg-brand/30 rounded-full"></div>
+                            <div class="absolute left-1/4 w-3 h-3 bg-white border border-brand/50 rounded-full shadow cursor-pointer"></div>
+                            <div class="absolute right-1/4 w-3 h-3 bg-white border border-brand/50 rounded-full shadow cursor-pointer"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 1.2 流量统计视图 -->
+                  <div x-show="detailDrawerUsageTab === 'traffic'" class="space-y-6" x-cloak>
+                    <!-- 流量数据卡片 -->
+                    <div class="grid grid-cols-2 gap-4 select-none">
+                      <div class="bg-brand/5 rounded-control p-4">
+                        <div class="text-[11px] text-text-mute">上行流量 (GB)</div>
+                        <div class="text-xs text-text-title font-sans mt-1">
+                          总计 <span class="font-semibold font-outfit text-sm">4,281.4</span> &nbsp; 平均 <span class="font-semibold font-outfit text-sm">142.7</span>
+                        </div>
+                      </div>
+                      <div class="bg-brand/5 rounded-control p-4">
+                        <div class="text-[11px] text-text-mute">下行流量 (GB)</div>
+                        <div class="text-xs text-text-title font-sans mt-1">
+                          总计 <span class="font-semibold font-outfit text-sm">8,924.8</span> &nbsp; 平均 <span class="font-semibold font-outfit text-sm">297.5</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- 流量柱状图 (SVG) -->
+                    <div class="border border-border/60 rounded-container p-4 bg-white">
+                      <div class="text-xs font-semibold text-text-title mb-3">每日流量消耗趋势</div>
+                      <svg viewBox="0 0 700 160" class="w-full h-40">
+                        <line x1="40" y1="20" x2="680" y2="20" stroke="#F1F3F5" stroke-width="1"></line>
+                        <line x1="40" y1="55" x2="680" y2="55" stroke="#F1F3F5" stroke-width="1"></line>
+                        <line x1="40" y1="90" x2="680" y2="90" stroke="#F1F3F5" stroke-width="1"></line>
+                        <line x1="40" y1="125" x2="680" y2="125" stroke="#F1F3F5" stroke-width="1"></line>
+                        
+                        <!-- Columns (Up / Down) -->
+                        <g fill="#1C6EFF" opacity="0.85">
+                          <!-- 07-01 --> <rect x="58" y="70" width="10" height="55" rx="1"></rect>
+                          <!-- 07-02 --> <rect x="158" y="50" width="10" height="75" rx="1"></rect>
+                          <!-- 07-03 --> <rect x="258" y="80" width="10" height="45" rx="1"></rect>
+                          <!-- 07-04 --> <rect x="358" y="60" width="10" height="65" rx="1"></rect>
+                          <!-- 07-05 --> <rect x="458" y="40" width="10" height="85" rx="1"></rect>
+                          <!-- 07-06 --> <rect x="558" y="75" width="10" height="50" rx="1"></rect>
+                          <!-- 07-07 --> <rect x="658" y="30" width="10" height="95" rx="1"></rect>
+                        </g>
+                        <g fill="#137333" opacity="0.85">
+                          <!-- 07-01 --> <rect x="70" y="50" width="10" height="75" rx="1"></rect>
+                          <!-- 07-02 --> <rect x="170" y="35" width="10" height="90" rx="1"></rect>
+                          <!-- 07-03 --> <rect x="270" y="65" width="10" height="60" rx="1"></rect>
+                          <!-- 07-04 --> <rect x="370" y="45" width="10" height="80" rx="1"></rect>
+                          <!-- 07-05 --> <rect x="470" y="25" width="10" height="100" rx="1"></rect>
+                          <!-- 07-06 --> <rect x="570" y="60" width="10" height="65" rx="1"></rect>
+                          <!-- 07-07 --> <rect x="670" y="20" width="10" height="105" rx="1"></rect>
+                        </g>
+                        
+                        <!-- Y Labels -->
+                        <text x="12" y="14" fill="#A1A7B3" font-size="9">GB</text>
+                        <text x="15" y="23" fill="#A1A7B3" font-size="9" class="font-outfit">400</text>
+                        <text x="15" y="58" fill="#A1A7B3" font-size="9" class="font-outfit">300</text>
+                        <text x="15" y="93" fill="#A1A7B3" font-size="9" class="font-outfit">200</text>
+                        <text x="15" y="128" fill="#A1A7B3" font-size="9" class="font-outfit">0</text>
+                        
+                        <!-- X Axis Labels -->
+                        <text x="60" y="145" fill="#A1A7B3" font-size="9" class="font-outfit">07-01</text>
+                        <text x="160" y="145" fill="#A1A7B3" font-size="9" class="font-outfit">07-02</text>
+                        <text x="260" y="145" fill="#A1A7B3" font-size="9" class="font-outfit">07-03</text>
+                        <text x="360" y="145" fill="#A1A7B3" font-size="9" class="font-outfit">07-04</text>
+                        <text x="460" y="145" fill="#A1A7B3" font-size="9" class="font-outfit">07-05</text>
+                        <text x="560" y="145" fill="#A1A7B3" font-size="9" class="font-outfit">07-06</text>
+                        <text x="660" y="145" fill="#A1A7B3" font-size="9" class="font-outfit">07-07</text>
+                      </svg>
+                      
+                      <!-- Legend -->
+                      <div class="flex gap-4 text-[10px] text-text-mute mt-2 pt-2 border-t border-slate-100 select-none">
+                        <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 bg-[#1C6EFF]"></span>上行流量</span>
+                        <span class="flex items-center gap-1"><span class="inline-block w-2.5 h-2.5 bg-[#137333]"></span>下行流量</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 1.3 资源健康度视图 -->
+                  <div x-show="detailDrawerUsageTab === 'health'" class="space-y-6" x-cloak>
+                    <!-- 健康卡片 -->
+                    <div class="grid grid-cols-2 gap-4 select-none">
+                      <div class="bg-brand/5 rounded-control p-4 flex items-center justify-between">
+                        <div>
+                          <div class="text-[11px] text-text-mute">资源平均可用率</div>
+                          <div class="text-xs text-text-title mt-1 font-sans">
+                            当前可用率 <span class="font-semibold font-outfit text-success text-sm">100.0%</span>
+                          </div>
+                        </div>
+                        <span class="w-2.5 h-2.5 rounded-full bg-success"></span>
+                      </div>
+                      <div class="bg-brand/5 rounded-control p-4">
+                        <div class="text-[11px] text-text-mute">加速平均时延</div>
+                        <div class="text-xs text-text-title mt-1 font-sans">
+                          平均 <span class="font-semibold font-outfit text-sm text-brand">15.4 ms</span> &nbsp; 最大 <span class="font-semibold font-outfit text-sm">42.0 ms</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- 延迟趋势图 (SVG) -->
+                    <div class="border border-border/60 rounded-container p-4 bg-white">
+                      <div class="text-xs font-semibold text-text-title mb-3">全球加速链路往返时延 (RTT)</div>
+                      <svg viewBox="0 0 700 160" class="w-full h-40">
+                        <line x1="40" y1="20" x2="680" y2="20" stroke="#F1F3F5" stroke-width="1"></line>
+                        <line x1="40" y1="55" x2="680" y2="55" stroke="#F1F3F5" stroke-width="1"></line>
+                        <line x1="40" y1="90" x2="680" y2="90" stroke="#F1F3F5" stroke-width="1"></line>
+                        <line x1="40" y1="125" x2="680" y2="125" stroke="#F1F3F5" stroke-width="1"></line>
+                        
+                        <!-- Area path for latency -->
+                        <path d="M 40 110 C 100 120, 150 80, 200 90 C 250 100, 300 115, 350 90 C 400 80, 450 70, 500 85 C 550 100, 600 70, 680 95" fill="none" stroke="#1C6EFF" stroke-width="1.5"></path>
+                        <path d="M 40 110 C 100 120, 150 80, 200 90 C 250 100, 300 115, 350 90 C 400 80, 450 70, 500 85 C 550 100, 600 70, 680 95 L 680 125 L 40 125 Z" fill="url(#bw-blue-gradient)" opacity="0.05"></path>
+                        
+                        <!-- Y Labels -->
+                        <text x="12" y="14" fill="#A1A7B3" font-size="9">ms</text>
+                        <text x="15" y="23" fill="#A1A7B3" font-size="9" class="font-outfit">60</text>
+                        <text x="15" y="58" fill="#A1A7B3" font-size="9" class="font-outfit">40</text>
+                        <text x="15" y="93" fill="#A1A7B3" font-size="9" class="font-outfit">20</text>
+                        <text x="15" y="128" fill="#A1A7B3" font-size="9" class="font-outfit">0</text>
+                        
+                        <!-- X Labels -->
+                        <text x="40" y="145" fill="#A1A7B3" font-size="9" class="font-outfit">07-01</text>
+                        <text x="160" y="145" fill="#A1A7B3" font-size="9" class="font-outfit">07-02</text>
+                        <text x="260" y="145" fill="#A1A7B3" font-size="9" class="font-outfit">07-03</text>
+                        <text x="360" y="145" fill="#A1A7B3" font-size="9" class="font-outfit">07-04</text>
+                        <text x="460" y="145" fill="#A1A7B3" font-size="9" class="font-outfit">07-05</text>
+                        <text x="560" y="145" fill="#A1A7B3" font-size="9" class="font-outfit">07-06</text>
+                        <text x="660" y="145" fill="#A1A7B3" font-size="9" class="font-outfit">07-07</text>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 2. 加加速配置 Tab -->
+                <div x-show="detailDrawerTab === 'config'" class="py-4 space-y-6 select-none" x-cloak>
+                  
+                  <!-- 2.1 源站信息 -->
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-semibold text-text-title relative pl-3">
+                        <span class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-3 bg-brand rounded-sm"></span>
+                        源站信息
+                      </span>
+                      <button @click="addOriginNode()" class="sd-btn sd-btn-default px-3 h-7 text-xs border border-border bg-white hover:text-brand hover:border-brand">新增节点</button>
+                    </div>
+                    
+                    <!-- 属性字段 -->
+                    <div class="flex items-center gap-4 text-xs">
+                      <span class="w-[80px] text-text-mute">源站对象</span>
+                      <span class="text-text-title font-semibold font-outfit" x-text="detailDrawerRule ? detailDrawerRule.srcObject : ''"></span>
+                    </div>
+                    
+                    <!-- 源站节点列表表格 (表头不加粗, 直角，高 32/40) -->
+                    <table class="sd-table w-full border border-border/60 rounded-none text-xs text-left">
+                      <thead>
+                        <tr class="bg-[#FAFAFA] border-b border-border/50 h-8">
+                          <th class="font-normal text-text-mute px-3">加速节点</th>
+                          <th class="font-normal text-text-mute px-3">所属大区</th>
+                          <th class="font-normal text-text-mute px-3">IP地址</th>
+                          <th class="font-normal text-text-mute px-3">带宽上限</th>
+                          <th class="font-normal text-text-mute px-3 text-center w-16">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template x-for="(node, index) in detailDrawerOriginNodes" :key="node.id">
+                          <tr class="border-b border-border/40 hover:bg-slate-50/50 h-10">
+                            <td class="px-3 text-text-title" x-text="node.node"></td>
+                            <td class="px-3 text-text-mute" x-text="node.region"></td>
+                            <td class="px-3 font-outfit text-text-title" x-text="node.ip"></td>
+                            <td class="px-3">
+                              <!-- Inline editable bandwidth limit -->
+                              <div class="flex items-center gap-1.5">
+                                <span x-show="!node.editing" x-text="node.limit" class="font-outfit text-text-title"></span>
+                                <input x-show="node.editing" x-model="node.limit" @blur="node.editing = false" @keydown.enter="node.editing = false" class="w-16 h-6 border border-border rounded text-center text-xs outline-none focus:border-brand font-outfit" x-cloak>
+                                <svg @click="node.editing = !node.editing" class="w-3.5 h-3.5 text-text-mute hover:text-brand cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                              </div>
+                            </td>
+                            <td class="px-3 text-center">
+                              <a @click.prevent="deleteOriginNode(node.id)" class="text-brand hover:text-brand-hover cursor-pointer font-medium">删除</a>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- 2.2 已分配的 CNAME -->
+                  <div class="space-y-3">
+                    <span class="text-xs font-semibold text-text-title relative pl-3 block">
+                      <span class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-3 bg-brand rounded-sm"></span>
+                      已分配的 CNAME
+                    </span>
+                    
+                    <!-- Alert提示条 (去除边框线, 最小高度32, 16px间距链接) -->
+                    <div class="sd-alert sd-alert-info flex items-center rounded-control border-none min-h-8 px-3 py-1.5 gap-2 bg-brand/5 text-brand">
+                      <span class="sd-alert-icon text-brand">ⓘ</span>
+                      <div class="text-xs text-brand/90 flex-1">
+                        域名地址，发布至公网 DNS 服务器实现接入加速。 <a class="font-semibold text-brand hover:underline ml-4 cursor-pointer">如何发布?</a>
+                      </div>
+                    </div>
+                    
+                    <!-- CNAME表格 -->
+                    <table class="sd-table w-full border border-border/60 rounded-none text-xs text-left">
+                      <thead>
+                        <tr class="bg-[#FAFAFA] border-b border-border/50 h-8">
+                          <th class="font-normal text-text-mute px-3 w-20">状态</th>
+                          <th class="font-normal text-text-mute px-3">加速域名 (CNAME)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr class="h-10 border-b border-border/40">
+                          <td class="px-3">
+                            <span class="inline-flex items-center px-2 py-0.5 text-[10px] bg-green-50 text-success border border-green-200/50 rounded-control font-normal">已发布</span>
+                          </td>
+                          <td class="px-3">
+                            <div class="flex items-center justify-between group/cname">
+                              <span class="font-outfit text-text-title select-all" x-text="detailDrawerRule && detailDrawerRule.accDomain !== '-' ? detailDrawerRule.accDomain : (detailDrawerRule ? detailDrawerRule.name + '.cname.sangfor.com' : '')"></span>
+                              <button @click="navigator.clipboard.writeText(detailDrawerRule && detailDrawerRule.accDomain !== '-' ? detailDrawerRule.accDomain : (detailDrawerRule ? detailDrawerRule.name + '.cname.sangfor.com' : '')).then(() => { $dispatch('show-toast', { message: '域名已复制到剪贴板' }) })" 
+                                      class="opacity-0 group-hover/cname:opacity-100 transition-opacity p-0.5 text-text-mute hover:text-brand cursor-pointer focus:outline-none"
+                                      title="复制域名">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                </svg>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- 2.3 加速范围 -->
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-semibold text-text-title relative pl-3">
+                        <span class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-3 bg-brand rounded-sm"></span>
+                        加速范围
+                      </span>
+                      <button @click="addAccRange()" class="sd-btn sd-btn-default px-3 h-7 text-xs border border-border bg-white hover:text-brand hover:border-brand">新增节点</button>
+                    </div>
+                    
+                    <!-- 节点列表 -->
+                    <table class="sd-table w-full border border-border/60 rounded-none text-xs text-left">
+                      <thead>
+                        <tr class="bg-[#FAFAFA] border-b border-border/50 h-8">
+                          <th class="font-normal text-text-mute px-3">加速节点</th>
+                          <th class="font-normal text-text-mute px-3">所属大区</th>
+                          <th class="font-normal text-text-mute px-3">IP地址</th>
+                          <th class="font-normal text-text-mute px-3">带宽上限</th>
+                          <th class="font-normal text-text-mute px-3 text-center w-16">操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template x-for="node in detailDrawerAccRanges" :key="node.id">
+                          <tr class="border-b border-border/40 hover:bg-slate-50/50 h-10">
+                            <td class="px-3 text-text-title" x-text="node.node"></td>
+                            <td class="px-3 text-text-mute" x-text="node.region"></td>
+                            <td class="px-3 font-outfit text-text-title" x-text="node.ip"></td>
+                            <td class="px-3">
+                              <!-- Inline editable bandwidth limit -->
+                              <div class="flex items-center gap-1.5">
+                                <span x-show="!node.editing" x-text="node.limit" class="font-outfit text-text-title"></span>
+                                <input x-show="node.editing" x-model="node.limit" @blur="node.editing = false" @keydown.enter="node.editing = false" class="w-16 h-6 border border-border rounded text-center text-xs outline-none focus:border-brand font-outfit" x-cloak>
+                                <svg @click="node.editing = !node.editing" class="w-3.5 h-3.5 text-text-mute hover:text-brand cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                              </div>
+                            </td>
+                            <td class="px-3 text-center">
+                              <a @click.prevent="deleteAccRange(node.id)" class="text-brand hover:text-brand-hover cursor-pointer font-medium">删除</a>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- 2.4 加速规则 -->
+                  <div class="space-y-3">
+                    <span class="text-xs font-semibold text-text-title relative pl-3 block">
+                      <span class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-3 bg-brand rounded-sm"></span>
+                      规则详情
+                    </span>
+                    
+                    <!-- 规则表格 -->
+                    <div class="border border-border/60 rounded-none overflow-hidden">
+                      <table class="sd-table w-full text-xs text-left">
+                        <thead>
+                          <tr class="bg-[#FAFAFA] border-b border-border/50 h-8">
+                            <th class="font-normal text-text-mute px-3 w-40">
+                              <div class="flex items-center gap-1">协议 <span class="text-text-mute hover:text-brand cursor-help select-none">ⓘ</span></div>
+                            </th>
+                            <th class="font-normal text-text-mute px-3">监听端口</th>
+                            <th class="font-normal text-text-mute px-3">回源端口</th>
+                            <th class="font-normal text-text-mute px-3 text-center w-16">操作</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <template x-for="item in detailDrawerRulesList" :key="item.id">
+                            <tr class="border-b border-border/40 h-10">
+                              <td class="px-3">
+                                <div class="relative w-full">
+                                  <select x-model="item.protocol" class="h-8 pl-3 pr-8 border border-slate-200 rounded bg-white text-slate-700 text-xs focus:outline-none appearance-none cursor-pointer w-full">
+                                    <option value="TCP/UDP">TCP/UDP</option>
+                                    <option value="TCP">TCP</option>
+                                    <option value="UDP">UDP</option>
+                                  </select>
+                                  <span class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-slate-400">▼</span>
+                                </div>
+                              </td>
+                              <td class="px-3">
+                                <input type="text" x-model="item.port" class="sd-input w-full h-8 text-xs font-outfit focus:shadow-none outline-none border border-slate-200 px-2 rounded">
+                              </td>
+                              <td class="px-3">
+                                <input type="text" x-model="item.srcPort" class="sd-input w-full h-8 text-xs font-outfit focus:shadow-none outline-none border border-slate-200 px-2 rounded">
+                              </td>
+                              <td class="px-3 text-center">
+                                <a @click.prevent="deleteRuleItem(item.id)" class="text-brand hover:text-brand-hover cursor-pointer font-medium" :class="detailDrawerRulesList.length <= 1 && 'opacity-30 cursor-not-allowed pointer-events-none'">删除</a>
+                              </td>
+                            </tr>
+                          </template>
+                        </tbody>
+                      </table>
+                      
+                      <!-- 添加规则按钮 -->
+                      <button @click="addRuleItem()" class="sd-btn sd-btn-default w-full h-8 text-xs border-0 border-t border-dashed border-slate-200 rounded-none justify-center bg-white hover:text-brand select-none flex items-center gap-1.5 focus:outline-none">
+                        <span class="text-base font-semibold">+</span> 添加
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- 2.5 高级设置 (和SDP配置保持完全一致) -->
+                  <div class="pt-2">
+                    <button @click="detailDrawerConfigAdvancedOpen = !detailDrawerConfigAdvancedOpen"
+                      class="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 transition-colors focus:outline-none select-none">
+                      <span>高级配置</span>
+                      <svg class="w-3.5 h-3.5 transition-transform" :class="detailDrawerConfigAdvancedOpen ? 'rotate-180' : ''"
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    
+                    <div x-show="detailDrawerConfigAdvancedOpen" x-collapse x-cloak class="mt-2 pt-3 border-t border-slate-100 space-y-3 text-xs text-slate-700">
+                      
+                      <!-- 独享IP -->
+                      <div class="flex items-center gap-3">
+                        <span class="w-[80px] text-slate-500 flex-shrink-0">独享IP</span>
+                        <button @click="detailDrawerAdvanced.exclusiveIp = !detailDrawerAdvanced.exclusiveIp"
+                          class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0 focus:outline-none"
+                          :class="detailDrawerAdvanced.exclusiveIp ? 'bg-brand' : 'bg-slate-200'">
+                          <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                            :class="detailDrawerAdvanced.exclusiveIp ? 'left-4.5' : 'left-0.5'"></div>
+                        </button>
+                        <span class="text-slate-400">隔离风控，源站专用独立公网出口 IP</span>
+                        <span class="text-slate-400 ml-auto select-none">（全局容量剩余：8/20）</span>
+                      </div>
+
+                      <!-- 源IP透传 -->
+                      <div class="flex items-center gap-3">
+                        <span class="w-[80px] text-slate-500 flex-shrink-0">源IP透传</span>
+                        <button @click="detailDrawerAdvanced.sourceIpPassthrough = !detailDrawerAdvanced.sourceIpPassthrough"
+                          class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0 focus:outline-none"
+                          :class="detailDrawerAdvanced.sourceIpPassthrough ? 'bg-brand' : 'bg-slate-200'">
+                          <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                            :class="detailDrawerAdvanced.sourceIpPassthrough ? 'left-4.5' : 'left-0.5'"></div>
+                        </button>
+                        <span class="text-slate-400">基于PP协议透传终端真实 IP，支撑零信任安全策略与访问审计溯源</span>
+                      </div>
+
+                      <!-- 传输优化 -->
+                      <div class="flex items-center gap-3">
+                        <span class="w-[80px] text-slate-500 flex-shrink-0">传输优化</span>
+                        <button @click="detailDrawerAdvanced.transportOptimize = !detailDrawerAdvanced.transportOptimize"
+                          class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0 focus:outline-none"
+                          :class="detailDrawerAdvanced.transportOptimize ? 'bg-brand' : 'bg-slate-200'">
+                          <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                            :class="detailDrawerAdvanced.transportOptimize ? 'left-4.5' : 'left-0.5'"></div>
+                        </button>
+                        <span class="text-slate-400">跨境弱网链路传输增强，降低延迟与丢包</span>
+                      </div>
+
+                      <!-- 健康检查 -->
+                      <div class="flex items-center gap-3 flex-wrap">
+                        <span class="w-[80px] text-slate-500 flex-shrink-0">健康检查</span>
+                        <button @click="detailDrawerAdvanced.healthCheck = !detailDrawerAdvanced.healthCheck"
+                          class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0 focus:outline-none"
+                          :class="detailDrawerAdvanced.healthCheck ? 'bg-brand' : 'bg-slate-200'">
+                          <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                            :class="detailDrawerAdvanced.healthCheck ? 'left-4.5' : 'left-0.5'"></div>
+                        </button>
+                        <div x-show="detailDrawerAdvanced.healthCheck" x-transition class="flex items-center gap-2 text-slate-500 text-xs">
+                          <span>每间隔</span>
+                          <div class="relative">
+                            <select x-model="detailDrawerAdvanced.healthInterval" class="h-6 pl-2 pr-6 border border-slate-200 rounded bg-white text-slate-700 text-xs focus:outline-none appearance-none cursor-pointer">
+                              <option value="1s">1秒</option>
+                              <option value="2s">2秒</option>
+                              <option value="5s">5秒</option>
+                              <option value="10s">10秒</option>
+                            </select>
+                            <span class="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-slate-400">▼</span>
+                          </div>
+                          <span>计算最近</span>
+                          <div class="relative">
+                            <select x-model="detailDrawerAdvanced.healthDuration" class="h-6 pl-2 pr-6 border border-slate-200 rounded bg-white text-slate-700 text-xs focus:outline-none appearance-none cursor-pointer">
+                              <option value="30s">30秒内</option>
+                              <option value="1m">1分钟内</option>
+                              <option value="5m">5分钟内</option>
+                            </select>
+                            <span class="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-slate-400">▼</span>
+                          </div>
+                          <span>源站区域-业务的资源健康度</span>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+
+              <!-- 底部栏：高度 56px，左对齐，有 1px 顶部分割线，无底色，主按钮在最左侧 -->
+              <div class="sd-drawer-footer h-14 px-4 border-t border-bg-line flex items-center justify-start gap-2 flex-shrink-0 select-none bg-white">
+                <button class="sd-btn sd-btn-primary px-6 text-md ml-4 h-8 text-white focus:outline-none" @click="saveDrawerConfig()">确定</button>
+                <button class="sd-btn sd-btn-default px-6 text-md h-8 bg-white border border-border hover:text-brand hover:border-brand focus:outline-none" @click="detailDrawerOpen = false">取消</button>
+              </div>
+
             </div>
           </div>
         </div>

@@ -1470,6 +1470,7 @@
           /* ---- CNAME 引导弹窗状态 ---- */
           showCnameModal: false,
           copiedRowId: null,
+          searchQueries: {},
           saveConfig() {
             // 1. 获取第一行的源站对象
             const firstRow = this.sourceRows.find(r => r.target) || this.sourceRows[0] || { target: '', location: '' };
@@ -1748,6 +1749,69 @@
             }
             return this.popConfigs[id];
           },
+          filterPops(query) {
+            if (!query) return [];
+            const q = query.toLowerCase().trim();
+            const results = [];
+            for (const region in this.mockPops) {
+              for (const pop of this.mockPops[region]) {
+                if (pop.name.toLowerCase().includes(q) || pop.cities.some(c => c.toLowerCase().includes(q))) {
+                  results.push(pop);
+                }
+              }
+            }
+            return results;
+          },
+          hasDirectMatch(query) {
+            if (!query) return false;
+            const q = query.toLowerCase().trim();
+            for (const region in this.mockPops) {
+              for (const pop of this.mockPops[region]) {
+                if (pop.name.toLowerCase().includes(q)) {
+                  return true;
+                }
+              }
+            }
+            return false;
+          },
+          getRecommendedPop(query) {
+            if (!query) return { key: 'sz', name: '深圳' };
+            const q = query.toLowerCase().trim();
+            const countryMapping = [
+              { keys: ['新加坡'], pop: { key: 'sg', name: '新加坡' } },
+              { keys: ['马来西亚', '吉隆坡'], pop: { key: 'kl', name: '吉隆坡' } },
+              { keys: ['日本', '东京', '大阪', '京都'], pop: { key: 'to', name: '东京' } },
+              { keys: ['韩国', '首尔', '釜山'], pop: { key: 'seoul', name: '首尔' } },
+              { keys: ['澳大利亚', '澳洲', '悉尼', '墨尔本'], pop: { key: 'sydney', name: '悉尼' } },
+              { keys: ['泰国', '曼谷', '清迈'], pop: { key: 'bangkok', name: '曼谷' } },
+              { keys: ['菲律宾', '马尼拉'], pop: { key: 'manila', name: '马尼拉' } },
+              { keys: ['印度', '孟买', '新德里'], pop: { key: 'mumbai', name: '孟买' } },
+              { keys: ['美国', '美洲', '洛杉矶', '旧金山', '纽约', '西雅图', '加州'], pop: { key: 'la', name: '洛杉矶' } },
+              { keys: ['英国', '伦敦', '英格兰'], pop: { key: 'lo', name: '伦敦' } },
+              { keys: ['法国', '巴黎'], pop: { key: 'pa', name: '巴黎' } },
+              { keys: ['德国', '柏林', '慕尼黑'], pop: { key: 'be', name: '柏林' } },
+              { keys: ['迪拜', '中东', '阿联酋', '沙特'], pop: { key: 'du', name: '迪拜' } },
+              { keys: ['越南', '印尼', '印度尼西亚', '老挝', '柬埔寨', '缅甸', '文莱'], pop: { key: 'sg', name: '新加坡' } },
+              { keys: ['欧洲', '意大利', '西班牙', '荷兰', '瑞士', '比利时'], pop: { key: 'lo', name: '伦敦' } },
+            ];
+            for (const item of countryMapping) {
+              if (item.keys.some(k => q.includes(k) || k.includes(q))) {
+                return item.pop;
+              }
+            }
+            const cityMapping = [
+              { keys: ['广东', '广州', '深圳', '东莞', '佛山', '惠州', '珠海', '中山', '汕头', '潮州', '揭阳', '汕尾', '河源', '江门', '肇庆', '清远', '广西', '南宁', '桂林', '海南', '海口', '三亚', '福建', '福州', '厦门'], pop: { key: 'sz', name: '深圳' } },
+              { keys: ['上海', '浙江', '杭州', '江苏', '南京', '苏州', '无锡', '常州', '宁波', '温州', '安徽', '合肥', '江西', '南昌'], pop: { key: 'sz', name: '深圳' } },
+              { keys: ['湖北', '武汉', '湖南', '长沙', '四川', '成都', '重庆', '贵州', '贵阳', '云南', '昆明', '西藏', '拉萨'], pop: { key: 'wh', name: '武汉' } },
+              { keys: ['北京', '天津', '河北', '石家庄', '唐山', '保定', '廊坊', '沧州', '山东', '济南', '青岛', '河南', '郑州', '陕西', '西安', '山西', '太原', '内蒙古', '呼和浩特', '辽宁', '沈阳', '大连', '吉林', '长春', '黑龙江', '哈尔滨', '甘肃', '兰州', '青海', '西宁', '宁夏', '银川', '新疆', '乌鲁木齐'], pop: { key: 'bj', name: '北京' } }
+            ];
+            for (const item of cityMapping) {
+              if (item.keys.some(k => q.includes(k) || k.includes(q))) {
+                return item.pop;
+              }
+            }
+            return { key: 'sz', name: '深圳' };
+          },
           rowCoverageInfo(rowId) {
             const cfg = this.getPopConfig(rowId);
             if (!cfg || !cfg.selectedPops || cfg.selectedPops.length === 0) {
@@ -2017,11 +2081,14 @@
                             <!-- 隧道场景：代理网关树形下拉（简化为分组select） -->
                             <div x-show="subtype === 'tunnel'" class="relative" x-cloak>
                               <div @click="openDropdown === ('t-'+row.id) ? openDropdown=null : openDropdown='t-'+row.id"
-                                class="h-8 border border-slate-200 rounded bg-white px-3 flex items-center justify-between cursor-pointer hover:border-slate-300 text-xs"
+                                class="relative group h-8 border border-slate-200 rounded bg-white px-3 flex items-center justify-between cursor-pointer hover:border-slate-300 text-xs"
                                 :class="row.target ? 'text-slate-700' : 'text-slate-300'">
                                 <span x-text="row.target || '请选择代理网关区域访问地址'"></span>
-                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg :class="row.target ? 'group-hover:hidden' : ''" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                                <svg x-show="row.target" @click.stop="row.target = ''" class="hidden group-hover:block w-3.5 h-3.5 text-slate-400 hover:text-red-500 flex-shrink-0 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
                               </div>
                               <!-- 下拉列表 -->
@@ -2047,7 +2114,7 @@
                             </div>
 
                             <!-- WEB场景：直接输入匹配的下拉 -->
-                            <div x-show="subtype === 'web'" class="relative" @click.outside="if (openDropdown === 'w-'+row.id) openDropdown = null" x-cloak>
+                            <div x-show="subtype === 'web'" class="relative group" @click.outside="if (openDropdown === 'w-'+row.id) openDropdown = null" x-cloak>
                               <div class="relative flex items-center">
                                 <input type="text"
                                   placeholder="请输入名称或前端访问地址选择应用"
@@ -2055,8 +2122,11 @@
                                   @focus="openDropdown = 'w-'+row.id"
                                   class="w-full h-8 border border-slate-200 rounded pl-3 pr-8 text-xs text-slate-700 placeholder-slate-300 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20"
                                   :class="row.target ? 'text-slate-700' : 'text-slate-300'">
-                                <svg class="w-3.5 h-3.5 text-slate-400 absolute right-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg :class="row.target ? 'group-hover:hidden' : ''" class="w-3.5 h-3.5 text-slate-400 absolute right-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                                <svg x-show="row.target" @click.stop="row.target = ''" class="hidden group-hover:block w-3.5 h-3.5 text-slate-400 hover:text-red-500 absolute right-3 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
                               </div>
                               <div x-show="openDropdown === ('w-'+row.id)" x-cloak
@@ -2084,11 +2154,14 @@
                             <!-- 接入认证场景：地址输入/选择 -->
                             <div x-show="subtype === 'auth'" class="relative" x-cloak>
                               <div @click="openDropdown === ('a-'+row.id) ? openDropdown=null : openDropdown='a-'+row.id"
-                                class="h-8 border border-slate-200 rounded bg-white px-3 flex items-center justify-between cursor-pointer hover:border-slate-300 text-xs"
+                                class="relative group h-8 border border-slate-200 rounded bg-white px-3 flex items-center justify-between cursor-pointer hover:border-slate-300 text-xs"
                                 :class="row.target ? 'text-slate-700' : 'text-slate-300'">
                                 <span x-text="row.target || '请输入域名或选择已有对象'"></span>
-                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg :class="row.target ? 'group-hover:hidden' : ''" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                                <svg x-show="row.target" @click.stop="row.target = ''" class="hidden group-hover:block w-3.5 h-3.5 text-slate-400 hover:text-red-500 flex-shrink-0 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
                               </div>
                               <div x-show="openDropdown === ('a-'+row.id)" @click.away="openDropdown=null" x-cloak
@@ -2115,13 +2188,20 @@
 
                           <!-- 源站地理位置 -->
                           <div class="flex-1 min-w-0">
-                            <div class="text-[11px] text-slate-500 mb-1">
-                              <span class="text-red-500">*</span>源站地理位置
-                              <span class="text-slate-400 font-normal ml-1">（不存在则选源站最近的选项）</span>
+                            <div class="text-[11px] text-slate-500 mb-1 flex items-center">
+                              <span class="text-red-500">*</span>源站区域
+                              <span class="relative group cursor-help ml-1 inline-flex items-center">
+                                <svg class="w-3.5 h-3.5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full left-1/2 -translate-x-1/2 mb-1.5 shadow-lg pointer-events-none w-52 leading-relaxed text-left normal-case font-normal">
+                                  源站区域可以理解为高速公路“下车点”，请选择源站对象所在的地理位置，如果不存在则选择距离源站较近的选项
+                                </span>
+                              </span>
                             </div>
                             <div class="relative">
-                              <div @click="if (openDropdown === ('l-'+row.id)) { openDropdown = null; } else { openDropdown = 'l-'+row.id; openRegion[row.id] = '中国大陆'; }"
-                                class="h-8 border border-slate-200 rounded bg-white px-3 flex items-center justify-between cursor-pointer hover:border-slate-300 text-xs"
+                              <div @click="if (openDropdown === ('l-'+row.id)) { openDropdown = null; } else { openDropdown = 'l-'+row.id; openRegion[row.id] = '中国大陆'; searchQueries['l-'+row.id] = ''; }"
+                                class="relative group h-8 border border-slate-200 rounded bg-white px-3 flex items-center justify-between cursor-pointer hover:border-slate-300 text-xs"
                                 :class="row.location ? 'text-slate-700' : 'text-slate-300'">
                                 <span class="flex items-center gap-1.5">
                                   <template x-if="row.location">
@@ -2129,51 +2209,119 @@
                                   </template>
                                   <span x-text="row.location || '请选择源站最近的加速位置'"></span>
                                 </span>
-                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg :class="row.location ? 'group-hover:hidden' : ''" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                                <svg x-show="row.location" @click.stop="row.location = ''" class="hidden group-hover:block w-3.5 h-3.5 text-slate-400 hover:text-red-500 flex-shrink-0 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
                               </div>
                               <!-- 二级下拉 -->
                               <div x-show="openDropdown === ('l-'+row.id)" @click.away="openDropdown=null" x-cloak
-                                class="absolute z-30 top-9 left-0 w-80 bg-white border border-slate-200 rounded shadow-lg text-xs flex">
-                                <!-- 左列：区域 -->
-                                <div class="w-24 border-r border-slate-100 flex-shrink-0">
-                                  <template x-for="region in Object.keys(mockPops)" :key="region">
-                                    <div class="px-3 py-2 cursor-pointer flex items-center justify-between hover:bg-slate-50"
-                                      :class="openRegion[row.id] === region ? 'text-brand font-semibold bg-blue-50' : 'text-slate-600'"
-                                      @mouseenter="openRegion[row.id] = region">
-                                      <span x-text="region"></span>
-                                      <svg class="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                class="absolute z-30 top-9 left-0 w-80 bg-white border border-slate-200 rounded shadow-lg text-xs flex flex-col">
+                                <!-- 搜索输入框 -->
+                                <div class="p-2 border-b border-slate-100 flex-shrink-0 relative">
+                                  <input type="text" x-model="searchQueries['l-'+row.id]" placeholder="搜索源站区域..."
+                                    class="w-full h-7 border border-slate-200 rounded pl-7 pr-2 text-xs focus:outline-none focus:border-brand text-slate-700">
+                                  <svg class="w-3.5 h-3.5 text-slate-400 absolute left-4.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                  </svg>
+                                </div>
+                                <div class="flex">
+                                  <!-- 未进行搜索时显示双列布局 -->
+                                  <template x-if="!searchQueries['l-'+row.id]">
+                                    <div class="flex w-full">
+                                      <!-- 左列：区域 -->
+                                      <div class="w-24 border-r border-slate-100 flex-shrink-0">
+                                        <template x-for="region in Object.keys(mockPops)" :key="region">
+                                          <div class="px-3 py-2 cursor-pointer flex items-center justify-between hover:bg-slate-50"
+                                            :class="openRegion[row.id] === region ? 'text-brand font-semibold bg-blue-50' : 'text-slate-600'"
+                                            @mouseenter="openRegion[row.id] = region">
+                                            <span x-text="region"></span>
+                                            <svg class="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                                          </div>
+                                        </template>
+                                      </div>
+                                      <!-- 右列：城市PoP -->
+                                      <div class="flex-1 overflow-y-auto max-h-52">
+                                        <template x-if="openRegion[row.id]">
+                                          <template x-for="pop in mockPops[openRegion[row.id]]" :key="pop.key">
+                                            <div @click="row.location = pop.name; openDropdown = null; searchQueries['l-'+row.id] = '';"
+                                              class="px-3 py-2 hover:bg-blue-50 cursor-pointer flex items-center gap-2"
+                                              :class="row.location === pop.name ? 'text-brand font-semibold' : 'text-slate-700'">
+                                              <span class="text-brand text-base">🌐</span>
+                                              <span x-text="pop.name"></span>
+                                              <span class="ml-auto text-slate-400 text-[10px] flex items-center gap-0.5 select-none relative">
+                                                <span>覆盖</span>
+                                                <span x-text="pop.cities[0]"></span>
+                                                <span>等</span>
+                                                <span class="relative group" @click.stop>
+                                                  <span class="text-brand font-semibold cursor-help border-b border-dashed border-brand/50 px-0.5" x-text="pop.cities.length"></span>
+                                                  <!-- Tooltip panel -->
+                                                  <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full mb-2 right-0 shadow-lg pointer-events-none w-48 leading-relaxed text-left normal-case font-normal">
+                                                    <span class="block font-semibold border-b border-slate-700 pb-1 mb-1 text-slate-200">全部覆盖位置:</span>
+                                                    <span class="block text-slate-300 font-sans break-all" x-text="pop.cities.join('、')"></span>
+                                                  </span>
+                                                </span>
+                                                <span>个位置</span>
+                                              </span>
+                                            </div>
+                                          </template>
+                                        </template>
+                                      </div>
                                     </div>
                                   </template>
                                 </div>
-                                <!-- 右列：城市PoP -->
-                                <div class="flex-1 overflow-y-auto max-h-52">
-                                  <template x-if="openRegion[row.id]">
-                                    <template x-for="pop in mockPops[openRegion[row.id]]" :key="pop.key">
-                                      <div @click="row.location = pop.name; openDropdown = null"
-                                        class="px-3 py-2 hover:bg-blue-50 cursor-pointer flex items-center gap-2"
-                                        :class="row.location === pop.name ? 'text-brand' : 'text-slate-700'">
-                                        <span class="text-brand text-base">🌐</span>
-                                        <span x-text="pop.name"></span>
-                                        <span class="ml-auto text-slate-400 text-[10px] flex items-center gap-0.5 select-none relative">
-                                          <span>覆盖</span>
-                                          <span x-text="pop.cities[0]"></span>
-                                          <span>等</span>
-                                          <span class="relative group" @click.stop>
-                                            <span class="text-brand font-semibold cursor-help border-b border-dashed border-brand/50 px-0.5" x-text="pop.cities.length"></span>
-                                            <!-- Tooltip panel -->
-                                            <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full mb-2 right-0 shadow-lg pointer-events-none w-48 leading-relaxed text-left normal-case font-normal">
-                                              <span class="block font-semibold border-b border-slate-700 pb-1 mb-1 text-slate-200">全部覆盖位置:</span>
-                                              <span class="block text-slate-300 font-sans break-all" x-text="pop.cities.join('、')"></span>
+                                
+                                <!-- 进行搜索时展示平铺过滤列表 -->
+                                <template x-if="searchQueries['l-'+row.id]">
+                                  <div class="flex-1 overflow-y-auto max-h-52 w-full">
+                                    <template x-if="filterPops(searchQueries['l-'+row.id]).length > 0">
+                                      <div>
+                                        <!-- 如果仅通过覆盖城市匹配，展示就近推荐横幅 -->
+                                        <template x-if="!hasDirectMatch(searchQueries['l-'+row.id])">
+                                          <div class="px-3 py-1.5 bg-[#FFF7E8] text-[#D97706] border-b border-[#FFF1D6] font-medium text-[10px] flex items-center">
+                                            <span x-text="'“' + searchQueries['l-'+row.id] + '”节点不存在，推荐您选择就近节点：'"></span>
+                                          </div>
+                                        </template>
+                                        <template x-for="pop in filterPops(searchQueries['l-'+row.id])" :key="pop.key">
+                                          <div @click="row.location = pop.name; openDropdown = null; searchQueries['l-'+row.id] = '';"
+                                            class="px-3 py-2 hover:bg-blue-50 cursor-pointer flex items-center gap-2"
+                                            :class="row.location === pop.name ? 'text-brand font-semibold' : 'text-slate-700'">
+                                            <span class="text-brand text-base">🌐</span>
+                                            <span x-text="pop.name"></span>
+                                            <span class="ml-auto text-slate-400 text-[10px] flex items-center gap-0.5 select-none relative">
+                                              <span>覆盖</span>
+                                              <span x-text="pop.cities[0]"></span>
+                                              <span>等</span>
+                                              <span class="relative group" @click.stop>
+                                                <span class="text-brand font-semibold cursor-help border-b border-dashed border-brand/50 px-0.5" x-text="pop.cities.length"></span>
+                                                <!-- Tooltip panel -->
+                                                <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full mb-2 right-0 shadow-lg pointer-events-none w-48 leading-relaxed text-left normal-case font-normal">
+                                                  <span class="block font-semibold border-b border-slate-700 pb-1 mb-1 text-slate-200">全部覆盖位置:</span>
+                                                  <span class="block text-slate-300 font-sans break-all" x-text="pop.cities.join('、')"></span>
+                                                </span>
+                                              </span>
+                                              <span>个位置</span>
                                             </span>
-                                          </span>
-                                          <span>个位置</span>
-                                        </span>
+                                          </div>
+                                        </template>
                                       </div>
                                     </template>
-                                  </template>
-                                </div>
+                                    <template x-if="filterPops(searchQueries['l-'+row.id]).length === 0">
+                                      <div class="px-4 py-6 text-center text-slate-400">
+                                        <div class="mb-2 text-slate-500 font-medium">选项不存在</div>
+                                        <div class="text-[11px] text-slate-400">
+                                          为您推荐较近的选项
+                                          <button @click="row.location = getRecommendedPop(searchQueries['l-'+row.id]).name; openDropdown = null; searchQueries['l-'+row.id] = '';"
+                                            class="text-brand font-semibold hover:underline border-b border-brand border-dashed mx-1 px-0.5"
+                                            x-text="getRecommendedPop(searchQueries['l-'+row.id]).name">
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </template>
+                                  </div>
+                                </template>
                               </div>
                             </div>
                           </div>
@@ -2243,8 +2391,8 @@
 
                       <!-- 已选标签 + 下拉触发 -->
                       <div class="relative">
-                        <div @click="if (openPopDropdown === row.id) { openPopDropdown = null; } else { openPopDropdown = row.id; openRegion['pop-'+row.id] = '中国大陆'; }"
-                          class="min-h-[36px] border border-slate-200 rounded px-3 py-1.5 flex flex-wrap items-center gap-1.5 cursor-pointer hover:border-slate-300">
+                        <div @click="if (openPopDropdown === row.id) { openPopDropdown = null; } else { openPopDropdown = row.id; openRegion['pop-'+row.id] = '中国大陆'; searchQueries['pop-'+row.id] = ''; }"
+                          class="relative group min-h-[36px] border border-slate-200 rounded px-3 py-1.5 flex flex-wrap items-center gap-1.5 cursor-pointer hover:border-slate-300">
                           <template x-if="getPopConfig(row.id).selectedPops.length === 0">
                             <span class="text-xs text-slate-300">请选择</span>
                           </template>
@@ -2258,55 +2406,125 @@
                           <template x-if="extraPops(row.id) > 0">
                             <span class="text-xs text-slate-500 font-medium" x-text="'+' + extraPops(row.id)"></span>
                           </template>
-                          <svg class="ml-auto w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg :class="getPopConfig(row.id).selectedPops.length > 0 ? 'group-hover:hidden' : ''" class="ml-auto w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                          </svg>
+                          <svg x-show="getPopConfig(row.id).selectedPops.length > 0" @click.stop="getPopConfig(row.id).selectedPops = []" class="hidden group-hover:block ml-auto w-3.5 h-3.5 text-slate-400 hover:text-red-500 flex-shrink-0 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                           </svg>
                         </div>
 
                         <!-- PoP多选下拉 -->
                         <div x-show="openPopDropdown === row.id" @click.away="openPopDropdown = null" x-cloak
-                          class="absolute z-20 left-0 right-0 top-10 bg-white border border-slate-200 rounded shadow-lg text-xs flex max-h-52 overflow-hidden">
-                          <!-- 左列区域 -->
-                          <div class="w-24 border-r border-slate-100 flex-shrink-0 overflow-y-auto">
-                            <template x-for="region in Object.keys(mockPops)" :key="region">
-                              <div class="px-3 py-2 cursor-pointer flex items-center justify-between hover:bg-slate-50"
-                                :class="openRegion['pop-'+row.id] === region ? 'text-brand font-semibold bg-blue-50' : 'text-slate-600'"
-                                @click="openRegion['pop-'+row.id] = region">
-                                <span x-text="region"></span>
-                                <svg class="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                              </div>
-                            </template>
+                          class="absolute z-20 left-0 right-0 top-10 bg-white border border-slate-200 rounded shadow-lg text-xs flex flex-col max-h-60 overflow-hidden w-full">
+                          <!-- 搜索输入框 -->
+                          <div class="p-2 border-b border-slate-100 flex-shrink-0 relative">
+                            <input type="text" x-model="searchQueries['pop-'+row.id]" placeholder="搜索加速区域..."
+                              class="w-full h-7 border border-slate-200 rounded pl-7 pr-2 text-xs focus:outline-none focus:border-brand text-slate-700">
+                            <svg class="w-3.5 h-3.5 text-slate-400 absolute left-4.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
                           </div>
-                          <!-- 右列城市（多选） -->
-                          <div class="flex-1 overflow-y-auto">
-                            <template x-if="openRegion['pop-'+row.id]">
-                              <template x-for="pop in mockPops[openRegion['pop-'+row.id]]" :key="pop.key">
-                                <div @click.stop="togglePop(row.id, pop.key)"
-                                  class="px-3 py-2 hover:bg-blue-50 cursor-pointer flex items-center gap-2">
-                                  <div class="w-3.5 h-3.5 border rounded flex items-center justify-center flex-shrink-0"
-                                    :class="getPopConfig(row.id).selectedPops.includes(pop.key) ? 'bg-brand border-brand' : 'border-slate-300'">
-                                    <svg x-show="getPopConfig(row.id).selectedPops.includes(pop.key)" class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                          
+                          <!-- 未进行搜索时显示双列布局 -->
+                          <template x-if="!searchQueries['pop-'+row.id]">
+                            <div class="flex flex-1 max-h-48 overflow-hidden w-full">
+                              <!-- 左列区域 -->
+                              <div class="w-24 border-r border-slate-100 flex-shrink-0 overflow-y-auto">
+                                <template x-for="region in Object.keys(mockPops)" :key="region">
+                                  <div class="px-3 py-2 cursor-pointer flex items-center justify-between hover:bg-slate-50"
+                                    :class="openRegion['pop-'+row.id] === region ? 'text-brand font-semibold bg-blue-50' : 'text-slate-600'"
+                                    @click="openRegion['pop-'+row.id] = region">
+                                    <span x-text="region"></span>
+                                    <svg class="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                                   </div>
-                                  <span class="text-brand text-xs">🌐</span>
-                                  <span :class="getPopConfig(row.id).selectedPops.includes(pop.key) ? 'text-brand font-medium' : 'text-slate-700'" x-text="pop.name"></span>
-                                  <span class="ml-auto text-slate-400 text-[10px] flex items-center gap-0.5 select-none relative">
-                                    <span>覆盖</span>
-                                    <span x-text="pop.cities[0]"></span>
-                                    <span>等</span>
-                                    <span class="relative group" @click.stop>
-                                      <span class="text-brand font-semibold cursor-help border-b border-dashed border-brand/50 px-0.5" x-text="pop.cities.length"></span>
-                                      <!-- Tooltip panel -->
-                                      <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full mb-2 right-0 shadow-lg pointer-events-none w-48 leading-relaxed text-left normal-case font-normal">
-                                        <span class="block font-semibold border-b border-slate-700 pb-1 mb-1 text-slate-200">全部覆盖位置:</span>
-                                        <span class="block text-slate-300 font-sans break-all" x-text="pop.cities.join('、')"></span>
+                                </template>
+                              </div>
+                              <!-- 右列城市（多选） -->
+                              <div class="flex-1 overflow-y-auto">
+                                <template x-if="openRegion['pop-'+row.id]">
+                                  <template x-for="pop in mockPops[openRegion['pop-'+row.id]]" :key="pop.key">
+                                    <div @click.stop="togglePop(row.id, pop.key)"
+                                      class="px-3 py-2 hover:bg-blue-50 cursor-pointer flex items-center gap-2">
+                                      <div class="w-3.5 h-3.5 border rounded flex items-center justify-center flex-shrink-0"
+                                        :class="getPopConfig(row.id).selectedPops.includes(pop.key) ? 'bg-brand border-brand' : 'border-slate-300'">
+                                        <svg x-show="getPopConfig(row.id).selectedPops.includes(pop.key)" class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                      </div>
+                                      <span class="text-brand text-xs">🌐</span>
+                                      <span :class="getPopConfig(row.id).selectedPops.includes(pop.key) ? 'text-brand font-semibold' : 'text-slate-700'" x-text="pop.name"></span>
+                                      <span class="ml-auto text-slate-400 text-[10px] flex items-center gap-0.5 select-none relative">
+                                        <span>覆盖</span>
+                                        <span x-text="pop.cities[0]"></span>
+                                        <span>等</span>
+                                        <span class="relative group" @click.stop>
+                                          <span class="text-brand font-semibold cursor-help border-b border-dashed border-brand/50 px-0.5" x-text="pop.cities.length"></span>
+                                          <!-- Tooltip panel -->
+                                          <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full mb-2 right-0 shadow-lg pointer-events-none w-48 leading-relaxed text-left normal-case font-normal">
+                                            <span class="block font-semibold border-b border-slate-700 pb-1 mb-1 text-slate-200">全部覆盖位置:</span>
+                                            <span class="block text-slate-300 font-sans break-all" x-text="pop.cities.join('、')"></span>
+                                          </span>
+                                        </span>
+                                        <span>个位置</span>
                                       </span>
-                                    </span>
-                                    <span>个位置</span>
-                                  </span>
+                                    </div>
+                                  </template>
+                                </template>
+                              </div>
+                            </div>
+                          </template>
+                          
+                          <!-- 进行搜索时展示平铺过滤列表 -->
+                          <template x-if="searchQueries['pop-'+row.id]">
+                            <div class="flex-1 overflow-y-auto max-h-48 w-full">
+                              <template x-if="filterPops(searchQueries['pop-'+row.id]).length > 0">
+                                <div>
+                                  <!-- 如果仅通过覆盖城市匹配，展示就近推荐横幅 -->
+                                  <template x-if="!hasDirectMatch(searchQueries['pop-'+row.id])">
+                                    <div class="px-3 py-1.5 bg-[#FFF7E8] text-[#D97706] border-b border-[#FFF1D6] font-medium text-[10px] flex items-center">
+                                      <span x-text="'“' + searchQueries['pop-'+row.id] + '”节点不存在，推荐您选择就近节点：'"></span>
+                                    </div>
+                                  </template>
+                                  <template x-for="pop in filterPops(searchQueries['pop-'+row.id])" :key="pop.key">
+                                    <div @click.stop="togglePop(row.id, pop.key)"
+                                      class="px-3 py-2 hover:bg-blue-50 cursor-pointer flex items-center gap-2">
+                                      <div class="w-3.5 h-3.5 border rounded flex items-center justify-center flex-shrink-0"
+                                        :class="getPopConfig(row.id).selectedPops.includes(pop.key) ? 'bg-brand border-brand' : 'border-slate-300'">
+                                        <svg x-show="getPopConfig(row.id).selectedPops.includes(pop.key)" class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                      </div>
+                                      <span class="text-brand text-xs">🌐</span>
+                                      <span :class="getPopConfig(row.id).selectedPops.includes(pop.key) ? 'text-brand font-semibold' : 'text-slate-700'" x-text="pop.name"></span>
+                                      <span class="ml-auto text-slate-400 text-[10px] flex items-center gap-0.5 select-none relative">
+                                        <span>覆盖</span>
+                                        <span x-text="pop.cities[0]"></span>
+                                        <span>等</span>
+                                        <span class="relative group" @click.stop>
+                                          <span class="text-brand font-semibold cursor-help border-b border-dashed border-brand/50 px-0.5" x-text="pop.cities.length"></span>
+                                          <!-- Tooltip panel -->
+                                          <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full mb-2 right-0 shadow-lg pointer-events-none w-48 leading-relaxed text-left normal-case font-normal">
+                                            <span class="block font-semibold border-b border-slate-700 pb-1 mb-1 text-slate-200">全部覆盖位置:</span>
+                                            <span class="block text-slate-300 font-sans break-all" x-text="pop.cities.join('、')"></span>
+                                          </span>
+                                        </span>
+                                        <span>个位置</span>
+                                      </span>
+                                    </div>
+                                  </template>
                                 </div>
                               </template>
-                            </template>
-                          </div>
+                              <template x-if="filterPops(searchQueries['pop-'+row.id]).length === 0">
+                                <div class="px-4 py-6 text-center text-slate-400">
+                                  <div class="mb-2 text-slate-500 font-medium">选项不存在</div>
+                                  <div class="text-[11px] text-slate-400">
+                                    为您推荐较近 of 选项
+                                    <button @click.stop="if(!getPopConfig(row.id).selectedPops.includes(getRecommendedPop(searchQueries['pop-'+row.id]).key)) { togglePop(row.id, getRecommendedPop(searchQueries['pop-'+row.id]).key); } searchQueries['pop-'+row.id] = '';"
+                                      class="text-brand font-semibold hover:underline border-b border-brand border-dashed mx-1 px-0.5"
+                                      x-text="getRecommendedPop(searchQueries['pop-'+row.id]).name">
+                                    </button>
+                                  </div>
+                                </div>
+                              </template>
+                            </div>
+                          </template>
                         </div>
                       </div>
 
