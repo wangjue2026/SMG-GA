@@ -93,7 +93,7 @@
     用途：维护顶部导航、左侧菜单展开项、当前叶子菜单、全局抽屉开关等 Alpine 状态。
     排障提示：如导航切换、菜单高亮、抽屉打开异常，优先检查此 x-data。
   ======================================================= -->
-  <div class="flex flex-col w-full h-full" x-data="Object.assign(globalAccelerationApp(), { pageMode: 'initial', openLearnModal: false, showLearnBubble: safeStorage.getItem('hideLearnBubble') !== 'true', dontShowBubbleAgain: safeStorage.getItem('hideLearnBubble') === 'true', hoveredTerm: null })">
+  <div class="flex flex-col w-full h-full" x-data="Object.assign(globalAccelerationApp(), { pageMode: 'initial', openLearnModal: false, showLearnBubble: true, dontShowBubbleAgain: false, hoveredTerm: null })">
 
     <!-- ======================================================
       Header / 顶部导航栏，固定高度 56px
