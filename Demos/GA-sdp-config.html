@@ -1471,6 +1471,7 @@
           showCnameModal: false,
           copiedRowId: null,
           searchQueries: {},
+          selectedRegionFilter: {},
           saveConfig() {
             // 1. 获取第一行的源站对象
             const firstRow = this.sourceRows.find(r => r.target) || this.sourceRows[0] || { target: '', location: '' };
@@ -1588,18 +1589,58 @@
             }
             return 'https://' + target + '.sangfor.com';
           },
-          getWebCname(row) {
-            if (!row || !row.target) return '';
-            let url = this.getWebTargetUrl(row.target);
-            let clean = url.replace(/https?:\/\//, '').split('/')[0].split(':')[0];
-            let str = row.id + clean;
+          cleanDomain(target) {
+            if (!target) return '';
+            let domain = target.trim();
+            const found = this.mockWebApps.find(app => app.label === domain);
+            if (found) {
+              domain = found.url;
+            }
+            domain = domain.replace(/^https?:\/\//i, '');
+            domain = domain.split('/')[0].split(':')[0];
+            return domain;
+          },
+          generateCnameValue(rowId, target) {
+            if (!target) return '';
+            const domain = this.cleanDomain(target);
+            let str = rowId + domain;
             let hash = 0;
             for (let i = 0; i < str.length; i++) {
               hash = (hash << 5) - hash + str.charCodeAt(i);
               hash |= 0;
             }
             let hex = Math.abs(hash).toString(36).substring(0, 6);
-            return 'https://saauth.sangfor.com.cn/sa/auth/yu' + hex + '.cname.sangfor.com';
+            return `${domain}.${hex}.sdp-acc.sangfor.com.cn`;
+          },
+          getCnameList() {
+            const list = [];
+            for (const row of this.sourceRows.filter(r => r.target)) {
+              if (this.subtype === 'web' && Array.isArray(row.targets) && row.targets.length > 0) {
+                row.targets.forEach((t, idx) => {
+                  list.push({
+                    id: `${row.id}-${idx}`,
+                    rowId: row.id,
+                    sourceDomain: this.cleanDomain(t.ip),
+                    cname: this.generateCnameValue(row.id, t.ip)
+                  });
+                });
+              } else {
+                list.push({
+                  id: `${row.id}-single`,
+                  rowId: row.id,
+                  sourceDomain: this.cleanDomain(row.target),
+                  cname: this.generateCnameValue(row.id, row.target)
+                });
+              }
+            }
+            return list;
+          },
+          getWebCname(row) {
+            if (!row || !row.target) return '';
+            if (this.subtype === 'web' && Array.isArray(row.targets) && row.targets.length > 0) {
+              return row.targets.map(t => this.generateCnameValue(row.id, t.ip)).join('、');
+            }
+            return this.generateCnameValue(row.id, row.target);
           },
           copyText(text, rowId) {
             try {
@@ -1639,7 +1680,7 @@
           },
 
           /* ---- Step 1 — 源站行列表 ---- */
-          sourceRows: [{ id: 1, target: '', location: '' }],
+          sourceRows: [{ id: 1, target: '', targets: [], location: '' }],
           nextRowId: 2,
 
           /* ---- Step 2 — 每个源站的加速范围配置 key=id ---- */
@@ -1649,19 +1690,19 @@
           /* ---- 各子类型独立的数据备份 ---- */
           subtypeData: {
             tunnel: {
-              sourceRows: [{ id: 1, target: '', location: '' }],
+              sourceRows: [{ id: 1, target: '', targets: [], location: '' }],
               nextRowId: 2,
               popConfigs: {},
               selectedRowId: null
             },
             web: {
-              sourceRows: [{ id: 1, target: '', location: '' }],
+              sourceRows: [{ id: 1, target: '', targets: [], location: '' }],
               nextRowId: 2,
               popConfigs: {},
               selectedRowId: null
             },
             auth: {
-              sourceRows: [{ id: 1, target: '', location: '' }],
+              sourceRows: [{ id: 1, target: '', targets: [], location: '' }],
               nextRowId: 2,
               popConfigs: {},
               selectedRowId: null
@@ -1670,18 +1711,20 @@
 
           /* ---- 模拟数据 ---- */
           mockGateways: [
-            { label: '上海办公代理网关', ips: ['10.23.22.4', '10.44.23.1'] },
-            { label: '北京办公代理网关', ips: ['172.16.0.1'] },
+            { label: '上海办公代理网关', ips: ['10.23.22.4', '10.44.23.1', 'sh-gw.atrust-vpn.com'] },
+            { label: '北京办公代理网关', ips: ['172.16.0.1', 'bj-gw.atrust-vpn.com'] },
             { label: '新加坡办公代理网关', ips: ['39.52.2.3'] },
             { label: '首尔办公代理网关', ips: ['52.78.1.9'] },
           ],
           mockWebApps: [
-            { label: 'ERP系统', url: 'https://erp.sangfor.com' },
-            { label: '智慧OA', url: 'https://oa.sangfor.com' },
-            { label: 'AI中台业务', url: 'https://ai.sangfor.com' },
-            { label: '财务管理系统', url: 'https://finance.sangfor.com' },
-            { label: '知识库平台', url: 'https://wiki.sangfor.com' },
-            { label: '客户关系管理 (CRM)', url: 'https://crm.sangfor.com' },
+            { label: 'ERP系统', url: 'https://erp.sangfor.com', region: '上海数据中心' },
+            { label: '智慧OA', url: 'https://oa.sangfor.com', region: '北京总部' },
+            { label: 'AI中台业务', url: 'https://ai.sangfor.com', region: '上海数据中心' },
+            { label: '财务管理系统', url: 'https://finance.sangfor.com', region: '深圳数据中心' },
+            { label: '知识库平台', url: 'https://wiki.sangfor.com', region: '北京总部' },
+            { label: '客户关系管理 (CRM)', url: 'https://crm.sangfor.com', region: '新加坡地区' },
+            { label: '研发GitLab', url: 'https://git.sangfor.com', region: '深圳数据中心' },
+            { label: 'HR系统', url: 'https://hr.sangfor.com', region: '上海数据中心' },
           ],
           mockAuthAddrs: [
             { label: 'https://www.atrust.sangfor.com:8888', type: 'client' },
@@ -1728,11 +1771,99 @@
           /* ---- 方法 ---- */
           addRow() {
             if (this.sourceRows.length >= 5) return;
-            this.sourceRows.push({ id: this.nextRowId++, target: '', location: '' });
+            this.sourceRows.push({ id: this.nextRowId++, target: '', targets: [], location: '' });
           },
           removeRow(id) {
             if (this.sourceRows.length <= 1) return;
             this.sourceRows = this.sourceRows.filter(r => r.id !== id);
+          },
+          isTargetSelected(row, ip) {
+            return Array.isArray(row.targets) && row.targets.some(t => t.ip === ip);
+          },
+          hasDomainSelected(row) {
+            if (!row) return false;
+            if (this.subtype === 'tunnel') {
+              return Array.isArray(row.targets) && row.targets.some(t => !/^[0-9.]+$/.test(t.ip));
+            }
+            if (this.subtype === 'web') {
+              return Array.isArray(row.targets) && row.targets.length > 0;
+            }
+            if (this.subtype === 'auth') {
+              if (!row.target) return false;
+              const host = row.target.replace(/^https?:\/\//i, '').split('/')[0].split(':')[0];
+              return /[a-zA-Z]/.test(host);
+            }
+            return false;
+          },
+          toggleTarget(row, ip, label) {
+            if (!Array.isArray(row.targets)) {
+              row.targets = [];
+            }
+            const idx = row.targets.findIndex(t => t.ip === ip);
+            if (idx > -1) {
+              row.targets.splice(idx, 1);
+            } else {
+              row.targets.push({ ip, label });
+            }
+            row.target = row.targets.length > 0 ? row.targets.map(t => t.ip).join('、') : '';
+            if (this.hasDomainSelected(row)) {
+              this.getPopConfig(row.id).exclusiveIp = true;
+            }
+          },
+          toggleWebTarget(row, url, label, region) {
+            if (!Array.isArray(row.targets)) {
+              row.targets = [];
+            }
+            const idx = row.targets.findIndex(t => t.ip === url);
+            if (idx > -1) {
+              row.targets.splice(idx, 1);
+            } else {
+              row.targets.push({ ip: url, label: label, region: region });
+            }
+            row.target = row.targets.length > 0 ? row.targets.map(t => t.label).join('、') : '';
+            if (this.hasDomainSelected(row)) {
+              this.getPopConfig(row.id).exclusiveIp = true;
+            }
+          },
+          clearWebTargets(row) {
+            row.targets = [];
+            row.target = '';
+          },
+          getFilteredWebApps(row) {
+            const q = (this.searchQueries['w-'+row.id] || '').toLowerCase().trim();
+            const r = this.selectedRegionFilter[row.id] || '全部';
+            return this.mockWebApps.filter(app => {
+              const matchesQuery = !q || app.label.toLowerCase().includes(q) || app.url.toLowerCase().includes(q);
+              const matchesRegion = r === '全部' || app.region === r;
+              return matchesQuery && matchesRegion;
+            });
+          },
+          isAllFilteredSelected(row) {
+            const filtered = this.getFilteredWebApps(row);
+            if (filtered.length === 0) return false;
+            return filtered.every(app => (row.targets || []).some(t => t.ip === app.url));
+          },
+          toggleSelectAllFiltered(row) {
+            const filtered = this.getFilteredWebApps(row);
+            const allSelected = this.isAllFilteredSelected(row);
+            if (!Array.isArray(row.targets)) {
+              row.targets = [];
+            }
+            if (allSelected) {
+              // Deselect all filtered apps
+              row.targets = row.targets.filter(t => !filtered.some(app => app.url === t.ip));
+            } else {
+              // Select all filtered apps (without duplicates)
+              filtered.forEach(app => {
+                if (!row.targets.some(t => t.ip === app.url)) {
+                  row.targets.push({ ip: app.url, label: app.label, region: app.region });
+                }
+              });
+            }
+            row.target = row.targets.length > 0 ? row.targets.map(t => t.label).join('、') : '';
+            if (this.hasDomainSelected(row)) {
+              this.getPopConfig(row.id).exclusiveIp = true;
+            }
           },
           getPopConfig(id) {
             if (!this.popConfigs[id]) {
@@ -1746,6 +1877,10 @@
                 healthInterval: '2s',
                 healthDuration: '1m'
               };
+            }
+            const row = this.sourceRows.find(r => r.id === id);
+            if (row && this.hasDomainSelected(row)) {
+              this.popConfigs[id].exclusiveIp = true;
             }
             return this.popConfigs[id];
           },
@@ -1866,7 +2001,17 @@
           },
           step2CardTitle(row) {
             const t = row.target || '–';
-            if (this.subtype === 'tunnel') return t;
+            if (this.subtype === 'tunnel') {
+              if (Array.isArray(row.targets) && row.targets.length > 0) {
+                const names = row.targets.map(x => x.ip);
+                const joined = names.join('、');
+                if (joined.length > 32) {
+                  return joined.substring(0, 32) + '...';
+                }
+                return joined;
+              }
+              return t;
+            }
             if (this.subtype === 'web') {
               const app = this.mockWebApps.find(a => a.label === t);
               return app ? `${app.label}–${app.url}` : t;
@@ -1874,17 +2019,48 @@
             return t;
           },
           step3Rules() {
-            return this.sourceRows.filter(r => r.target && r.location).map(r => {
+            const rules = [];
+            this.sourceRows.filter(r => r.target && r.location).forEach(r => {
               const cfg = this.getPopConfig(r.id);
-              return {
-                id: r.id,
-                name: r.customName || (r.target ? `${r.target}加速规则` : '加速规则'),
-                description: r.description || '–',
-                target: r.target,
-                location: r.location,
-                pops: cfg ? cfg.selectedPops : [],
-              };
+              const pops = cfg ? cfg.selectedPops : [];
+              
+              if (this.subtype === 'tunnel' && Array.isArray(r.targets) && r.targets.length > 0) {
+                r.targets.forEach((t, idx) => {
+                  rules.push({
+                    id: `${r.id}-${idx}`,
+                    rowId: r.id,
+                    name: r.customName ? `${r.customName} [${t.ip}]` : `${t.ip}加速规则`,
+                    description: r.description || '–',
+                    target: t.ip,
+                    location: r.location,
+                    pops: pops
+                  });
+                });
+              } else if (this.subtype === 'web' && Array.isArray(r.targets) && r.targets.length > 0) {
+                r.targets.forEach((t, idx) => {
+                  rules.push({
+                    id: `${r.id}-${idx}`,
+                    rowId: r.id,
+                    name: r.customName ? `${r.customName} [${t.label}]` : `${t.label}加速规则`,
+                    description: r.description || '–',
+                    target: `${t.label}–${this.cleanDomain(t.ip)}`,
+                    location: r.location,
+                    pops: pops
+                  });
+                });
+              } else {
+                rules.push({
+                  id: `${r.id}-single`,
+                  rowId: r.id,
+                  name: r.customName || `${this.cleanDomain(r.target)}加速规则`,
+                  description: r.description || '–',
+                  target: this.cleanDomain(r.target),
+                  location: r.location,
+                  pops: pops
+                });
+              }
             });
+            return rules;
           },
           getPreviewRow() {
             if (this.step === 2 && this.selectedRowId) {
@@ -1998,7 +2174,7 @@
                     :class="step === 2 ? 'bg-brand text-white' : step > 2 ? 'bg-slate-200 text-slate-500' : 'bg-slate-200 text-slate-400'">
                     2
                   </div>
-                  <span :class="step === 2 ? 'text-slate-800 font-semibold' : 'text-slate-400'">确定加速范围及资源</span>
+                  <span :class="step === 2 ? 'text-slate-800 font-semibold' : 'text-slate-400'">确定加速范围</span>
                 </div>
                 <span class="mx-3 text-slate-300">/</span>
                 <!-- Step 3 -->
@@ -2034,7 +2210,7 @@
                       <template x-for="opt in [
                         { value: 'tunnel', title: '隧道应用访问加速', desc: '基于四层加密隧道专线加速传输' },
                         { value: 'web',    title: 'WEB应用访问加速',  desc: '面向内网页业务提供七层应用专项加速' },
-                        { value: 'auth',   title: '接入与认证加速',   desc: '优化客户端登录、身份核验、节点握手等' }
+                        { value: 'auth',   title: '接入与认证加速',   desc: '优化客户端接入、身份验证的加速体验' }
                       ]" :key="opt.value">
                         <label :for="'subtype-' + opt.value"
                           class="w-[180px] flex-shrink-0 border rounded p-2.5 cursor-pointer transition-all duration-150 min-w-0 bg-white"
@@ -2063,7 +2239,7 @@
                   </div>
                   <!-- 说明文字（按子场景切换） -->
                   <p class="text-xs text-slate-500 mb-3 leading-relaxed">
-                    <span x-show="subtype === 'tunnel'">零信任架构下，代理网关区域代理着不同的业务。请选择代理网关区域作为源站对象：</span>
+                    <span x-show="subtype === 'tunnel'">代理网关代理着隧道应用的访问，加速代理网关可实现区域内全部隧道应用访问加速。请选择代理网关区域作为源站对象：</span>
                     <span x-show="subtype === 'web'" x-cloak>请直接选择现有的零信任WEB类型应用作为源站对象：</span>
                     <span x-show="subtype === 'auth'" x-cloak>请选择客户端接入的服务器地址作为源站对象进行加速：</span>
                   </p>
@@ -2075,79 +2251,189 @@
                         <div class="flex gap-3 items-start">
                           <!-- 源站对象 -->
                           <div class="flex-1 min-w-0">
-                            <div class="text-[11px] text-slate-500 mb-1">
+                            <div class="text-[12px] text-slate-500 mb-1">
                               <span class="text-red-500">*</span>源站对象
                             </div>
-                            <!-- 隧道场景：代理网关树形下拉（简化为分组select） -->
-                            <div x-show="subtype === 'tunnel'" class="relative" x-cloak>
+                            <!-- 隧道场景：代理网关树形下拉（多选Tag呈现） -->
+                            <div x-show="subtype === 'tunnel'" class="relative" x-cloak
+                              x-init="if (!row.expanded) { row.expanded = { 'all': true }; mockGateways.forEach(g => { row.expanded[g.label] = (g.label === '上海办公代理网关'); }); }">
                               <div @click="openDropdown === ('t-'+row.id) ? openDropdown=null : openDropdown='t-'+row.id"
-                                class="relative group h-8 border border-slate-200 rounded bg-white px-3 flex items-center justify-between cursor-pointer hover:border-slate-300 text-xs"
-                                :class="row.target ? 'text-slate-700' : 'text-slate-300'">
-                                <span x-text="row.target || '请选择代理网关区域访问地址'"></span>
-                                <svg :class="row.target ? 'group-hover:hidden' : ''" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                                <svg x-show="row.target" @click.stop="row.target = ''" class="hidden group-hover:block w-3.5 h-3.5 text-slate-400 hover:text-red-500 flex-shrink-0 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
+                                class="relative group min-h-[32px] py-1 border border-slate-200 rounded bg-white px-3 flex items-center justify-between cursor-pointer hover:border-slate-300 text-xs"
+                                :class="row.target ? 'text-slate-700' : 'text-[#A1A7B3]'">
+                                <div class="flex flex-wrap items-center gap-1.5 pr-6 w-full">
+                                  <template x-if="!row.targets || row.targets.length === 0">
+                                    <span class="text-[#A1A7B3]">请选择代理网关区域访问地址</span>
+                                  </template>
+                                  <template x-for="(t, tIdx) in (row.targets || [])" :key="t.ip">
+                                    <template x-if="tIdx < 2">
+                                      <span class="inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] rounded px-1.5 py-0.5 select-none">
+                                        <span x-text="t.ip"></span>
+                                        <button @click.stop="toggleTarget(row, t.ip, t.label)" class="text-slate-400 hover:text-slate-600 font-bold leading-none ml-0.5">×</button>
+                                      </span>
+                                    </template>
+                                  </template>
+                                  <template x-if="row.targets && row.targets.length > 2">
+                                    <span class="inline-flex items-center bg-slate-100 text-slate-500 text-[11px] rounded px-1.5 py-0.5 select-none" x-text="'+' + (row.targets.length - 2)"></span>
+                                  </template>
+                                </div>
+                                <div class="absolute right-3 flex items-center">
+                                  <svg :class="row.target ? 'group-hover:hidden' : ''" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                  </svg>
+                                  <svg x-show="row.target" @click.stop="row.targets = []; row.target = ''" class="hidden group-hover:block w-3.5 h-3.5 text-slate-400 hover:text-red-500 flex-shrink-0 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                  </svg>
+                                </div>
                               </div>
                               <!-- 下拉列表 -->
                               <div x-show="openDropdown === ('t-'+row.id)" @click.away="openDropdown=null" x-cloak
-                                class="absolute z-30 top-9 left-0 right-0 bg-white border border-slate-200 rounded shadow-lg max-h-52 overflow-y-auto text-xs">
-                                <template x-for="gw in mockGateways" :key="gw.label">
-                                  <div>
-                                    <div class="px-3 py-1.5 flex items-center gap-1.5 text-slate-500 font-medium bg-slate-50 sticky top-0">
-                                      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-                                      <span x-text="gw.label"></span>
-                                    </div>
-                                    <template x-for="ip in gw.ips" :key="ip">
-                                      <div @click="row.target = ip + '（' + gw.label + '）'; openDropdown = null"
-                                        class="pl-8 pr-3 py-1.5 hover:bg-blue-50 cursor-pointer flex items-center gap-2"
-                                        :class="row.target && row.target.startsWith(ip) ? 'text-brand' : 'text-slate-700'">
-                                        <span class="inline-flex items-center gap-1 px-1 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-mono">IP</span>
-                                        <span x-text="ip"></span>
+                                class="absolute z-30 top-9 left-0 right-0 bg-white border border-slate-200 rounded shadow-lg max-h-60 overflow-y-auto text-xs flex flex-col">
+                                <!-- 顶部提示栏 -->
+                                <div class="px-3 py-2 bg-slate-50 border-b border-slate-200/60 flex items-center gap-1.5 text-slate-500 text-[11px] leading-normal font-normal">
+                                  <svg class="w-3.5 h-3.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                  </svg>
+                                  <span>同一规则内请选择源站位置相同的线路</span>
+                                </div>
+                                <!-- 树形结构内容 -->
+                                <div class="p-2 space-y-1 select-none">
+                                  <!-- 所有区域 (Root Folder) -->
+                                  <div class="flex items-center gap-1.5 py-1 px-2 hover:bg-slate-50 rounded cursor-pointer" @click="row.expanded['all'] = !row.expanded['all']">
+                                    <!-- +/- sign indicator box -->
+                                    <span class="w-3.5 h-3.5 border border-slate-200 rounded-sm flex items-center justify-center text-[10px] text-slate-400 bg-white font-mono leading-none" x-text="row.expanded['all'] ? '–' : '+'"></span>
+                                    <!-- Folder Icon -->
+                                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                                    <span class="text-slate-700 font-medium">所有区域</span>
+                                  </div>
+
+                                  <!-- Level 1 Folders (inside all) -->
+                                  <div x-show="row.expanded['all']" class="pl-4 space-y-1">
+                                    <template x-for="gw in mockGateways" :key="gw.label">
+                                      <div class="space-y-1">
+                                        <!-- Gateway Folder -->
+                                        <div class="flex items-center gap-1.5 py-1 px-2 hover:bg-slate-50 rounded cursor-pointer" @click="row.expanded[gw.label] = !row.expanded[gw.label]">
+                                          <span class="w-3.5 h-3.5 border border-slate-200 rounded-sm flex items-center justify-center text-[10px] text-slate-400 bg-white font-mono leading-none" x-text="row.expanded[gw.label] ? '–' : '+'"></span>
+                                          <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                                          <span class="text-slate-700" x-text="gw.label"></span>
+                                        </div>
+
+                                        <!-- Leaf IP Nodes (inside gateway) -->
+                                        <div x-show="row.expanded[gw.label]" class="pl-6 space-y-1">
+                                           <template x-for="ip in gw.ips" :key="ip">
+                                             <label class="flex items-center gap-2 py-1 px-2 hover:bg-blue-50/50 rounded cursor-pointer">
+                                               <input type="checkbox" 
+                                                 :checked="isTargetSelected(row, ip)"
+                                                 @change="toggleTarget(row, ip, gw.label)"
+                                                 class="w-3.5 h-3.5 rounded border-slate-300 text-brand focus:ring-brand accent-blue-600">
+                                               <!-- IP/域名 徽章标签 -->
+                                               <span class="inline-flex items-center gap-1 px-1 py-0.5 rounded text-[9px] font-mono leading-none border transition-colors"
+                                                 :class="/^[0-9.]+$/.test(ip) ? 'bg-slate-100 text-slate-500 border-slate-200' : 'bg-blue-50 text-blue-600 border-blue-100'"
+                                                 x-text="/^[0-9.]+$/.test(ip) ? 'IP' : '域名'"></span>
+                                               <span class="text-slate-600 font-mono" x-text="ip"></span>
+                                             </label>
+                                           </template>
+                                        </div>
                                       </div>
                                     </template>
                                   </div>
-                                </template>
+                                </div>
                               </div>
                             </div>
 
-                            <!-- WEB场景：直接输入匹配的下拉 -->
+                            <!-- WEB场景：多选 Tag 呈现与下拉触发 -->
                             <div x-show="subtype === 'web'" class="relative group" @click.outside="if (openDropdown === 'w-'+row.id) openDropdown = null" x-cloak>
-                              <div class="relative flex items-center">
-                                <input type="text"
-                                  placeholder="请输入名称或前端访问地址选择应用"
-                                  x-model="row.target"
-                                  @focus="openDropdown = 'w-'+row.id"
-                                  class="w-full h-8 border border-slate-200 rounded pl-3 pr-8 text-xs text-slate-700 placeholder-slate-300 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20"
-                                  :class="row.target ? 'text-slate-700' : 'text-slate-300'">
-                                <svg :class="row.target ? 'group-hover:hidden' : ''" class="w-3.5 h-3.5 text-slate-400 absolute right-3 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                                <svg x-show="row.target" @click.stop="row.target = ''" class="hidden group-hover:block w-3.5 h-3.5 text-slate-400 hover:text-red-500 absolute right-3 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
-                              </div>
-                              <div x-show="openDropdown === ('w-'+row.id)" x-cloak
-                                class="absolute z-30 top-9 left-0 right-0 bg-white border border-slate-200 rounded shadow-lg text-xs max-h-56 overflow-y-auto">
-                                <!-- 没有匹配项的提示 -->
-                                <div x-show="mockWebApps.filter(app => !row.target || app.label.toLowerCase().includes(row.target.toLowerCase()) || app.url.toLowerCase().includes(row.target.toLowerCase())).length === 0"
-                                  class="px-3 py-3 text-slate-400 text-center select-none">
-                                  未找到匹配的WEB应用
+                              <div @click="openDropdown === ('w-'+row.id) ? openDropdown=null : openDropdown='w-'+row.id"
+                                class="relative group min-h-[32px] py-1 border border-slate-200 rounded bg-white px-3 flex items-center justify-between cursor-pointer hover:border-slate-300 text-xs"
+                                :class="row.target ? 'text-slate-700' : 'text-[#A1A7B3]'">
+                                <div class="flex flex-wrap items-center gap-1.5 pr-6 w-full">
+                                  <template x-if="!row.targets || row.targets.length === 0">
+                                    <span class="text-[#A1A7B3]">请输入名称或前端访问地址选择应用</span>
+                                  </template>
+                                  <template x-for="(t, tIdx) in (row.targets || [])" :key="t.ip">
+                                    <template x-if="tIdx < 2">
+                                      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 border border-blue-200 text-brand rounded-sm text-[11px] font-medium leading-none">
+                                        <span x-text="t.label"></span>
+                                        <span @click.stop="toggleWebTarget(row, t.ip, t.label, t.region)" class="text-brand/50 hover:text-brand cursor-pointer font-bold select-none text-[10px] ml-0.5">×</span>
+                                      </span>
+                                    </template>
+                                  </template>
+                                  <template x-if="row.targets && row.targets.length > 2">
+                                    <span class="inline-flex items-center px-1.5 py-0.5 bg-slate-50 border border-slate-200 text-slate-500 rounded-sm text-[11px] font-medium leading-none" x-text="'+' + (row.targets.length - 2)"></span>
+                                  </template>
                                 </div>
-                                <!-- 匹配项列表 -->
-                                <template x-for="app in mockWebApps.filter(app => !row.target || app.label.toLowerCase().includes(row.target.toLowerCase()) || app.url.toLowerCase().includes(row.target.toLowerCase()))" :key="app.label">
-                                  <div @click="row.target = app.label; openDropdown = null"
-                                    class="px-3 py-2 hover:bg-blue-50 cursor-pointer flex items-center justify-between"
-                                    :class="row.target === app.label ? 'text-brand font-medium bg-blue-50/30' : 'text-slate-700'">
-                                    <div class="flex flex-col">
-                                      <span x-text="app.label"></span>
-                                      <span class="text-[10px] text-slate-400 mt-0.5" x-text="app.url"></span>
+                                <div class="absolute right-3 flex items-center gap-1.5">
+                                  <svg :class="row.target ? 'group-hover:hidden' : ''" class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                  </svg>
+                                  <button x-show="row.target" @click.stop="clearWebTargets(row)" class="hidden group-hover:block text-slate-400 hover:text-slate-600 focus:outline-none">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+
+                              <!-- 下拉匹配过滤多选面板 -->
+                              <div x-show="openDropdown === ('w-'+row.id)" x-cloak
+                                class="absolute z-30 top-9 left-0 bg-white border border-slate-200 rounded shadow-lg text-xs flex flex-col w-[380px] md:w-[420px]">
+                                
+                                <!-- 局部搜索框 -->
+                                <div class="p-2 border-b border-slate-100">
+                                  <input type="text"
+                                    placeholder="输入关键字搜索应用名称或 URL..."
+                                    x-model="searchQueries['w-'+row.id]"
+                                    @click.stop
+                                    class="w-full h-8 border border-slate-200 rounded px-2.5 text-xs focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20">
+                                </div>
+
+                                <!-- 滚动区域过滤 Tag 栏 -->
+                                <div class="flex items-center gap-1.5 px-3 py-2 bg-slate-50 border-b border-slate-100 overflow-x-auto select-none no-scrollbar" @click.stop>
+                                  <template x-for="rTag in ['全部', ...new Set(mockWebApps.map(a => a.region))]" :key="rTag">
+                                    <button @click.stop="selectedRegionFilter[row.id] = rTag"
+                                      class="px-2.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap transition-colors"
+                                      :class="(selectedRegionFilter[row.id] || '全部') === rTag ? 'bg-[#1C6EFF] text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'">
+                                      <span x-text="rTag"></span>
+                                    </button>
+                                  </template>
+                                </div>
+
+                                <!-- 全选当前过滤结果控制行 -->
+                                <div class="px-3 py-1.5 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between text-[11px] text-slate-500" @click.stop>
+                                  <label class="flex items-center gap-1.5 cursor-pointer select-none">
+                                    <input type="checkbox"
+                                      :checked="isAllFilteredSelected(row)"
+                                      @change="toggleSelectAllFiltered(row)"
+                                      class="w-3.5 h-3.5 rounded border-slate-300 text-brand focus:ring-brand accent-blue-600">
+                                    <span class="font-medium text-slate-600">全选当前过滤结果</span>
+                                  </label>
+                                  <span class="text-slate-400">
+                                    已选 <span class="text-[#1C6EFF] font-semibold" x-text="(row.targets || []).length"></span> 个应用
+                                  </span>
+                                </div>
+
+                                <!-- 列表渲染 -->
+                                <div class="max-h-52 overflow-y-auto w-full" @click.stop>
+                                  <template x-for="app in getFilteredWebApps(row)" :key="app.url">
+                                    <div @click.stop="toggleWebTarget(row, app.url, app.label, app.region)"
+                                      class="px-3 py-2 hover:bg-blue-50/50 cursor-pointer flex items-center justify-between gap-3 text-xs border-b border-slate-100 last:border-0"
+                                      :class="(row.targets || []).some(t => t.ip === app.url) ? 'bg-blue-50/10' : ''">
+                                      <div class="flex items-center gap-2.5 min-w-0">
+                                        <input type="checkbox"
+                                          :checked="(row.targets || []).some(t => t.ip === app.url)"
+                                          @change.prevent="toggleWebTarget(row, app.url, app.label, app.region)"
+                                          class="w-3.5 h-3.5 rounded border-slate-300 text-brand focus:ring-brand accent-blue-600">
+                                        <div class="flex flex-col min-w-0">
+                                          <span class="font-semibold text-slate-700 truncate" x-text="app.label"></span>
+                                          <span class="text-slate-400 font-mono text-[10px] mt-0.5 truncate" x-text="app.url"></span>
+                                        </div>
+                                      </div>
+                                      <span class="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[9px] border border-slate-200 flex-shrink-0" x-text="app.region"></span>
                                     </div>
-                                    <span x-show="row.target === app.label" class="text-brand text-xs">✓</span>
-                                  </div>
-                                </template>
+                                  </template>
+                                  <template x-if="getFilteredWebApps(row).length === 0">
+                                    <div class="px-3 py-8 text-center text-slate-400 text-xs">没有找到匹配的WEB应用</div>
+                                  </template>
+                                </div>
                               </div>
                             </div>
 
@@ -2155,7 +2441,7 @@
                             <div x-show="subtype === 'auth'" class="relative" x-cloak>
                               <div @click="openDropdown === ('a-'+row.id) ? openDropdown=null : openDropdown='a-'+row.id"
                                 class="relative group h-8 border border-slate-200 rounded bg-white px-3 flex items-center justify-between cursor-pointer hover:border-slate-300 text-xs"
-                                :class="row.target ? 'text-slate-700' : 'text-slate-300'">
+                                :class="row.target ? 'text-slate-700' : 'text-[#A1A7B3]'">
                                 <span x-text="row.target || '请输入域名或选择已有对象'"></span>
                                 <svg :class="row.target ? 'group-hover:hidden' : ''" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
@@ -2188,8 +2474,8 @@
 
                           <!-- 源站地理位置 -->
                           <div class="flex-1 min-w-0">
-                            <div class="text-[11px] text-slate-500 mb-1 flex items-center">
-                              <span class="text-red-500">*</span>源站区域
+                            <div class="text-[12px] text-slate-500 mb-1 flex items-center">
+                              <span class="text-red-500">*</span>源站区域<span class="text-[#A1A7B3]">（下车点）</span>
                               <span class="relative group cursor-help ml-1 inline-flex items-center">
                                 <svg class="w-3.5 h-3.5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -2202,12 +2488,12 @@
                             <div class="relative">
                               <div @click="if (openDropdown === ('l-'+row.id)) { openDropdown = null; } else { openDropdown = 'l-'+row.id; openRegion[row.id] = '中国大陆'; searchQueries['l-'+row.id] = ''; }"
                                 class="relative group h-8 border border-slate-200 rounded bg-white px-3 flex items-center justify-between cursor-pointer hover:border-slate-300 text-xs"
-                                :class="row.location ? 'text-slate-700' : 'text-slate-300'">
+                                :class="row.location ? 'text-slate-700' : 'text-[#A1A7B3]'">
                                 <span class="flex items-center gap-1.5">
                                   <template x-if="row.location">
                                     <span class="text-brand font-medium">🌐</span>
                                   </template>
-                                  <span x-text="row.location || '请选择源站最近的加速位置'"></span>
+                                  <span x-text="row.location || '请选择距离源站最近的下车点'"></span>
                                 </span>
                                 <svg :class="row.location ? 'group-hover:hidden' : ''" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
@@ -2251,20 +2537,7 @@
                                               :class="row.location === pop.name ? 'text-brand font-semibold' : 'text-slate-700'">
                                               <span class="text-brand text-base">🌐</span>
                                               <span x-text="pop.name"></span>
-                                              <span class="ml-auto text-slate-400 text-[10px] flex items-center gap-0.5 select-none relative">
-                                                <span>覆盖</span>
-                                                <span x-text="pop.cities[0]"></span>
-                                                <span>等</span>
-                                                <span class="relative group" @click.stop>
-                                                  <span class="text-brand font-semibold cursor-help border-b border-dashed border-brand/50 px-0.5" x-text="pop.cities.length"></span>
-                                                  <!-- Tooltip panel -->
-                                                  <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full mb-2 right-0 shadow-lg pointer-events-none w-48 leading-relaxed text-left normal-case font-normal">
-                                                    <span class="block font-semibold border-b border-slate-700 pb-1 mb-1 text-slate-200">全部覆盖位置:</span>
-                                                    <span class="block text-slate-300 font-sans break-all" x-text="pop.cities.join('、')"></span>
-                                                  </span>
-                                                </span>
-                                                <span>个位置</span>
-                                              </span>
+
                                             </div>
                                           </template>
                                         </template>
@@ -2290,20 +2563,7 @@
                                             :class="row.location === pop.name ? 'text-brand font-semibold' : 'text-slate-700'">
                                             <span class="text-brand text-base">🌐</span>
                                             <span x-text="pop.name"></span>
-                                            <span class="ml-auto text-slate-400 text-[10px] flex items-center gap-0.5 select-none relative">
-                                              <span>覆盖</span>
-                                              <span x-text="pop.cities[0]"></span>
-                                              <span>等</span>
-                                              <span class="relative group" @click.stop>
-                                                <span class="text-brand font-semibold cursor-help border-b border-dashed border-brand/50 px-0.5" x-text="pop.cities.length"></span>
-                                                <!-- Tooltip panel -->
-                                                <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full mb-2 right-0 shadow-lg pointer-events-none w-48 leading-relaxed text-left normal-case font-normal">
-                                                  <span class="block font-semibold border-b border-slate-700 pb-1 mb-1 text-slate-200">全部覆盖位置:</span>
-                                                  <span class="block text-slate-300 font-sans break-all" x-text="pop.cities.join('、')"></span>
-                                                </span>
-                                              </span>
-                                              <span>个位置</span>
-                                            </span>
+
                                           </div>
                                         </template>
                                       </div>
@@ -2362,7 +2622,7 @@
               <div x-show="step === 2" x-cloak class="space-y-3">
                 <div class="flex items-center gap-1.5">
                   <div class="w-0.5 h-3.5 bg-brand rounded-full"></div>
-                  <span class="text-sm font-semibold text-slate-800">确定加速范围及带宽</span>
+                  <span class="text-sm font-semibold text-slate-800">确定加速范围</span>
                 </div>
 
                 <!-- 每个源站一张卡片 -->
@@ -2378,16 +2638,25 @@
                           :class="selectedRowId === row.id ? 'bg-[#1C6EFF]' : 'bg-slate-300'"></div>
                         <span class="text-xs font-semibold text-slate-800" x-text="step2CardTitle(row)"></span>
                       </div>
-                      <div class="flex items-center gap-1.5 text-xs text-slate-500 bg-white border border-slate-200 rounded px-2.5 py-0.5">
-                        <span class="text-[10px] text-slate-400">源站区域：</span>
-                        <span class="text-brand text-xs">🌐</span>
-                        <span class="text-slate-700 font-medium text-[11px]" x-text="row.location"></span>
+                      <div class="flex items-center gap-1.5 text-[11px] text-slate-600 bg-white border border-slate-200 rounded px-2 py-0.5">
+                        <span class="text-slate-400">区域：</span>
+                        <span class="text-slate-800 font-medium" x-text="row.location"></span>
                       </div>
                     </div>
 
                     <!-- 卡片体 -->
                     <div class="p-4 space-y-3">
-                      <div class="text-xs text-slate-500"><span class="text-black font-medium">选择加速区域</span>（上车点，选择可覆盖终端请求较近位置的 pop 点）</div>
+                      <div class="text-xs text-slate-500 flex items-center gap-1">
+                        <span class="text-red-500">*</span><span class="text-black font-medium">选择加速区域</span><span class="text-[#A1A7B3]">（上车点）</span>
+                        <span class="relative group cursor-help inline-flex items-center">
+                          <svg class="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full left-1/2 -translate-x-1/2 mb-1.5 shadow-lg pointer-events-none w-52 leading-relaxed text-left normal-case font-normal">
+                            选择可覆盖终端请求较近位置的 POP 节点
+                          </span>
+                        </span>
+                      </div>
 
                       <!-- 已选标签 + 下拉触发 -->
                       <div class="relative">
@@ -2452,20 +2721,7 @@
                                       </div>
                                       <span class="text-brand text-xs">🌐</span>
                                       <span :class="getPopConfig(row.id).selectedPops.includes(pop.key) ? 'text-brand font-semibold' : 'text-slate-700'" x-text="pop.name"></span>
-                                      <span class="ml-auto text-slate-400 text-[10px] flex items-center gap-0.5 select-none relative">
-                                        <span>覆盖</span>
-                                        <span x-text="pop.cities[0]"></span>
-                                        <span>等</span>
-                                        <span class="relative group" @click.stop>
-                                          <span class="text-brand font-semibold cursor-help border-b border-dashed border-brand/50 px-0.5" x-text="pop.cities.length"></span>
-                                          <!-- Tooltip panel -->
-                                          <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full mb-2 right-0 shadow-lg pointer-events-none w-48 leading-relaxed text-left normal-case font-normal">
-                                            <span class="block font-semibold border-b border-slate-700 pb-1 mb-1 text-slate-200">全部覆盖位置:</span>
-                                            <span class="block text-slate-300 font-sans break-all" x-text="pop.cities.join('、')"></span>
-                                          </span>
-                                        </span>
-                                        <span>个位置</span>
-                                      </span>
+
                                     </div>
                                   </template>
                                 </template>
@@ -2493,20 +2749,7 @@
                                       </div>
                                       <span class="text-brand text-xs">🌐</span>
                                       <span :class="getPopConfig(row.id).selectedPops.includes(pop.key) ? 'text-brand font-semibold' : 'text-slate-700'" x-text="pop.name"></span>
-                                      <span class="ml-auto text-slate-400 text-[10px] flex items-center gap-0.5 select-none relative">
-                                        <span>覆盖</span>
-                                        <span x-text="pop.cities[0]"></span>
-                                        <span>等</span>
-                                        <span class="relative group" @click.stop>
-                                          <span class="text-brand font-semibold cursor-help border-b border-dashed border-brand/50 px-0.5" x-text="pop.cities.length"></span>
-                                          <!-- Tooltip panel -->
-                                          <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full mb-2 right-0 shadow-lg pointer-events-none w-48 leading-relaxed text-left normal-case font-normal">
-                                            <span class="block font-semibold border-b border-slate-700 pb-1 mb-1 text-slate-200">全部覆盖位置:</span>
-                                            <span class="block text-slate-300 font-sans break-all" x-text="pop.cities.join('、')"></span>
-                                          </span>
-                                        </span>
-                                        <span>个位置</span>
-                                      </span>
+
                                     </div>
                                   </template>
                                 </div>
@@ -2528,21 +2771,7 @@
                         </div>
                       </div>
 
-                      <!-- 覆盖范围提示 -->
-                      <div class="h-8 bg-[#F7F9FC] rounded px-3 flex items-center text-xs text-slate-500">
-                        <span>
-                          根据已选的加速区域可覆盖 
-                          <template x-if="getPopConfig(row.id).selectedPops.length > 0">
-                            <span>
-                              <span class="text-slate-600 font-semibold" x-text="rowCoverageInfo(row.id).names"></span>等 
-                              <strong class="text-brand" x-text="rowCoverageInfo(row.id).count"></strong> 个地区的终端请求
-                            </span>
-                          </template>
-                          <template x-if="getPopConfig(row.id).selectedPops.length === 0">
-                            <span><strong class="text-slate-400">0</strong> 个地区的终端请求</span>
-                          </template>
-                        </span>
-                      </div>
+
 
                       <!-- 高级配置（折叠） -->
                       <div>
@@ -2556,20 +2785,38 @@
                           
                           <!-- 独享IP -->
                           <div class="flex items-center gap-3">
-                            <span class="w-[80px] text-slate-500 flex-shrink-0">独享IP</span>
-                            <button @click="getPopConfig(row.id).exclusiveIp = !getPopConfig(row.id).exclusiveIp"
-                              class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
-                              :class="getPopConfig(row.id).exclusiveIp ? 'bg-brand' : 'bg-slate-200'">
-                              <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
-                                :class="getPopConfig(row.id).exclusiveIp ? 'left-4.5' : 'left-0.5'"></div>
-                            </button>
-                            <span class="text-slate-400">隔离风控，源站专用独立公网出口 IP</span>
+                            <div class="w-[110px] flex items-center gap-1 flex-shrink-0">
+                              <span class="text-slate-500">独享IP</span>
+                              <span class="relative group cursor-help inline-flex items-center">
+                                <svg class="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full left-1/2 -translate-x-1/2 mb-1.5 shadow-lg pointer-events-none w-52 leading-relaxed text-left normal-case font-normal">
+                                  该源站享有专用的公网出口 IP，便于源站端安全策略（如防火墙白名单）单独放行，并隔离共用出口公网 IP 所带来的潜在风控拦截风险。
+                                </span>
+                              </span>
+                            </div>
+                            <div class="relative group flex-shrink-0">
+                              <button @click="if (hasDomainSelected(row)) return; getPopConfig(row.id).exclusiveIp = !getPopConfig(row.id).exclusiveIp"
+                                class="relative w-8 h-4 rounded-full transition-all flex-shrink-0"
+                                :class="hasDomainSelected(row) ? 'opacity-50 cursor-not-allowed bg-brand' : (getPopConfig(row.id).exclusiveIp ? 'bg-brand' : 'bg-slate-200')">
+                                <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                                  :class="getPopConfig(row.id).exclusiveIp ? 'left-4.5' : 'left-0.5'"></div>
+                              </button>
+                              <!-- Tooltip for disabled auto-enable domain explanation -->
+                              <template x-if="hasDomainSelected(row)">
+                                <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 shadow-lg pointer-events-none whitespace-nowrap">
+                                  检测到域名源站，已自动锁定开启
+                                </span>
+                              </template>
+                            </div>
+                            <span class="text-slate-400">分配源站专属的独立出口公网 IP</span>
                             <span class="text-slate-400 ml-auto select-none">（全局容量剩余：8/20）</span>
                           </div>
 
                           <!-- 源IP透传 -->
                           <div class="flex items-center gap-3">
-                            <span class="w-[80px] text-slate-500 flex-shrink-0">源IP透传</span>
+                            <span class="w-[110px] text-slate-500 flex-shrink-0">客户端源IP透传</span>
                             <button @click="getPopConfig(row.id).sourceIpPassthrough = !getPopConfig(row.id).sourceIpPassthrough"
                               class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
                               :class="getPopConfig(row.id).sourceIpPassthrough ? 'bg-brand' : 'bg-slate-200'">
@@ -2581,7 +2828,7 @@
 
                           <!-- 传输优化 -->
                           <div class="flex items-center gap-3">
-                            <span class="w-[80px] text-slate-500 flex-shrink-0">传输优化</span>
+                            <span class="w-[110px] text-slate-500 flex-shrink-0">传输优化</span>
                             <button @click="getPopConfig(row.id).transportOptimize = !getPopConfig(row.id).transportOptimize"
                               class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
                               :class="getPopConfig(row.id).transportOptimize ? 'bg-brand' : 'bg-slate-200'">
@@ -2593,7 +2840,7 @@
 
                           <!-- 健康检查 -->
                           <div class="flex items-center gap-3 flex-wrap">
-                            <span class="w-[80px] text-slate-500 flex-shrink-0">健康检查</span>
+                            <span class="w-[110px] text-slate-500 flex-shrink-0">连通性检查</span>
                             <button @click="getPopConfig(row.id).healthCheck = !getPopConfig(row.id).healthCheck"
                               class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
                               :class="getPopConfig(row.id).healthCheck ? 'bg-brand' : 'bg-slate-200'">
@@ -2620,7 +2867,7 @@
                                 </select>
                                 <span class="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-slate-400">▼</span>
                               </div>
-                              <span>源站区域-业务的资源健康度</span>
+                              <span>源站区域-业务的资源连通度</span>
                             </div>
                           </div>
                         </div>
@@ -2651,11 +2898,11 @@
                 <template x-for="rule in step3Rules()" :key="'s3-'+rule.id">
                   <div class="border border-slate-200 rounded-lg bg-white overflow-hidden">
                     <!-- 卡片头 (非编辑态) -->
-                    <div x-show="editingRuleId !== rule.id" class="px-4 py-2.5 border-b border-slate-100 flex items-center gap-4">
+                    <div x-show="editingRuleId !== rule.id" class="px-4 py-2.5 border-b border-slate-100 flex items-center gap-3">
                       <span class="text-xs text-slate-500">规则名称：</span>
                       <span class="text-xs font-semibold text-slate-800" x-text="rule.name"></span>
                       <span class="text-xs text-slate-400 ml-2" x-text="'描述：' + rule.description"></span>
-                      <button @click="editingRuleId = rule.id; editingName = rule.name; editingDesc = rule.description === '–' ? '' : rule.description" class="ml-auto text-brand hover:text-brand/80 transition-colors">
+                      <button @click="editingRuleId = rule.id; editingName = rule.name; editingDesc = rule.description === '–' ? '' : rule.description" class="text-brand hover:text-brand/80 transition-colors p-1 hover:bg-slate-100 rounded flex items-center justify-center">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                       </button>
                     </div>
@@ -2671,7 +2918,7 @@
                         <input type="text" class="h-7 px-2 border border-slate-300 rounded text-xs text-slate-800 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400 w-[200px]" x-model="editingDesc" placeholder="请输入描述信息">
                       </div>
                       <div class="ml-auto flex items-center gap-2">
-                        <button @click="const row = sourceRows.find(r => r.id === rule.id); if (row) { row.customName = editingName; row.description = editingDesc || '–'; }; editingRuleId = null" class="h-6 px-2.5 rounded bg-brand text-white text-[11px] font-medium hover:bg-brand-hover active:bg-brand-active transition-colors">
+                        <button @click="const row = sourceRows.find(r => r.id === rule.rowId); if (row) { row.customName = editingName; row.description = editingDesc || '–'; }; editingRuleId = null" class="h-6 px-2.5 rounded bg-brand text-white text-[11px] font-medium hover:bg-brand-hover active:bg-brand-active transition-colors">
                           保存
                         </button>
                         <button @click="editingRuleId = null" class="h-6 px-2.5 rounded border border-slate-200 text-slate-500 text-[11px] font-medium hover:bg-slate-50 transition-colors">
@@ -2679,39 +2926,27 @@
                         </button>
                       </div>
                     </div>
-                    <!-- 链路可视化行 -->
-                    <div class="p-6 flex items-center justify-between gap-2 text-xs bg-slate-50/40 rounded-b-lg overflow-x-auto min-w-[850px]">
+                    <div class="p-6 flex items-center justify-between gap-2 text-xs bg-slate-50/40 rounded-b-lg overflow-x-auto" :class="subtype === 'tunnel' ? 'min-w-[820px]' : 'min-w-[800px]'">
                       <!-- 1. 覆盖区域 -->
-                      <div class="flex-1 min-w-[140px] max-w-[200px] space-y-1">
-                        <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400">终端请求覆盖</div>
-                        <div class="text-xs text-slate-500 leading-relaxed">
-                          <template x-if="rule.pops.length > 0">
-                            <div class="flex items-center gap-1.5">
-                              <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
-                              <span>
-                                <span class="text-slate-500" x-text="rowCoverageInfo(rule.id).names"></span>等
-                                <span class="text-brand text-xs" x-text="rowCoverageInfo(rule.id).count"></span> 个地区
-                              </span>
-                            </div>
-                          </template>
-                          <template x-if="rule.pops.length === 0">
-                            <div class="flex items-center gap-1.5 text-slate-400">
-                              <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-                              <span>0 个地区</span>
-                            </div>
-                          </template>
+                      <div class="flex-1 min-w-[90px] max-w-[120px] space-y-1">
+                        <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400">终端请求发起</div>
+                        <div class="text-xs text-slate-600 leading-relaxed flex items-center gap-1.5">
+                          <svg class="w-4 h-4 text-brand flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          <span>各地终端用户</span>
                         </div>
                       </div>
 
                       <!-- 箭头 1 (覆盖到上车点) -->
-                      <div class="flex items-center justify-center flex-shrink-0 w-8">
+                      <div class="flex items-center justify-center flex-shrink-0 w-4">
                         <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                         </svg>
                       </div>
 
                       <!-- 2. 加速区域（上车点） -->
-                      <div class="flex-shrink-0 flex flex-col items-center min-w-[120px]">
+                      <div class="flex-shrink-0 flex flex-col items-center min-w-[90px]">
                         <div class="text-[10px] font-medium text-slate-400 mb-1.5">加速区域 (上车点)</div>
                         <template x-if="rule.pops.length > 0">
                           <div class="w-full px-3 py-2 rounded-xl border border-blue-200 bg-gradient-to-b from-blue-50 to-blue-100/50 text-blue-700 font-semibold text-xs shadow-sm flex items-center justify-center gap-2 relative group hover:border-blue-400 transition-colors">
@@ -2721,6 +2956,13 @@
                             <span x-text="popLabel(rule.pops[0])"></span>
                             <template x-if="rule.pops.length > 1">
                               <span class="absolute -top-2 -right-2 bg-brand text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold border border-white shadow-md scale-95" x-text="'+' + (rule.pops.length - 1)"></span>
+                            </template>
+                            <!-- Tooltip showing all selected POPs on hover -->
+                            <template x-if="rule.pops.length > 1">
+                              <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2.5 z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 shadow-lg pointer-events-none whitespace-nowrap">
+                                <span class="block font-semibold border-b border-slate-700 pb-1 mb-1 text-slate-200 text-center">已选加速区域:</span>
+                                <span class="block font-normal text-slate-300 text-center font-sans" x-text="rule.pops.map(p => popLabel(p)).join('、')"></span>
+                              </span>
                             </template>
                           </div>
                         </template>
@@ -2732,7 +2974,7 @@
                       </div>
 
                       <!-- 极速流动管道 1 (上车点到骨干网) -->
-                      <div class="flex-1 mx-2 relative flex items-center min-w-[50px] max-w-[120px] translate-y-[10px]">
+                      <div class="flex-1 mx-1.5 relative flex items-center min-w-[20px] max-w-[50px] translate-y-[10px]">
                         <div class="h-1 w-full bg-cyan-100/80 rounded-full overflow-hidden relative shadow-inner">
                           <div class="absolute top-0 bottom-0 w-[40px] bg-gradient-to-r from-transparent via-[#06B6D4] to-transparent animate-flow-fast"></div>
                         </div>
@@ -2749,14 +2991,14 @@
                       </div>
 
                       <!-- 极速流动管道 2 (骨干网到下车点) -->
-                      <div class="flex-1 mx-2 relative flex items-center min-w-[50px] max-w-[120px] translate-y-[10px]">
+                      <div class="flex-1 mx-1.5 relative flex items-center min-w-[20px] max-w-[50px] translate-y-[10px]">
                         <div class="h-1 w-full bg-cyan-100/80 rounded-full overflow-hidden relative shadow-inner">
                           <div class="absolute top-0 bottom-0 w-[40px] bg-gradient-to-r from-transparent via-[#06B6D4] to-transparent animate-flow-fast"></div>
                         </div>
                       </div>
 
                       <!-- 4. 源站区域（下车点） -->
-                      <div class="flex-shrink-0 flex flex-col items-center min-w-[120px]">
+                      <div class="flex-shrink-0 flex flex-col items-center min-w-[90px]">
                         <div class="text-[10px] font-medium text-slate-400 mb-1.5">源站区域 (下车点)</div>
                         <div class="w-full px-3 py-2 rounded-xl border border-emerald-200 bg-gradient-to-b from-[#F0FDF4] to-[#DCFCE7] text-[#15803D] font-semibold text-xs shadow-sm flex items-center justify-center gap-2 hover:border-emerald-400 transition-colors">
                           <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -2767,14 +3009,14 @@
                       </div>
 
                       <!-- 箭头 2 (下车点到源站对象) -->
-                      <div class="flex items-center justify-center flex-shrink-0 w-8">
+                      <div class="flex items-center justify-center flex-shrink-0 w-4">
                         <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                         </svg>
                       </div>
 
                       <!-- 5. 源站对象 -->
-                      <div class="flex-1 min-w-[150px] max-w-[220px] space-y-1">
+                      <div class="flex-1 min-w-[110px] max-w-[150px] space-y-1">
                         <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400">源站对象</div>
                         <div class="flex items-center gap-2.5">
                           <div class="w-9 h-9 rounded-xl border border-slate-200 bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center flex-shrink-0 shadow-sm">
@@ -2787,12 +3029,73 @@
                           </div>
                         </div>
                       </div>
+
+                      <!-- 极速连线（仅在隧道模式下显示：网关到具体应用，非流动管道形式的常规虚线连线） -->
+                      <template x-if="subtype === 'tunnel'">
+                        <div class="flex-1 mx-1.5 relative flex items-center min-w-[20px] max-w-[40px] translate-y-[10px]">
+                          <div class="w-full border-t-2 border-dashed border-slate-300 flex items-center justify-end relative">
+                            <svg class="w-3.5 h-3.5 text-slate-400 absolute -right-1 -top-1.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                          </div>
+                        </div>
+                      </template>
+
+                      <!-- 6. 实际业务系统 (仅在隧道模式下显示，3D等距托盘堆叠形式) -->
+                      <template x-if="subtype === 'tunnel'">
+                        <div class="flex-1 min-w-[90px] max-w-[120px] space-y-1">
+                          <div class="text-[10px] font-medium text-slate-400">实际业务系统</div>
+                          <div class="flex items-center gap-2">
+                            <!-- Premium 3D Isometric SVG representation of Tunnel Apps -->
+                            <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center relative bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl border border-slate-100 shadow-inner">
+                              <svg class="w-10 h-10 overflow-visible" viewBox="0 0 48 48" fill="none">
+                                <!-- The circular tray platform (green glow gradient matching screenshot) -->
+                                <ellipse cx="24" cy="38" rx="20" ry="7" fill="url(#trayGlow)" stroke="#10B981" stroke-width="1.5" />
+                                
+                                <!-- Left server block: OA -->
+                                <g transform="translate(10, 22)">
+                                  <path d="M0 4 L6 7 L12 4 L6 1 Z" fill="#93C5FD" stroke="#3B82F6" stroke-width="0.75" />
+                                  <path d="M0 4 L0 9 L6 12 L6 7 Z" fill="#60A5FA" stroke="#2563EB" stroke-width="0.75" />
+                                  <path d="M6 7 L6 12 L12 9 L12 4 Z" fill="#3B82F6" stroke="#1D4ED8" stroke-width="0.75" />
+                                  <text x="6" y="8.5" font-size="4" font-weight="extrabold" fill="#ffffff" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" letter-spacing="-0.5">OA</text>
+                                </g>
+                                
+                                <!-- Right server block: Mail -->
+                                <g transform="translate(26, 22)">
+                                  <path d="M0 4 L6 7 L12 4 L6 1 Z" fill="#93C5FD" stroke="#3B82F6" stroke-width="0.75" />
+                                  <path d="M0 4 L0 9 L6 12 L6 7 Z" fill="#60A5FA" stroke="#2563EB" stroke-width="0.75" />
+                                  <path d="M6 7 L6 12 L12 9 L12 4 Z" fill="#3B82F6" stroke="#1D4ED8" stroke-width="0.75" />
+                                  <text x="6" y="8.5" font-size="3" font-weight="extrabold" fill="#ffffff" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" letter-spacing="-0.5">Mail</text>
+                                </g>
+                                
+                                <!-- Top server block: +45 -->
+                                <g transform="translate(18, 13)">
+                                  <path d="M0 4 L6 7 L12 4 L6 1 Z" fill="#60A5FA" stroke="#2563EB" stroke-width="0.75" />
+                                  <path d="M0 4 L0 9 L6 12 L6 7 Z" fill="#3B82F6" stroke="#1D4ED8" stroke-width="0.75" />
+                                  <path d="M6 7 L6 12 L12 9 L12 4 Z" fill="#2563EB" stroke="#1E40AF" stroke-width="0.75" />
+                                  <text x="6" y="8.5" font-size="3" font-weight="extrabold" fill="#ffffff" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" letter-spacing="-0.5">+45</text>
+                                </g>
+                                
+                                <defs>
+                                  <radialGradient id="trayGlow" cx="50%" cy="50%" r="50%">
+                                    <stop offset="0%" stop-color="#E8F5E9" />
+                                    <stop offset="100%" stop-color="#D1FAE5" />
+                                  </radialGradient>
+                                </defs>
+                              </svg>
+                            </div>
+                             <div class="min-w-0 flex-1 leading-normal">
+                               <div class="text-[10px] text-slate-400">OA、邮件、文件共享等</div>
+                             </div>
+                          </div>
+                        </div>
+                      </template>
                     </div>
                   </div>
                 </template>
 
                 <!-- 注意说明 -->
-                <p x-show="subtype !== 'web'" class="text-xs text-slate-400">
+                <p x-show="subtype === 'tunnel'" class="text-xs text-slate-400">
                   注：保存后，本次新增加速链路的加速IP信息会在【系统管理/代理网关管理】左树对应区域编辑中同步显示<span @click="showNewExampleModal = true" class="text-brand hover:underline cursor-pointer ml-1.5 text-xs select-none">查看示例</span>
                 </p>
               </div><!-- /step 3 -->
@@ -3058,31 +3361,31 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <template x-for="row in sourceRows.filter(r => r.target)" :key="'cname-'+row.id">
-                        <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
-                          <td class="py-2.5 px-4 text-slate-700 font-medium" x-text="getWebTargetUrl(row.target)"></td>
-                          <td class="py-2.5 px-4">
-                            <div class="flex items-center justify-between gap-3 bg-emerald-50/40 border border-emerald-100 rounded px-2.5 py-1 text-emerald-800 font-mono text-[11px] max-w-[360px]">
-                              <span class="flex items-center gap-1 min-w-0 flex-1">
-                                <span class="text-emerald-600 text-xs flex-shrink-0">⚡</span>
-                                <span class="truncate max-w-[280px]" x-text="getWebCname(row)" :title="getWebCname(row)"></span>
-                              </span>
-                              <button @click.stop="copyText(getWebCname(row), row.id)" class="text-emerald-600 hover:text-emerald-800 flex-shrink-0 relative group p-0.5 ml-2">
-                                <template x-if="copiedRowId === row.id">
-                                  <span class="text-[10px] text-emerald-600 font-sans font-bold flex items-center gap-0.5">
-                                    <span>✓</span>已复制
-                                  </span>
-                                </template>
-                                <template x-if="copiedRowId !== row.id">
-                                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
-                                  </svg>
-                                </template>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      </template>
+                       <template x-for="item in getCnameList()" :key="item.id">
+                         <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
+                           <td class="py-2.5 px-4 text-slate-700 font-semibold font-mono" x-text="item.sourceDomain"></td>
+                           <td class="py-2.5 px-4">
+                             <div class="flex items-center justify-between gap-3 bg-emerald-50/40 border border-emerald-100 rounded px-2.5 py-1 text-emerald-800 font-mono text-[11px] max-w-[420px]">
+                               <span class="flex items-center gap-1 min-w-0 flex-1">
+                                 <span class="text-emerald-600 text-xs flex-shrink-0">⚡</span>
+                                 <span class="truncate max-w-[340px]" x-text="item.cname" :title="item.cname"></span>
+                               </span>
+                               <button @click.stop="copyText(item.cname, item.id)" class="text-emerald-600 hover:text-emerald-800 flex-shrink-0 relative group p-0.5 ml-2">
+                                 <template x-if="copiedRowId === item.id">
+                                   <span class="text-[10px] text-emerald-600 font-sans font-bold flex items-center gap-0.5">
+                                     <span>✓</span>已复制
+                                   </span>
+                                 </template>
+                                 <template x-if="copiedRowId !== item.id">
+                                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                                   </svg>
+                                 </template>
+                               </button>
+                             </div>
+                           </td>
+                         </tr>
+                       </template>
                     </tbody>
                   </table>
                 </div>

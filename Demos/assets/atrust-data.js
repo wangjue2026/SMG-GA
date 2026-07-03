@@ -39,9 +39,17 @@ window.globalAccelerationApp = function() {
     },
     toggleL4(key) { 
       this.activeLeaf = key; 
+      if (key === 'm_1_2_0') {
+        const path = window.location.pathname;
+        if (!path.endsWith('GA-usage.html')) {
+          window.location.href = 'GA-usage.html';
+        }
+      }
       if (key === 'm_1_2_1') {
         const path = window.location.pathname;
-        if (!path.endsWith('GA-initial.html') && !path.endsWith('/Demos/') && path !== '/') {
+        if (path.endsWith('GA-usage.html')) {
+          window.location.href = 'GA-display.html';
+        } else if (!path.endsWith('GA-initial.html') && !path.endsWith('/Demos/') && path !== '/') {
           window.location.href = 'GA-initial.html';
         }
       }
