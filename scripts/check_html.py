@@ -9,11 +9,11 @@ class TagCounter(HTMLParser):
         self.line_offset = 0
 
     def handle_starttag(self, tag, attrs):
-        if tag not in ["meta", "link", "img", "input", "br", "hr", "source", "path", "stop", "defs", "br", "col", "embed", "track", "wbr"]:
+        if tag not in ["meta", "link", "img", "input", "br", "hr", "source", "path", "stop", "defs", "br", "col", "embed", "track", "wbr", "line", "circle"]:
             self.tags.append((tag, self.getpos()))
 
     def handle_endtag(self, tag):
-        if tag not in ["meta", "link", "img", "input", "br", "hr", "source", "path", "stop", "defs", "br", "col", "embed", "track", "wbr"]:
+        if tag not in ["meta", "link", "img", "input", "br", "hr", "source", "path", "stop", "defs", "br", "col", "embed", "track", "wbr", "line", "circle"]:
             if self.tags and self.tags[-1][0] == tag:
                 self.tags.pop()
             else:

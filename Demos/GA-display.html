@@ -254,8 +254,8 @@
           { key: 'desc', title: '描述', visible: false, cannotHide: false },
           { key: 'scenario', title: '加速类型', visible: true, cannotHide: false },
           { key: 'status', title: '状态', visible: true, cannotHide: false },
-          { key: 'accRegion', title: '加速区域', visible: true, cannotHide: false },
-          { key: 'srcRegion', title: '源站区域', visible: true, cannotHide: false },
+          { key: 'accRegion', title: '加速区域（上车点）', visible: true, cannotHide: false },
+          { key: 'srcRegion', title: '源站区域（下车点）', visible: true, cannotHide: false },
           { key: 'srcObject', title: '源站对象', visible: true, cannotHide: false },
           { key: 'accDomain', title: '加速域名', visible: true, cannotHide: false },
           { key: 'exclusiveIp', title: '独享IP', visible: true, cannotHide: false }
@@ -1935,25 +1935,20 @@
         <div class="flex-1 overflow-hidden pt-3 px-3 pb-2 flex flex-col min-h-0 bg-[#F2F3F5]" x-show="activeLeaf === 'm_1_2_1'">
 
           <div class="flex-1 flex flex-col min-h-0 bg-white rounded-container border border-border shadow-sm pt-2 px-2 pb-0.5">
-            <!-- 1. Top Overview Grid (10 columns, 3:3:4 ratio) -->
-            <div class="grid grid-cols-1 md:grid-cols-10 gap-6 select-none mb-4">
-              <!-- 源站对象 (30%) -->
-              <div class="bg-gradient-to-br from-white to-[#F4F7FF] rounded-container border border-border/80 shadow-sm p-5 relative overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:border-brand/40 md:col-span-3">
-                <span class="text-xs text-text-mute font-medium mb-3">源站对象</span>
+            <!-- 1. Top Overview Grid (2 columns, equal width) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 select-none mb-3">
+              <!-- 源站对象 -->
+              <div class="bg-gradient-to-br from-white to-[#F4F7FF] rounded-container border border-border/80 shadow-sm py-3.5 px-4 relative overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:border-brand/40">
+                <span class="text-xs text-text-mute font-medium mb-1.5">源站对象</span>
                 <div class="flex-grow flex items-center justify-between mt-1">
-                  <!-- 左侧大数与IP/域名 -->
+                  <!-- 左侧大数 -->
                   <div class="flex flex-col justify-center pr-2">
                     <div class="flex items-baseline gap-1">
                       <span class="text-3xl font-outfit font-bold text-text-title tracking-tight">18</span>
                     </div>
-                    <div class="text-[10px] text-text-mute mt-1.5 flex items-center gap-1.5">
-                      <span>IP: <strong class="text-text-title font-outfit">12</strong></span>
-                      <span class="w-[1px] h-2.5 bg-border/80"></span>
-                      <span>域名: <strong class="text-text-title font-outfit">6</strong></span>
-                    </div>
                   </div>
                   <!-- 右侧细分场景 (4种) -->
-                  <div class="grid grid-cols-2 gap-x-3 gap-y-2 text-[10px] border-l border-border/40 pl-3">
+                  <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] border-l border-border/40 pl-3">
                     <div class="flex items-center justify-between gap-1">
                       <span class="flex items-center gap-1 text-text-mute truncate max-w-[95px]" title="零信任业务加速">
                         <span class="w-1.5 h-1.5 rounded-full bg-brand shrink-0"></span>
@@ -1986,9 +1981,9 @@
                 </div>
               </div>
               
-              <!-- 规则状态 (30%) -->
-              <div class="bg-gradient-to-br from-white to-[#F6FCF7] rounded-container border border-border/80 shadow-sm p-5 relative overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:border-success/40 md:col-span-3">
-                <span class="text-xs text-text-mute font-medium mb-3">规则状态</span>
+              <!-- 规则状态 -->
+              <div class="bg-gradient-to-br from-white to-[#F6FCF7] rounded-container border border-border/80 shadow-sm py-3.5 px-4 relative overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:border-success/40">
+                <span class="text-xs text-text-mute font-medium mb-1.5">规则状态</span>
                 <div class="grid grid-cols-3 gap-2 flex-grow items-center">
                   <!-- 加速中 -->
                   <div class="flex flex-col justify-center">
@@ -2018,59 +2013,6 @@
                       <span>运行异常</span>
                     </div>
                     <div class="font-outfit font-bold text-xl text-text-title pl-6">15</div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- 资源使用情况 (40%) -->
-              <div class="bg-gradient-to-br from-white to-[#F9F7FC] rounded-container border border-border/80 shadow-sm p-5 relative overflow-hidden flex flex-col justify-between transition-all duration-300 hover:shadow-md hover:border-purple-400/40 md:col-span-4">
-                <div class="flex justify-between items-center mb-3">
-                  <span class="text-xs text-text-mute font-medium">资源使用情况</span>
-                  <span class="bg-brand/10 text-brand px-2 py-0.5 rounded-control text-[11px] font-medium font-outfit shadow-sm border border-brand/10">独享IP：2/20</span>
-                </div>
-                <div class="grid grid-cols-2 gap-x-4 gap-y-3">
-                  <!-- 中国大陆 -->
-                  <div class="flex flex-col gap-1">
-                    <div class="flex items-center justify-between text-[11px] text-text-mute">
-                      <span>中国大陆</span>
-                      <span>剩余 <span class="font-outfit font-semibold text-brand">60</span> Mbps</span>
-                    </div>
-                    <div class="w-full h-1.5 bg-[#E5E6EB] rounded-full overflow-hidden">
-                      <div class="h-full bg-brand rounded-full transition-all duration-500" style="width: 60%"></div>
-                    </div>
-                  </div>
- 
-                  <!-- 欧美地区 -->
-                  <div class="flex flex-col gap-1">
-                    <div class="flex items-center justify-between text-[11px] text-text-mute">
-                      <span>欧美地区</span>
-                      <span>剩余 <span class="font-outfit font-semibold text-brand">60</span> Mbps</span>
-                    </div>
-                    <div class="w-full h-1.5 bg-[#E5E6EB] rounded-full overflow-hidden">
-                      <div class="h-full bg-brand rounded-full transition-all duration-500" style="width: 60%"></div>
-                    </div>
-                  </div>
- 
-                  <!-- 亚太地区 -->
-                  <div class="flex flex-col gap-1">
-                    <div class="flex items-center justify-between text-[11px] text-text-mute">
-                      <span>亚太地区</span>
-                      <span>剩余 <span class="font-outfit font-semibold text-brand">45</span> Mbps</span>
-                    </div>
-                    <div class="w-full h-1.5 bg-[#E5E6EB] rounded-full overflow-hidden">
-                      <div class="h-full bg-brand rounded-full transition-all duration-500" style="width: 45%"></div>
-                    </div>
-                  </div>
- 
-                  <!-- 其他地区 -->
-                  <div class="flex flex-col gap-1">
-                    <div class="flex items-center justify-between text-[11px] text-text-mute">
-                      <span>其他地区</span>
-                      <span>剩余 <span class="font-outfit font-semibold text-brand">20</span> Mbps</span>
-                    </div>
-                    <div class="w-full h-1.5 bg-[#E5E6EB] rounded-full overflow-hidden">
-                      <div class="h-full bg-brand rounded-full transition-all duration-500" style="width: 20%"></div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -2242,8 +2184,8 @@
                     <th class="font-normal text-text-title py-3 px-4 border-r border-border/50 bg-[#FAFAFA] text-xs">
                       <div class="flex items-center gap-1 justify-start">状态 <svg class="w-3.5 h-3.5 text-brand cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
                     </th>
-                    <th class="font-normal text-text-title py-3 px-4 border-r border-border/50 bg-[#FAFAFA] text-left text-xs">加速区域</th>
-                    <th class="font-normal text-text-title py-3 px-4 border-r border-border/50 bg-[#FAFAFA] text-left text-xs">源站区域</th>
+                    <th class="font-normal text-text-title py-3 px-4 border-r border-border/50 bg-[#FAFAFA] text-left text-xs">加速区域<span class="text-text-mute font-normal">（上车点）</span></th>
+                    <th class="font-normal text-text-title py-3 px-4 border-r border-border/50 bg-[#FAFAFA] text-left text-xs">源站区域<span class="text-text-mute font-normal">（下车点）</span></th>
                     <th class="font-normal text-text-title py-3 px-4 border-r border-border/50 bg-[#FAFAFA] text-left text-xs">源站对象</th>
                     <th class="font-normal text-text-title py-3 px-4 border-r border-border/50 bg-[#FAFAFA] text-xs">
                       <div class="flex items-center gap-1">加速域名 <svg class="w-3.5 h-3.5 text-brand cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
@@ -2311,7 +2253,7 @@
                         <!-- Horizontal Connecting Line Half (Only goes to the right) -->
                         <div class="absolute top-1/2 left-[100px] right-0 h-[2px] bg-[#34D399] -translate-y-1/2 z-0 opacity-80"></div>
                         <div class="group/pill relative inline-block z-10 w-[168px] text-left">
-                          <span class="inline-block w-full text-center bg-[#E6F4EA] text-[#137333] px-3 py-1 rounded-full text-[11px] shadow-sm cursor-help relative z-10 border border-[#34D399]/30 truncate" x-text="rule.accRegion"></span>
+                          <span class="inline-block w-full text-center bg-[#E6F4EA] text-[#137333] px-3 py-1 rounded-[2px] text-[11px] shadow-sm cursor-help relative z-10 border border-[#34D399]/30 truncate" x-text="rule.accRegion"></span>
                           
                           <!-- Hover Popover for Acc Region -->
                           <div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[340px] bg-white border border-border shadow-[0_4px_24px_rgba(0,0,0,0.12)] rounded-sm p-4 z-[100] opacity-0 invisible group-hover/pill:opacity-100 group-hover/pill:visible transition-all pointer-events-none text-left">
@@ -2335,13 +2277,13 @@
                       
                       <td class="px-4 relative text-left">
                         <div class="absolute top-1/2 left-0 right-0 h-[2px] bg-[#34D399] -translate-y-1/2 z-0 opacity-80"></div>
-                        <span class="inline-block w-[168px] text-center bg-[#E6F4EA] text-[#137333] px-3 py-1 rounded-full text-[11px] shadow-sm relative z-10 border border-[#34D399]/30 truncate" x-text="rule.srcRegion"></span>
+                        <span class="inline-block w-[168px] text-center bg-[#E6F4EA] text-[#137333] px-3 py-1 rounded-[2px] text-[11px] shadow-sm relative z-10 border border-[#34D399]/30 truncate" x-text="rule.srcRegion"></span>
                       </td>
                       
                       <td class="px-4 relative text-left">
                         <!-- Horizontal Connecting Line Half (Only goes to the left) -->
                         <div class="absolute top-1/2 left-0 w-[100px] h-[2px] bg-[#34D399] -translate-y-1/2 z-0 opacity-80"></div>
-                        <span class="inline-block w-[168px] text-center bg-[#F1F3F4] text-text-title px-3 py-1 rounded-full text-[11px] shadow-sm relative z-10 border border-border/50 truncate" x-text="getSrcObject(rule)" :title="getSrcObject(rule)"></span>
+                        <span class="inline-block w-[168px] text-center bg-[#F1F3F4] text-text-title px-3 py-1 rounded-[2px] text-[11px] shadow-sm relative z-10 border border-border/50 truncate" x-text="getSrcObject(rule)" :title="getSrcObject(rule)"></span>
                       </td>
                       
                       <td class="px-4 text-text-mute max-w-[220px] relative group/copy">
@@ -2436,6 +2378,7 @@
             </div>
             
           </div>
+        </div>
 
         <!-- 非加速配置菜单激活时的占位说明 -->
         <div x-show="activeLeaf !== 'm_1_2_1'" class="flex-1 flex flex-col items-center justify-center text-text-mute text-xs rounded-control gap-3 bg-white border border-border shadow-[0_1px_3px_rgba(0,0,0,0.05)]" x-cloak>
@@ -3682,6 +3625,8 @@
       </div>
     </div>
   </div>
+
+  </div> <!-- / App Root -->
 
 </body>
 
