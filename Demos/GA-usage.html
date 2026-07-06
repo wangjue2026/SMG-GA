@@ -84,15 +84,15 @@
             name: '中国大陆',
             watermark: 50,
             upload: [12, 14, 11, 16, 21, 24, 22, 26, 29, 27, 22, 16, 11],
-            download: [16, 22, 18, 25, 31, 36, 32, 38, 41, 38, 30, 22, 15],
-            maxUp: 29.0, minUp: 11.0, maxDown: 41.0, minDown: 15.0
+            download: [16, 22, 18, 25, 31, 36, 32, 38, 39, 38, 30, 22, 15],
+            maxUp: 29.0, minUp: 11.0, maxDown: 39.0, minDown: 15.0
           },
           ap: {
             name: '亚太地区',
             watermark: 30,
             upload: [6, 8, 7, 10, 13, 16, 14, 17, 18, 16, 12, 9, 6],
-            download: [9, 13, 11, 15, 20, 23, 21, 25, 26, 23, 18, 12, 9],
-            maxUp: 18.0, minUp: 6.0, maxDown: 26.0, minDown: 9.0
+            download: [9, 13, 11, 15, 20, 23, 21, 24, 23.5, 22, 18, 12, 9],
+            maxUp: 18.0, minUp: 6.0, maxDown: 24.0, minDown: 9.0
           },
           eu: {
             name: '欧美地区',
@@ -1826,7 +1826,7 @@
                       </div>
                       <div class="mt-2 mb-1 flex items-baseline justify-between">
                         <span class="text-lg font-black font-outfit leading-none" :class="getRegionStyle('cn').text" x-text="getRegionUtil('cn') + '%'">42%</span>
-                        <span class="text-[8px] text-text-mute font-outfit" x-text="bandwidthStatus === 'tight' ? '34/50M' : '29/50M'">29/50M</span>
+                        <span class="text-[8px] text-text-mute font-outfit" x-text="Math.round(Math.max(getData('cn').upload[8], getData('cn').download[8])) + '/' + getData('cn').watermark + 'M'">29/50M</span>
                       </div>
                       <div class="w-full bg-slate-200/60 rounded-full h-1 overflow-hidden">
                         <div class="h-full rounded-full transition-all duration-500" :class="getRegionStyle('cn').bar" :style="'width: ' + getRegionUtil('cn') + '%'"></div>
@@ -1841,7 +1841,7 @@
                       </div>
                       <div class="mt-2 mb-1 flex items-baseline justify-between">
                         <span class="text-lg font-black font-outfit leading-none" :class="getRegionStyle('ap').text" x-text="getRegionUtil('ap') + '%'">55%</span>
-                        <span class="text-[8px] text-text-mute font-outfit" x-text="bandwidthStatus === 'tight' ? '23/30M' : '18/30M'">18/30M</span>
+                        <span class="text-[8px] text-text-mute font-outfit" x-text="Math.round(Math.max(getData('ap').upload[8], getData('ap').download[8])) + '/' + getData('ap').watermark + 'M'">18/30M</span>
                       </div>
                       <div class="w-full bg-slate-200/60 rounded-full h-1 overflow-hidden">
                         <div class="h-full rounded-full transition-all duration-500" :class="getRegionStyle('ap').bar" :style="'width: ' + getRegionUtil('ap') + '%'"></div>
@@ -1856,7 +1856,7 @@
                       </div>
                       <div class="mt-2 mb-1 flex items-baseline justify-between">
                         <span class="text-lg font-black font-outfit leading-none" :class="getRegionStyle('eu').text" x-text="getRegionUtil('eu') + '%'">94%</span>
-                        <span class="text-[8px] text-text-mute font-outfit" x-text="bandwidthStatus === 'tight' ? '19.2/20M' : '13/20M'">13/20M</span>
+                        <span class="text-[8px] text-text-mute font-outfit" x-text="Math.round(Math.max(getData('eu').upload[8], getData('eu').download[8])) + '/' + getData('eu').watermark + 'M'">13/20M</span>
                       </div>
                       <div class="w-full bg-slate-200/60 rounded-full h-1 overflow-hidden">
                         <div class="h-full rounded-full transition-all duration-500" :class="getRegionStyle('eu').bar" :style="'width: ' + getRegionUtil('eu') + '%'"></div>
@@ -1871,7 +1871,7 @@
                       </div>
                       <div class="mt-2 mb-1 flex items-baseline justify-between">
                         <span class="text-lg font-black font-outfit leading-none" :class="getRegionStyle('ot').text" x-text="getRegionUtil('ot') + '%'">22%</span>
-                        <span class="text-[8px] text-text-mute font-outfit" x-text="bandwidthStatus === 'tight' ? '7/15M' : '6.5/15M'">6.5/15M</span>
+                        <span class="text-[8px] text-text-mute font-outfit" x-text="Math.round(Math.max(getData('ot').upload[8], getData('ot').download[8])) + '/' + getData('ot').watermark + 'M'">6.5/15M</span>
                       </div>
                       <div class="w-full bg-slate-200/60 rounded-full h-1 overflow-hidden">
                         <div class="h-full rounded-full transition-all duration-500" :class="getRegionStyle('ot').bar" :style="'width: ' + getRegionUtil('ot') + '%'"></div>
@@ -2060,7 +2060,16 @@
                             <div class="flex items-center h-8 px-3 hover:bg-bg-light cursor-pointer text-xs transition-colors"
                                  :class="lineFilterRules.includes(rule) ? 'bg-brand-lightBg text-brand font-medium' : 'text-[#2F3540]'"
                                  @click="toggleRuleFilter(rule)">
-                              <span class="truncate" x-text="formatRuleName(rule)"></span>
+                              <div class="flex items-center gap-2 overflow-hidden w-full">
+                                <!-- 复选框 -->
+                                <span class="w-3.5 h-3.5 flex-shrink-0 rounded-[2px] border flex items-center justify-center transition-colors"
+                                      :class="lineFilterRules.includes(rule) ? 'bg-brand border-brand' : 'border-slate-300'">
+                                  <svg x-show="lineFilterRules.includes(rule)" class="w-2 h-2 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                  </svg>
+                                </span>
+                                <span class="truncate" x-text="formatRuleName(rule)"></span>
+                              </div>
                             </div>
                           </template>
                           <div x-show="allRuleOptions.length === 0" class="px-3 py-2 text-xs text-slate-400 text-center">暂无规则数据</div>
@@ -2135,7 +2144,7 @@
                         <div @click="lineSortDropOpen = !lineSortDropOpen"
                              class="flex items-center justify-between h-8 px-3 border border-border bg-white rounded-[2px] cursor-pointer hover:border-brand transition-colors select-none"
                              :class="lineSortDropOpen ? 'border-brand' : ''">
-                          <span class="text-xs truncate font-medium text-[#2F3540]" x-text="lineSortRule === 'util' ? '按峰值利用率降序' : '按峰值大小降序'"></span>
+                          <span class="text-xs truncate font-normal text-[#2F3540]" x-text="lineSortRule === 'util' ? '按峰值利用率降序' : '按峰值大小降序'"></span>
                           <svg class="w-3 h-3 text-slate-400 flex-shrink-0 transition-transform duration-200" 
                                :class="lineSortDropOpen ? 'rotate-180 text-brand' : ''" 
                                fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
