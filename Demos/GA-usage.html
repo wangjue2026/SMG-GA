@@ -59,7 +59,7 @@
 
     window.usageDashboard = function() {
       return {
-        bandwidthStatus: 'tight', // 默认状态为紧张，以向用户警示
+        bandwidthStatus: 'normal', // 默认状态为正常，以向用户展示正常预览
         hoverIndex: { cn: -1, ap: -1, eu: -1, ot: -1 },
         lineHoverIndex: {},
         linePage: 1,
@@ -1727,7 +1727,7 @@
                 </div>
 
                 <!-- 刷新组件 -->
-                <div class="flex items-center border border-slate-200 rounded bg-white h-8 overflow-hidden"
+                <div class="flex items-center border border-slate-200 rounded bg-white h-8"
                      x-cloak @click.outside="refreshOpen = false">
                   <!-- 左侧按钮: 刷新图标 -->
                   <button class="h-full px-2.5 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors border-r border-slate-200 focus:outline-none" 
@@ -1820,9 +1820,8 @@
                     
                     <!-- 中国大陆 -->
                     <div class="p-1.5 rounded flex flex-col justify-between relative group transition-all duration-300" :class="getRegionStyle('cn').bg">
-                      <div class="flex items-center justify-between text-[9px] text-slate-500 font-semibold">
+                      <div class="flex items-center text-[9px] text-slate-500 font-semibold">
                         <span>中国大陆</span>
-                        <span class="font-outfit text-[8px] text-slate-400">CN</span>
                       </div>
                       <div class="mt-2 mb-1 flex items-baseline justify-between">
                         <span class="text-lg font-black font-outfit leading-none" :class="getRegionStyle('cn').text" x-text="getRegionUtil('cn') + '%'">42%</span>
@@ -1835,9 +1834,8 @@
 
                     <!-- 亚太地区 -->
                     <div class="p-1.5 rounded flex flex-col justify-between relative group transition-all duration-300" :class="getRegionStyle('ap').bg">
-                      <div class="flex items-center justify-between text-[9px] text-slate-500 font-semibold">
+                      <div class="flex items-center text-[9px] text-slate-500 font-semibold">
                         <span>亚太地区</span>
-                        <span class="font-outfit text-[8px] text-slate-400">APAC</span>
                       </div>
                       <div class="mt-2 mb-1 flex items-baseline justify-between">
                         <span class="text-lg font-black font-outfit leading-none" :class="getRegionStyle('ap').text" x-text="getRegionUtil('ap') + '%'">55%</span>
@@ -1850,9 +1848,8 @@
 
                     <!-- 欧美地区 -->
                     <div class="p-1.5 rounded flex flex-col justify-between relative group transition-all duration-300" :class="getRegionStyle('eu').bg">
-                      <div class="flex items-center justify-between text-[9px] text-slate-500 font-semibold">
+                      <div class="flex items-center text-[9px] text-slate-500 font-semibold">
                         <span>欧美地区</span>
-                        <span class="font-outfit text-[8px] text-slate-400">EU-US</span>
                       </div>
                       <div class="mt-2 mb-1 flex items-baseline justify-between">
                         <span class="text-lg font-black font-outfit leading-none" :class="getRegionStyle('eu').text" x-text="getRegionUtil('eu') + '%'">94%</span>
@@ -1865,9 +1862,8 @@
 
                     <!-- 其他地区 -->
                     <div class="p-1.5 rounded flex flex-col justify-between relative group transition-all duration-300" :class="getRegionStyle('ot').bg">
-                      <div class="flex items-center justify-between text-[9px] text-slate-500 font-semibold">
+                      <div class="flex items-center text-[9px] text-slate-500 font-semibold">
                         <span>其他地区</span>
-                        <span class="font-outfit text-[8px] text-slate-400">OTHER</span>
                       </div>
                       <div class="mt-2 mb-1 flex items-baseline justify-between">
                         <span class="text-lg font-black font-outfit leading-none" :class="getRegionStyle('ot').text" x-text="getRegionUtil('ot') + '%'">22%</span>

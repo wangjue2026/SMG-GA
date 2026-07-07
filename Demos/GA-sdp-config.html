@@ -2639,7 +2639,8 @@
                         <span class="text-xs font-semibold text-slate-800" x-text="step2CardTitle(row)"></span>
                       </div>
                       <div class="flex items-center gap-1.5 text-[11px] text-slate-600 bg-white border border-slate-200 rounded px-2 py-0.5">
-                        <span class="text-slate-400">区域：</span>
+                        <span class="text-slate-400">源站区域：</span>
+                        <span class="text-brand text-[10px]">🌐</span>
                         <span class="text-slate-800 font-medium" x-text="row.location"></span>
                       </div>
                     </div>
@@ -2928,14 +2929,11 @@
                     </div>
                     <div class="p-6 flex items-center justify-between gap-2 text-xs bg-slate-50/40 rounded-b-lg overflow-x-auto" :class="subtype === 'tunnel' ? 'min-w-[820px]' : 'min-w-[800px]'">
                       <!-- 1. 覆盖区域 -->
-                      <div class="flex-1 min-w-[90px] max-w-[120px] space-y-1">
-                        <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400">终端请求发起</div>
-                        <div class="text-xs text-slate-600 leading-relaxed flex items-center gap-1.5">
-                          <svg class="w-4 h-4 text-brand flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                          </svg>
-                          <span>各地终端用户</span>
-                        </div>
+                      <div class="flex-shrink-0 flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-brand flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        <span class="text-xs text-slate-500 font-normal">终端请求</span>
                       </div>
 
                       <!-- 箭头 1 (覆盖到上车点) -->
@@ -2949,8 +2947,8 @@
                       <div class="flex-shrink-0 flex flex-col items-center min-w-[90px]">
                         <div class="text-[10px] font-medium text-slate-400 mb-1.5">加速区域 (上车点)</div>
                         <template x-if="rule.pops.length > 0">
-                          <div class="w-full px-3 py-2 rounded-xl border border-blue-200 bg-gradient-to-b from-blue-50 to-blue-100/50 text-blue-700 font-semibold text-xs shadow-sm flex items-center justify-center gap-2 relative group hover:border-blue-400 transition-colors">
-                            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                          <div class="w-full px-3 py-2 rounded-xl border border-emerald-200 bg-gradient-to-b from-[#F0FDF4] to-[#DCFCE7] text-[#15803D] font-semibold text-xs shadow-sm flex items-center justify-center gap-2 relative group hover:border-emerald-400 transition-colors">
+                            <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                             </svg>
                             <span x-text="popLabel(rule.pops[0])"></span>
