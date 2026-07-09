@@ -288,16 +288,49 @@
         detailDrawerUsageTab: 'bandwidth', // 'bandwidth', 'traffic', 'health'
         detailDrawerConfigAdvancedOpen: false,
         
+        nameEditing: false,
+        descEditing: false,
+        originalRuleName: '',
+        originalRuleDesc: '',
+        
         detailDrawerOriginNodes: [],
         detailDrawerAccRanges: [],
         detailDrawerRulesList: [],
+        detailDrawerProbeTime: '',
+        detailDrawerShowProbeChart: false,
+        hoverProbeIndex: -1,
+        probeHistoryData: [],
         detailDrawerAdvanced: {
           exclusiveIp: false,
           sourceIpPassthrough: true,
           transportOptimize: true,
           healthCheck: true,
-          healthInterval: '2s',
-          healthDuration: '1m'
+          healthProtocol: 'TCP'
+        },
+
+        isDomain(srcObject) {
+          if (!srcObject) return false;
+          return /[a-zA-Z]/.test(srcObject);
+        },
+        cleanIp(srcObject) {
+          if (!srcObject) return '15.4.156.2';
+          let raw = srcObject.split('（')[0].trim();
+          raw = raw.replace('主节点：', '');
+          let ipOnly = raw.split(':')[0].trim();
+          if (/[a-zA-Z]/.test(ipOnly)) {
+            return '15.4.156.2';
+          }
+          return ipOnly;
+        },
+        getAccIpPair(ip) {
+          if (!ip) return '';
+          const parts = ip.split('.');
+          if (parts.length === 4) {
+            const last = parseInt(parts[3], 10);
+            parts[3] = (last + 1).toString();
+            return parts.join('.');
+          }
+          return ip;
         },
 
         openDetailDrawer(rule) {
@@ -307,22 +340,57 @@
           this.detailDrawerUsageTab = 'bandwidth';
           this.detailDrawerConfigAdvancedOpen = false;
 
+          this.nameEditing = false;
+          this.descEditing = false;
+          this.originalRuleName = rule.name;
+          this.originalRuleDesc = rule.desc || '-';
+
+          // Initialize last probe time to 30 seconds ago
+          const now = new Date(Date.now() - 30 * 1000);
+          const pad = (n) => n.toString().padStart(2, '0');
+          this.detailDrawerProbeTime = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+          // Generate 100 probe history records (5 min interval, mock some timeouts for visual feedback)
+          const data = [];
+          const nowTs = Date.now();
+          for (let i = 99; i >= 0; i--) {
+            const t = new Date(nowTs - i * 5 * 60 * 1000);
+            const timeStr = `${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}`;
+            const isAbnormal = (i === 18 || i === 42 || i === 75 || i === 76 || i === 92);
+            data.push({
+              time: timeStr,
+              status: isAbnormal ? 'abnormal' : 'normal',
+              latency: isAbnormal ? '连接超时' : `${(14.0 + Math.random() * 2.5).toFixed(1)}ms`
+            });
+          }
+          this.probeHistoryData = data;
+          this.detailDrawerShowProbeChart = false;
+          this.hoverProbeIndex = -1;
+
           // Mock data initialized based on selected rule
           this.detailDrawerOriginNodes = [
-            { id: 1, node: rule.srcRegion || '广州', region: '中国大陆', ip: rule.srcObject && rule.srcObject.includes('.') ? rule.srcObject.split('（')[0] : '15.4.156.2', limit: '100Mbps' }
+            { id: 1, node: rule.srcRegion || '广州', region: '中国大陆', ip: this.cleanIp(rule.srcObject), limit: '100Mbps' }
           ];
 
           this.detailDrawerAccRanges = [
-            { id: 1, node: '中国香港', region: '亚太地区', ip: '15.4.156.2', limit: '100Mbps' },
-            { id: 2, node: '中国澳门', region: '亚太地区', ip: '15.4.156.2', limit: '100Mbps' },
-            { id: 3, node: '新加坡', region: '亚太地区', ip: '15.4.156.2', limit: '40Mbps' },
-            { id: 4, node: '曼谷', region: '亚太地区', ip: '15.4.156.2', limit: '40Mbps' },
-            { id: 5, node: '洛杉矶', region: '欧美地区', ip: '15.4.156.2', limit: '40Mbps' },
-            { id: 6, node: '法兰克福', region: '欧美地区', ip: '15.4.156.2', limit: '40Mbps' }
+            { id: 1, node: '中国香港', region: '亚太地区', ip1: '15.4.156.34', ip2: '15.4.156.24', limit: '100Mbps', port1: 6745, port2: 6745 },
+            { id: 2, node: '中国澳门', region: '亚太地区', ip1: '33.45.23.1', ip2: '15.4.156.2', limit: '100Mbps', port1: 44, port2: 345 },
+            { id: 3, node: '新加坡', region: '亚太地区', ip1: '45.23.78.3', ip2: '15.4.156.2', limit: '40Mbps', port1: 566, port2: 345 },
+            { id: 4, node: '曼谷', region: '亚太地区', ip1: '65.32.56.34', ip2: '34.56.32.44', limit: '40Mbps', port1: 442, port2: 645 },
+            { id: 5, node: '洛杉矶', region: '欧美地区', ip1: '78.34.34.66', ip2: '29.45.23.11', limit: '40Mbps', port1: 887, port2: 345 },
+            { id: 6, node: '法兰克福', region: '欧美地区', ip1: '80.45.234.67', ip2: '10.34.87.234', limit: '40Mbps', port1: 176, port2: 5665 }
           ];
 
+          let portVal = '8867';
+          if (rule.exclusiveIp && rule.exclusiveIp !== '-') {
+            const parts = rule.exclusiveIp.split(':');
+            if (parts.length > 1) {
+              portVal = parts[1];
+            }
+          }
+
           this.detailDrawerRulesList = [
-            { id: 1, protocol: 'TCP/UDP', port: '80', srcPort: '4001' }
+            { id: 1, protocol: 'TCP-TCP', port: portVal, srcPort: '4001' }
           ];
 
           this.detailDrawerAdvanced = {
@@ -330,9 +398,40 @@
             sourceIpPassthrough: true,
             transportOptimize: true,
             healthCheck: true,
-            healthInterval: '2s',
-            healthDuration: '1m'
+            healthProtocol: 'TCP'
           };
+        },
+
+        closeDetailDrawer() {
+          if (this.detailDrawerRule) {
+            this.detailDrawerRule.name = this.originalRuleName;
+            this.detailDrawerRule.desc = this.originalRuleDesc;
+          }
+          this.detailDrawerOpen = false;
+        },
+
+        copyAccRanges() {
+          let text = '';
+          const showIp = this.detailDrawerRule && !this.isDomain(this.detailDrawerRule.srcObject);
+          
+          this.detailDrawerAccRanges.forEach(node => {
+            if (showIp) {
+              let ips = '';
+              if (this.detailDrawerAdvanced.exclusiveIp) {
+                const port = this.detailDrawerRulesList[0]?.port || '8867';
+                ips = `${node.ip1}:${port}, ${node.ip2}:${port}`;
+              } else {
+                ips = `${node.ip1}:${node.port1}, ${node.ip2}:${node.port2}`;
+              }
+              text += `节点：${node.node}，IP：${ips}，带宽：${node.limit}\n`;
+            } else {
+              text += `节点：${node.node}，带宽：${node.limit}\n`;
+            }
+          });
+          
+          navigator.clipboard.writeText(text.trim()).then(() => {
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: '复制成功，已复制到剪贴板', type: 'success' } }));
+          });
         },
 
         toggleDrawerRuleStatus() {
@@ -374,8 +473,11 @@
             id: id,
             node: '东京',
             region: '亚太地区',
-            ip: '15.4.156.9',
-            limit: '50Mbps'
+            ip1: '15.4.156.9',
+            ip2: '15.4.156.10',
+            limit: '50Mbps',
+            port1: 80,
+            port2: 80
           });
           window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: '新增加速范围节点成功', type: 'success' } }));
         },
@@ -388,13 +490,21 @@
           const id = Date.now();
           this.detailDrawerRulesList.push({
             id: id,
-            protocol: 'TCP/UDP',
+            protocol: 'TCP-TCP',
             port: '8080',
             srcPort: '8080'
           });
         },
 
         saveDrawerConfig() {
+          if (this.detailDrawerRule) {
+            if (this.detailDrawerAdvanced.exclusiveIp) {
+              const port = this.detailDrawerRulesList[0]?.port || '8867';
+              this.detailDrawerRule.exclusiveIp = `10.23.45.28:${port}`;
+            } else {
+              this.detailDrawerRule.exclusiveIp = '-';
+            }
+          }
           window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: '保存成功', type: 'success' } }));
           this.detailDrawerOpen = false;
         },
@@ -408,18 +518,18 @@
 
         // Rule list: 12 mock items
         rules: [
-          { id: 'POL-001', name: 'oa.sangfor.com', desc: '零信任-web应用访问加速', scenario: '零信任业务加速', subType: 'web应用', status: '加速中', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: 'oa.sangfor.com（上海办公网关）', accDomain: '-', exclusiveIp: '-' },
-          { id: 'POL-002', name: 'saauth.sangfor.com.cn', desc: '零信任-web应用访问加速', scenario: '零信任业务加速', subType: 'web应用', status: '加速中', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: 'saauth.sangfor.com.cn', accDomain: 'https://saauth.sangfor.com.cn/sa/auth...', exclusiveIp: '-' },
-          { id: 'POL-003', name: '10.23.22.3', desc: '零信任-接入与认证加速', scenario: '零信任业务加速', subType: '接入&认证', status: '加速中', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: '10.23.22.3', accDomain: 'https://saauth.sangfor.com.cn/sa/auth...', exclusiveIp: '-' },
-          { id: 'POL-004', name: '10.23.12.1', desc: '自定义IP/域名加速', scenario: '自定义IP/域名加速', status: '加速中', accRegion: '吉隆坡、首尔等7个', srcRegion: '广州', srcObject: '10.23.12.1:443/441/4433...', accDomain: '-', exclusiveIp: '10.23.45.23:441' },
-          { id: 'POL-005', name: '10.23.1.23', desc: '分支组网加速', scenario: '分支组网加速', status: '加速中', accRegion: '武汉、深圳、上海', srcRegion: '巴黎', srcObject: '主节点：10.23.1.23', accDomain: '-', exclusiveIp: '-' },
-          { id: 'POL-006', name: '10.50.2.11', desc: 'SaaS应用加速', scenario: 'SaaS应用加速', status: '未启用', accRegion: '东京、首尔等3个', srcRegion: '北京', srcObject: '10.50.2.11', accDomain: 'https://github.com', exclusiveIp: '-' },
-          { id: 'POL-007', name: '10.23.22.7', desc: '零信任-隧道应用访问加速', scenario: '零信任业务加速', subType: '隧道应用', status: '未启用', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: '10.23.22.7（上海办公网关）', accDomain: '-', exclusiveIp: '10.24.53.33:4883' },
-          { id: 'POL-008', name: 'office.com', desc: '零信任-web应用访问加速', scenario: '零信任业务加速', subType: 'web应用', status: '运行异常', accRegion: '香港、新加坡等4个', srcRegion: '深圳', srcObject: 'office.com', accDomain: 'https://office.com', exclusiveIp: '10.23.45.24:443' },
-          { id: 'POL-009', name: '10.88.9.12', desc: '自定义IP/域名加速', scenario: '自定义IP/域名加速', status: '加速中', accRegion: '伦敦、法兰克福等5个', srcRegion: '上海', srcObject: '10.88.9.12:80', accDomain: '-', exclusiveIp: '-' },
-          { id: 'POL-010', name: '10.1.44.89', desc: '分支组网加速', scenario: '分支组网加速', status: '加速中', accRegion: '纽约、旧金山', srcRegion: '西雅图', srcObject: '主节点：10.1.44.89', accDomain: '-', exclusiveIp: '10.23.45.28' },
-          { id: 'POL-011', name: '10.2.2.2', desc: 'SaaS应用加速', scenario: 'SaaS应用加速', status: '加速中', accRegion: '悉尼、墨尔本', srcRegion: '广州', srcObject: '10.2.2.2', accDomain: 'https://salesforce.com', exclusiveIp: '-' },
-          { id: 'POL-012', name: '10.200.1.1', desc: '零信任-接入与认证加速', scenario: '零信任业务加速', subType: '接入&认证', status: '运行异常', accRegion: '香港、吉隆坡等6个', srcRegion: '成都', srcObject: '10.200.1.1', accDomain: 'https://login.partner.microsoftonline...', exclusiveIp: '-' }
+          { id: 'POL-001', name: 'oa.sangfor.com', desc: '欧洲访问国内集团办公OA系统加速', scenario: '零信任业务加速', subType: 'web应用', status: '加速中', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: 'oa.sangfor.com（上海办公网关）', accDomain: '-', exclusiveIp: '-' },
+          { id: 'POL-002', name: 'saauth.sangfor.com.cn', desc: '海外研发中心安全认证中心链路优化', scenario: '零信任业务加速', subType: 'web应用', status: '加速中', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: 'saauth.sangfor.com.cn', accDomain: 'https://saauth.sangfor.com.cn/sa/auth...', exclusiveIp: '-' },
+          { id: 'POL-003', name: '10.23.22.3', desc: '零信任核心接入网关跨境传输加速', scenario: '零信任业务加速', subType: '接入&认证', status: '加速中', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: '10.23.22.3', accDomain: 'https://saauth.sangfor.com.cn/sa/auth...', exclusiveIp: '-' },
+          { id: 'POL-004', name: '10.23.12.1', desc: '自定义大文件传输与SSH控制隧道加速', scenario: '自定义IP/域名加速', status: '加速中', accRegion: '吉隆坡、首尔等7个', srcRegion: '广州', srcObject: '10.23.12.1:443/441/4433...', accDomain: '-', exclusiveIp: '10.23.45.23:441' },
+          { id: 'POL-005', name: '10.23.1.23', desc: '分支机构本地ERP及业务数据汇聚通道', scenario: '分支组网加速', status: '加速中', accRegion: '武汉、深圳、上海', srcRegion: '巴黎', srcObject: '主节点：10.23.1.23', accDomain: '-', exclusiveIp: '-' },
+          { id: 'POL-006', name: '10.50.2.11', desc: '海外办公访问公共服务加速优化', scenario: 'SaaS应用加速', status: '未启用', accRegion: '东京、首尔等3个', srcRegion: '北京', srcObject: '10.50.2.11', accDomain: 'https://github.com', exclusiveIp: '-' },
+          { id: 'POL-007', name: '10.23.22.7', desc: '零信任-安全客户端接入网关链路增强', scenario: '零信任业务加速', subType: '隧道应用', status: '未启用', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: '10.23.22.7（上海办公网关）', accDomain: '-', exclusiveIp: '10.24.53.33:4883' },
+          { id: 'POL-008', name: 'office.com', desc: '微软Office云办公服务跨境快速通道', scenario: '零信任业务加速', subType: 'web应用', status: '运行异常', accRegion: '香港、新加坡等4个', srcRegion: '深圳', srcObject: 'office.com', accDomain: 'https://office.com', exclusiveIp: '10.23.45.24:443' },
+          { id: 'POL-009', name: '10.88.9.12', desc: '自定义远程财务系统访问优化加速', scenario: '自定义IP/域名加速', status: '加速中', accRegion: '伦敦、法兰克福等5个', srcRegion: '上海', srcObject: '10.88.9.12:80', accDomain: '-', exclusiveIp: '-' },
+          { id: 'POL-010', name: '10.1.44.89', desc: '西雅图分支机构跨大西洋网络加速', scenario: '分支组网加速', status: '加速中', accRegion: '纽约、旧金山', srcRegion: '西雅图', srcObject: '主节点：10.1.44.89', accDomain: '-', exclusiveIp: '10.23.45.28' },
+          { id: 'POL-011', name: '10.2.2.2', desc: 'Salesforce销售管理系统访问优化', scenario: 'SaaS应用加速', status: '加速中', accRegion: '悉尼、墨尔本', srcRegion: '广州', srcObject: '10.2.2.2', accDomain: 'https://salesforce.com', exclusiveIp: '-' },
+          { id: 'POL-012', name: '10.200.1.1', desc: '零信任接入中心认证及数据安全链路', scenario: '零信任业务加速', subType: '接入&认证', status: '运行异常', accRegion: '香港、吉隆坡等6个', srcRegion: '成都', srcObject: '10.200.1.1', accDomain: 'https://login.partner.microsoftonline...', exclusiveIp: '-' }
         ],
         originalRules: null,
         showSdwanPublishModal: false,
@@ -982,7 +1092,7 @@
               </div>
               <div x-show="expandedL2 === 'm_1_2'" x-collapse x-cloak>
                 <div class="at-menu-l3" :class="activeLeaf === 'm_1_2_0' ? 'active' : ''" @click="toggleL4('m_1_2_0')">
-                  加速用量分析</div>
+                  加速用量统计</div>
                 <div class="at-menu-l3" :class="activeLeaf === 'm_1_2_1' ? 'active' : ''" @click="toggleL4('m_1_2_1')">
                   加速配置</div>
                 <div class="at-menu-l3" :class="activeLeaf === 'm_1_2_2' ? 'active' : ''" @click="toggleL4('m_1_2_2')">
@@ -2480,7 +2590,7 @@
           <div class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300"
                x-show="detailDrawerOpen" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-               @click="detailDrawerOpen = false"></div>
+               @click="closeDetailDrawer()"></div>
           
           <!-- Drawer Content Panel -->
           <div class="absolute inset-y-0 right-0 pl-10 max-w-full flex">
@@ -2491,7 +2601,7 @@
               <!-- 标题栏：高度固定 48px，无分割线，关闭按钮在最右侧 -->
               <div class="h-12 min-h-[48px] px-8 flex items-center justify-between flex-shrink-0 select-none bg-white">
                 <span class="text-base font-semibold text-text-title">详情</span>
-                <button class="text-text-mute hover:text-text-title transition-colors focus:outline-none" @click="detailDrawerOpen = false">
+                <button class="text-text-mute hover:text-text-title transition-colors focus:outline-none" @click="closeDetailDrawer()">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
               </div>
@@ -2499,46 +2609,66 @@
               <!-- 抽屉体内容区域 (独立滚动) -->
               <div class="flex-1 overflow-y-auto px-8 py-0 custom-scrollbar bg-white">
                 
-                <!-- 顶部概览区域：规则名、状态开关、源站等元数据 (移入滚动区域内) -->
-                <div class="pb-4 select-none bg-white pt-2 border-b border-bg-line mb-4">
-                  <div class="flex items-center justify-start mb-2">
-                    <div class="flex items-center gap-2">
-                      <span class="text-base font-semibold text-text-title font-sans truncate max-w-[400px]" x-text="detailDrawerRule ? detailDrawerRule.name : ''" :title="detailDrawerRule ? detailDrawerRule.name : ''"></span>
-                      
-                      <!-- 状态标签 -->
-                      <template x-if="detailDrawerRule && detailDrawerRule.status === '加速中'">
-                        <span class="px-2 py-0.5 text-[11px] bg-green-50 text-success border border-green-200/50 rounded-control font-normal">加速中</span>
-                      </template>
-                      <template x-if="detailDrawerRule && detailDrawerRule.status === '未启用'">
-                        <span class="px-2 py-0.5 text-[11px] bg-slate-50 text-text-mute border border-slate-200/50 rounded-control font-normal">未启用</span>
-                      </template>
-                      <template x-if="detailDrawerRule && (detailDrawerRule.status === '运行异常' || detailDrawerRule.status === '异常')">
-                        <span class="px-2 py-0.5 text-[11px] bg-orange-50 text-warning border border-orange-200/50 rounded-control font-normal">运行异常</span>
-                      </template>
-                    </div>
-                  </div>
+                <!-- 基本信息模块 -->
+                <div class="space-y-3 pt-2 mb-4">
+                  <span class="text-xs font-semibold text-text-title relative pl-3 block select-none">
+                    <span class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-3 bg-brand rounded-sm"></span>
+                    基本信息
+                  </span>
                   
-                  <!-- 属性列表 (状态切换开关放类型右边) -->
-                  <div class="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-text-mute">
-                    <div>源站对象：<span class="text-text font-outfit" x-text="detailDrawerRule ? (detailDrawerRule.srcObject || '-') : ''"></span></div>
-                    <div class="flex items-center gap-6">
-                      <div>类型：<span class="text-text font-sans" x-text="detailDrawerRule ? (detailDrawerRule.scenario + (detailDrawerRule.subType ? ' (' + detailDrawerRule.subType + ')' : '')) : ''"></span></div>
-                      <div class="flex items-center gap-2">
-                        <span class="text-xs text-text-mute font-sans">状态</span>
-                        <button @click.stop="toggleDrawerRuleStatus()"
-                          class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0 focus:outline-none"
-                          :class="detailDrawerRule && detailDrawerRule.status !== '未启用' ? 'bg-brand' : 'bg-slate-200'">
-                          <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
-                            :class="detailDrawerRule && detailDrawerRule.status !== '未启用' ? 'left-4.5' : 'left-0.5'"></div>
+                  <div class="grid grid-cols-12 gap-y-3.5 gap-x-6 text-xs text-text-mute">
+                    <!-- 规则名称 -->
+                    <div class="col-span-4 flex items-center gap-2">
+                      <span class="w-14 flex-shrink-0 text-text-mute">规则名称</span>
+                      <div class="flex items-center gap-1 text-text-title flex-1 min-w-0">
+                        <span x-show="!nameEditing" x-text="detailDrawerRule ? detailDrawerRule.name : ''" class="truncate font-outfit"></span>
+                        <input x-show="nameEditing" x-model="detailDrawerRule.name" @blur="nameEditing = false" @keydown.enter="nameEditing = false" class="w-full h-6 border border-border rounded px-1.5 text-xs outline-none focus:border-brand font-outfit" x-cloak>
+                        <button @click="nameEditing = !nameEditing" class="focus:outline-none flex-shrink-0 text-text-mute hover:text-brand" title="修改名称">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                         </button>
                       </div>
+                    </div>
+                    
+                    <!-- 描述 -->
+                    <div class="col-span-8 flex items-center gap-2">
+                      <span class="w-10 flex-shrink-0 text-text-mute">描述</span>
+                      <div class="flex items-center gap-1 text-text-title flex-1 min-w-0">
+                        <span x-show="!descEditing" x-text="detailDrawerRule && detailDrawerRule.desc && detailDrawerRule.desc !== '-' ? detailDrawerRule.desc : '-'" class="truncate"></span>
+                        <input x-show="descEditing" x-model="detailDrawerRule.desc" @blur="descEditing = false" @keydown.enter="descEditing = false" class="w-full h-6 border border-border rounded px-1.5 text-xs outline-none focus:border-brand" x-cloak>
+                        <button @click="descEditing = !descEditing" class="focus:outline-none flex-shrink-0 text-text-mute hover:text-brand" title="修改描述">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <!-- 源站对象 -->
+                    <div class="col-span-4 flex items-center gap-2">
+                      <span class="w-14 flex-shrink-0 text-text-mute">源站对象</span>
+                      <span class="text-text-title truncate font-outfit" x-text="detailDrawerRule ? (detailDrawerRule.srcObject || '-') : ''"></span>
+                    </div>
+                    
+                    <!-- 类型 -->
+                    <div class="col-span-5 flex items-center gap-2">
+                      <span class="w-10 flex-shrink-0 text-text-mute">类型</span>
+                      <span class="text-text-title truncate" x-text="detailDrawerRule ? (detailDrawerRule.scenario + (detailDrawerRule.subType ? '（' + detailDrawerRule.subType + '）' : '')) : ''"></span>
+                    </div>
+                    
+                    <!-- 状态 -->
+                    <div class="col-span-3 flex items-center gap-2">
+                      <span class="text-text-mute flex-shrink-0">状态</span>
+                      <button @click.stop="toggleDrawerRuleStatus()"
+                        class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0 focus:outline-none"
+                        :class="detailDrawerRule && detailDrawerRule.status !== '未启用' ? 'bg-brand' : 'bg-slate-200'">
+                        <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                          :class="detailDrawerRule && detailDrawerRule.status !== '未启用' ? 'left-4.5' : 'left-0.5'"></div>
+                      </button>
                     </div>
                   </div>
                 </div>
                 
 
                 <!-- 2. 加加速配置 Tab -->
-                <div class="py-4 space-y-6 select-none">
+                <div class="pb-4 pt-0 space-y-6 select-none">
                   
                   <!-- 2.1 源站信息 -->
                   <div class="space-y-3">
@@ -2552,21 +2682,19 @@
 
                     
                     <!-- 源站节点列表表格 (表头不加粗, 直角，高 32/40) -->
-                    <table class="sd-table w-full border border-border/60 rounded-none text-xs text-left">
+                    <table class="sd-table w-full border border-border/60 rounded-none text-xs text-left" style="table-layout: fixed;">
                       <thead>
                         <tr class="bg-[#FAFAFA] border-b border-border/50 h-8">
-                          <th class="font-normal text-text-mute px-3">POP 节点</th>
-                          <th class="font-normal text-text-mute px-3">所属大区</th>
-                          <th class="font-normal text-text-mute px-3">IP/域名</th>
+                          <th class="font-normal text-text-mute px-3 w-[160px]">POP 节点</th>
+                          <th class="font-normal text-text-mute px-3 w-[320px]">IP地址</th>
                           <th class="font-normal text-text-mute px-3">带宽上限</th>
-                          <th class="font-normal text-text-mute px-3 text-center w-16">操作</th>
+                          <th class="font-normal text-text-mute px-3 text-center w-[80px]">操作</th>
                         </tr>
                       </thead>
                       <tbody>
                         <template x-for="(node, index) in detailDrawerOriginNodes" :key="node.id">
                           <tr class="border-b border-border/40 hover:bg-slate-50/50 h-10">
                             <td class="px-3 text-text-title" x-text="node.node"></td>
-                            <td class="px-3 text-text-mute" x-text="node.region"></td>
                             <td class="px-3 font-outfit text-text-title" x-text="node.ip"></td>
                             <td class="px-3">
                               <!-- Inline editable bandwidth limit -->
@@ -2592,11 +2720,73 @@
                         正常
                       </span>
                       <span class="ml-2 font-outfit">平均时延15.4ms</span>
+                      <span class="ml-4 font-outfit" x-text="'最近探测时间：' + detailDrawerProbeTime"></span>
+                      <span class="mx-2 text-slate-300">|</span>
+                      <a @click.prevent="detailDrawerShowProbeChart = !detailDrawerShowProbeChart" class="text-brand hover:text-brand-hover hover:underline cursor-pointer flex items-center gap-1">
+                        <span>查看历史趋势</span>
+                        <svg class="w-3 h-3 transition-transform" :class="detailDrawerShowProbeChart ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                      </a>
+                    </div>
+                    
+                    <!-- 连通性历史探测状态柱状条 (最近100次) -->
+                    <div x-show="detailDrawerShowProbeChart" x-collapse x-cloak class="mt-3 p-3 bg-slate-50 border border-slate-100 rounded-control space-y-2">
+                      <div class="flex items-center justify-between text-[10px] text-text-mute">
+                        <span class="font-medium text-slate-600">连通性历史探测状态 (最近100次)</span>
+                        <span class="flex items-center gap-2 select-none">
+                          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-success"></span>正常</span>
+                          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-risk"></span>异常</span>
+                        </span>
+                      </div>
+                      
+                      <!-- 100个柱状条容器 -->
+                      <div class="flex items-end justify-between h-12 bg-white border border-slate-100/80 rounded px-2.5 py-1.5 relative select-none">
+                        <template x-for="(item, idx) in probeHistoryData" :key="idx">
+                          <div class="h-full flex items-end justify-center cursor-pointer transition-all"
+                               :class="item.status === 'normal' ? 'w-[4px] hover:w-[6px]' : 'w-[10px] hover:w-[14px]'"
+                               @mouseenter="hoverProbeIndex = idx"
+                               @mouseleave="hoverProbeIndex = -1">
+                            <div class="w-full h-full rounded-sm transition-all duration-150"
+                                 :class="item.status === 'normal' 
+                                         ? (hoverProbeIndex === idx ? 'bg-[#10B981] shadow-sm shadow-[#10B981]/30' : 'bg-[#10B981]/60') 
+                                         : (hoverProbeIndex === idx ? 'bg-[#EF4444] shadow-sm shadow-[#EF4444]/30' : 'bg-[#EF4444]')">
+                            </div>
+                          </div>
+                        </template>
+                      </div>
+                      
+                      <!-- 底部时间轴 -->
+                      <div class="flex items-center justify-between px-1 text-[9px] text-slate-400 font-outfit select-none">
+                        <span x-text="probeHistoryData[0] ? probeHistoryData[0].time : ''"></span>
+                        <span>探测频率：5分钟/次</span>
+                        <span x-text="probeHistoryData[probeHistoryData.length - 1] ? probeHistoryData[probeHistoryData.length - 1].time : '刚刚'"></span>
+                      </div>
+                      
+                      <!-- 悬浮选中的探测条数据提示卡 -->
+                      <div x-show="hoverProbeIndex !== -1" class="text-[10px] text-slate-600 bg-white border border-slate-200/80 shadow-sm rounded-sm px-2.5 py-1.5 flex items-center justify-between font-sans select-none" x-transition>
+                        <div class="flex items-center gap-1.5">
+                          <span class="text-slate-400 font-outfit" x-text="'探测时间：' + (probeHistoryData[hoverProbeIndex] ? probeHistoryData[hoverProbeIndex].time : '')"></span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                          <div class="flex items-center gap-1">
+                            <span>时延：</span>
+                            <span class="font-outfit font-semibold" :class="probeHistoryData[hoverProbeIndex]?.status === 'normal' ? 'text-[#10B981]' : 'text-[#EF4444]'" x-text="probeHistoryData[hoverProbeIndex] ? probeHistoryData[hoverProbeIndex].latency : ''"></span>
+                          </div>
+                          <div class="flex items-center gap-1">
+                            <span>状态：</span>
+                            <template x-if="probeHistoryData[hoverProbeIndex]?.status === 'normal'">
+                              <span class="text-success font-semibold flex items-center gap-0.5"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>正常</span>
+                            </template>
+                            <template x-if="probeHistoryData[hoverProbeIndex]?.status === 'abnormal'">
+                              <span class="text-risk font-semibold flex items-center gap-0.5"><span class="w-1.5 h-1.5 rounded-full bg-risk"></span>异常</span>
+                            </template>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
                   <!-- 2.2 已分配的 CNAME -->
-                  <div class="space-y-3">
+                  <div class="space-y-3" x-show="detailDrawerRule && isDomain(detailDrawerRule.srcObject) && !detailDrawerAdvanced.exclusiveIp">
                     <span class="text-xs font-semibold text-text-title relative pl-3 block">
                       <span class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-3 bg-brand rounded-sm"></span>
                       已分配的 CNAME
@@ -2625,8 +2815,8 @@
                           </td>
                           <td class="px-3">
                             <div class="flex items-center justify-between group/cname">
-                              <span class="font-outfit text-text-title select-all" x-text="detailDrawerRule ? detailDrawerRule.name + '.cname.sangfor.com' : ''"></span>
-                              <button @click="navigator.clipboard.writeText(detailDrawerRule ? detailDrawerRule.name + '.cname.sangfor.com' : '').then(() => { $dispatch('show-toast', { message: '域名已复制到剪贴板' }) })" 
+                              <span class="font-outfit text-text-title select-all" x-text="detailDrawerRule ? (detailDrawerRule.id === 'POL-002' ? 'ztna-acc-sg.company.net' : (detailDrawerRule.accDomain !== '-' ? detailDrawerRule.accDomain.replace(/^https?:\/\//, '').split('/')[0] : detailDrawerRule.name + '.cname.sangfor.com')) : ''"></span>
+                              <button @click="navigator.clipboard.writeText(detailDrawerRule ? (detailDrawerRule.id === 'POL-002' ? 'ztna-acc-sg.company.net' : (detailDrawerRule.accDomain !== '-' ? detailDrawerRule.accDomain.replace(/^https?:\/\//, '').split('/')[0] : detailDrawerRule.name + '.cname.sangfor.com')) : '').then(() => { $dispatch('show-toast', { message: '域名已复制到剪贴板' }) })" 
                                       class="opacity-0 group-hover/cname:opacity-100 transition-opacity p-0.5 text-text-mute hover:text-brand cursor-pointer focus:outline-none"
                                       title="复制域名">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2641,32 +2831,45 @@
                   </div>
 
                   <!-- 2.3 加速范围 -->
-                  <div class="space-y-3">
+                  <div class="space-y-2">
                     <div class="flex items-center justify-between">
                       <span class="text-xs font-semibold text-text-title relative pl-3">
                         <span class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-3 bg-brand rounded-sm"></span>
                         加速区域<span class="font-normal text-text-mute ml-1">（上车点）</span>
                       </span>
+                    </div>
+
+                    <!-- 新增节点和复制操作行 -->
+                    <div class="flex items-center justify-between py-1 select-none">
                       <button @click="addAccRange()" class="sd-btn sd-btn-default px-3 h-7 text-xs border border-border bg-white hover:text-brand hover:border-brand">新增节点</button>
+                      <button @click="copyAccRanges()" class="flex items-center gap-1 text-xs text-text-mute hover:text-brand focus:outline-none" title="复制加速区域信息">
+                        <svg class="w-3.5 h-3.5 text-text-mute hover:text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <span>复制</span>
+                      </button>
                     </div>
                     
                     <!-- 节点列表 -->
-                    <table class="sd-table w-full border border-border/60 rounded-none text-xs text-left">
+                    <table class="sd-table w-full border border-border/60 rounded-none text-xs text-left" :style="detailDrawerRule && !isDomain(detailDrawerRule.srcObject) ? 'table-layout: fixed;' : ''">
                       <thead>
                         <tr class="bg-[#FAFAFA] border-b border-border/50 h-8">
-                          <th class="font-normal text-text-mute px-3">POP 节点</th>
-                          <th class="font-normal text-text-mute px-3">所属大区</th>
-                          <th class="font-normal text-text-mute px-3">IP地址</th>
+                          <th class="font-normal text-text-mute px-3 w-[160px]">POP 节点</th>
+                          <th class="font-normal text-text-mute px-3 w-[320px]" x-show="detailDrawerRule && !isDomain(detailDrawerRule.srcObject)">IP地址</th>
                           <th class="font-normal text-text-mute px-3">带宽上限</th>
-                          <th class="font-normal text-text-mute px-3 text-center w-16">操作</th>
+                          <th class="font-normal text-text-mute px-3 text-center w-[80px]">操作</th>
                         </tr>
                       </thead>
                       <tbody>
                         <template x-for="node in detailDrawerAccRanges" :key="node.id">
                           <tr class="border-b border-border/40 hover:bg-slate-50/50 h-10">
                             <td class="px-3 text-text-title" x-text="node.node"></td>
-                            <td class="px-3 text-text-mute" x-text="node.region"></td>
-                            <td class="px-3 font-outfit text-text-title" x-text="node.ip"></td>
+                            <td class="px-3 py-1 font-outfit text-text-title" x-show="detailDrawerRule && !isDomain(detailDrawerRule.srcObject)">
+                              <div class="flex flex-wrap gap-2">
+                                <span class="inline-block px-2 py-0.5 bg-[#F2F3F5] text-text rounded font-outfit text-[11px] border border-border/10 animate-fade-in"
+                                      x-text="node.ip1 + ':' + (detailDrawerAdvanced.exclusiveIp ? (detailDrawerRulesList[0]?.port || '8867') : node.port1)"></span>
+                                <span class="inline-block px-2 py-0.5 bg-[#F2F3F5] text-text rounded font-outfit text-[11px] border border-border/10 animate-fade-in"
+                                      x-text="node.ip2 + ':' + (detailDrawerAdvanced.exclusiveIp ? (detailDrawerRulesList[0]?.port || '8867') : node.port2)"></span>
+                              </div>
+                            </td>
                             <td class="px-3">
                               <!-- Inline editable bandwidth limit -->
                               <div class="flex items-center gap-1.5">
@@ -2710,15 +2913,19 @@
                               <td class="px-3">
                                 <div class="relative w-full">
                                   <select x-model="item.protocol" class="h-8 pl-3 pr-8 border border-slate-200 rounded bg-white text-slate-700 text-xs focus:outline-none appearance-none cursor-pointer w-full">
-                                    <option value="TCP/UDP">TCP/UDP</option>
-                                    <option value="TCP">TCP</option>
-                                    <option value="UDP">UDP</option>
+                                    <option value="TCP-TCP">TCP-TCP</option>
+                                    <option value="UDP-UDP">UDP-UDP</option>
                                   </select>
                                   <span class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-slate-400">▼</span>
                                 </div>
                               </td>
                               <td class="px-3">
-                                <input type="text" x-model="item.port" class="sd-input w-full h-8 text-xs font-outfit focus:shadow-none outline-none border border-slate-200 px-2 rounded">
+                                <input type="text"
+                                       :value="detailDrawerAdvanced.exclusiveIp ? item.port : '自动分配'"
+                                       :disabled="!detailDrawerAdvanced.exclusiveIp"
+                                       @input="if (detailDrawerAdvanced.exclusiveIp) { item.port = $event.target.value }"
+                                       class="sd-input w-full h-8 text-xs font-outfit focus:shadow-none outline-none border border-slate-200 px-2 rounded"
+                                       :class="!detailDrawerAdvanced.exclusiveIp ? 'bg-slate-50 text-slate-400 select-none cursor-not-allowed' : 'bg-white text-slate-700'">
                               </td>
                               <td class="px-3">
                                 <input type="text" x-model="item.srcPort" class="sd-input w-full h-8 text-xs font-outfit focus:shadow-none outline-none border border-slate-200 px-2 rounded">
@@ -2765,17 +2972,17 @@
                         <span class="text-slate-400 select-none ml-6">（全局容量剩余：4/20）</span>
                       </div>
 
-                      <!-- 客户端源站IP透传 -->
-                      <div class="flex items-center gap-3">
-                        <span class="w-[80px] text-slate-500 flex-shrink-0">客户端源站IP透传</span>
-                        <button @click="detailDrawerAdvanced.sourceIpPassthrough = !detailDrawerAdvanced.sourceIpPassthrough"
-                          class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0 focus:outline-none"
-                          :class="detailDrawerAdvanced.sourceIpPassthrough ? 'bg-brand' : 'bg-slate-200'">
-                          <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
-                            :class="detailDrawerAdvanced.sourceIpPassthrough ? 'left-4.5' : 'left-0.5'"></div>
-                        </button>
-                        <span class="text-slate-400">基于PP协议透传终端真实 IP，支撑零信任安全策略与访问审计溯源</span>
-                      </div>
+                       <!-- 客户端源IP透传 -->
+                       <div class="flex items-center gap-3">
+                         <span class="w-[80px] text-slate-500 flex-shrink-0">客户端源IP透传</span>
+                         <button @click="detailDrawerAdvanced.sourceIpPassthrough = !detailDrawerAdvanced.sourceIpPassthrough"
+                           class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0 focus:outline-none"
+                           :class="detailDrawerAdvanced.sourceIpPassthrough ? 'bg-brand' : 'bg-slate-200'">
+                           <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                             :class="detailDrawerAdvanced.sourceIpPassthrough ? 'left-4.5' : 'left-0.5'"></div>
+                         </button>
+                         <span class="text-slate-400">基于PP协议透传终端真实 IP，支撑零信任安全策略与访问审计溯源</span>
+                       </div>
 
                       <!-- 传输优化 -->
                       <div class="flex items-center gap-3">
@@ -2798,27 +3005,15 @@
                           <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
                             :class="detailDrawerAdvanced.healthCheck ? 'left-4.5' : 'left-0.5'"></div>
                         </button>
-                        <div x-show="detailDrawerAdvanced.healthCheck" x-transition class="flex items-center gap-2 text-slate-500 text-xs">
-                          <span>每间隔</span>
+                        <div x-show="detailDrawerAdvanced.healthCheck" x-transition class="flex items-center gap-2 text-slate-400 text-xs">
+                          <span>检测协议</span>
                           <div class="relative">
-                            <select x-model="detailDrawerAdvanced.healthInterval" class="h-6 pl-2 pr-6 border border-slate-200 rounded bg-white text-slate-700 text-xs focus:outline-none appearance-none cursor-pointer">
-                              <option value="1s">1秒</option>
-                              <option value="2s">2秒</option>
-                              <option value="5s">5秒</option>
-                              <option value="10s">10秒</option>
+                            <select x-model="detailDrawerAdvanced.healthProtocol" class="h-6 pl-2 pr-6 border border-slate-200 rounded bg-white text-slate-700 text-xs focus:outline-none appearance-none cursor-pointer">
+                              <option value="TCP">TCP</option>
+                              <option value="ICMP">ICMP</option>
                             </select>
                             <span class="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-slate-400">▼</span>
                           </div>
-                          <span>计算最近</span>
-                          <div class="relative">
-                            <select x-model="detailDrawerAdvanced.healthDuration" class="h-6 pl-2 pr-6 border border-slate-200 rounded bg-white text-slate-700 text-xs focus:outline-none appearance-none cursor-pointer">
-                              <option value="30s">30秒内</option>
-                              <option value="1m">1分钟内</option>
-                              <option value="5m">5分钟内</option>
-                            </select>
-                            <span class="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-slate-400">▼</span>
-                          </div>
-                          <span>源站区域-源站的连通性</span>
                         </div>
                       </div>
 
@@ -2832,7 +3027,7 @@
               <!-- 底部栏：高度 56px，左对齐，有 1px 顶部分割线，无底色，主按钮在最左侧 -->
               <div class="sd-drawer-footer h-14 px-4 border-t border-bg-line flex items-center justify-start gap-2 flex-shrink-0 select-none bg-white">
                 <button class="sd-btn sd-btn-primary px-6 text-md ml-4 h-8 text-white focus:outline-none" @click="saveDrawerConfig()">确定</button>
-                <button class="sd-btn sd-btn-default px-6 text-md h-8 bg-white border border-border hover:text-brand hover:border-brand focus:outline-none" @click="detailDrawerOpen = false">取消</button>
+                <button class="sd-btn sd-btn-default px-6 text-md h-8 bg-white border border-border hover:text-brand hover:border-brand focus:outline-none" @click="closeDetailDrawer()">取消</button>
               </div>
 
             </div>
