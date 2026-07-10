@@ -2127,12 +2127,12 @@
                 <div class="flex items-center gap-1.5 bg-slate-200/60 p-0.5 rounded text-xs select-none">
                   <button class="px-3 py-1 rounded transition-all focus:outline-none text-[11px] font-medium"
                           :class="bandwidthStatus === 'normal' ? 'bg-white text-emerald-600 font-bold shadow-sm' : 'text-slate-500 hover:text-slate-700'"
-                          @click="bandwidthStatus = 'normal'">
+                          @click="bandwidthStatus = 'normal'; hoverIndex = { cn: -1, ap: -1, eu: -1, ot: -1 }; lineHoverIndex = {}">
                     带宽正常
                   </button>
                   <button class="px-3 py-1 rounded transition-all focus:outline-none text-[11px] font-medium"
                           :class="bandwidthStatus === 'tight' ? 'bg-white text-red-600 font-bold shadow-sm' : 'text-slate-500 hover:text-slate-700'"
-                          @click="bandwidthStatus = 'tight'">
+                          @click="bandwidthStatus = 'tight'; hoverIndex = { cn: -1, ap: -1, eu: -1, ot: -1 }; lineHoverIndex = {}">
                     带宽紧张
                   </button>
                 </div>
@@ -2248,12 +2248,12 @@
                     <div class="flex -space-x-px">
                       <button class="h-8 px-4 text-xs font-semibold rounded-l-[3px] rounded-r-none border transition-all focus:outline-none flex items-center justify-center cursor-pointer"
                               :class="activeTab === 'region' ? 'z-10 border-[#1C6EFF] text-[#1C6EFF] bg-blue-50/10' : 'border-slate-200 text-[#2F3540] hover:bg-slate-50 hover:border-slate-300'"
-                              @click="activeTab = 'region'">
+                              @click="activeTab = 'region'; hoverIndex = { cn: -1, ap: -1, eu: -1, ot: -1 }">
                         大区带宽使用详情
                       </button>
                       <button class="h-8 px-4 text-xs font-semibold rounded-r-[3px] rounded-l-none border transition-all focus:outline-none flex items-center justify-center cursor-pointer"
                               :class="activeTab === 'line' ? 'z-10 border-[#1C6EFF] text-[#1C6EFF] bg-blue-50/10' : 'border-slate-200 text-[#2F3540] hover:bg-slate-50 hover:border-slate-300'"
-                              @click="activeTab = 'line'">
+                              @click="activeTab = 'line'; lineHoverIndex = {}">
                         规则&线路带宽使用详情
                       </button>
                     </div>
