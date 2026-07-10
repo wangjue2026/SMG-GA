@@ -2354,7 +2354,7 @@
 
                               <div x-show="hoverIndex[region] !== -1"
                                    class="absolute bg-slate-900/95 text-white rounded px-2.5 py-1 shadow-lg text-[9px] pointer-events-none z-20 space-y-0.5"
-                                   :style="'left: ' + Math.min(160, Math.max(10, ((hoverIndex[region] / (timeline.length - 1)) * 280) - 50)) + 'px; top: 6px;'">
+                                   :style="hoverIndex[region] !== -1 ? ('left: ' + Math.min(160, Math.max(10, ((hoverIndex[region] / (timeline.length - 1)) * 280) - 50)) + 'px; top: 6px;') : 'display: none;'">
                                 <div class="font-bold text-slate-400 text-center" x-text="hoverIndex[region] !== -1 ? timeline[hoverIndex[region]] : ''">12:00</div>
                                 <div class="flex items-center gap-1.5">
                                   <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> 上行: <span class="font-bold font-outfit" x-text="hoverIndex[region] !== -1 ? (getData(region).upload[hoverIndex[region]] + ' Mbps') : ''"></span>
@@ -2669,7 +2669,7 @@
 
                                   <div x-show="isHovering(ruleCard.id)"
                                        class="absolute bg-slate-900/95 text-white rounded px-2.5 py-1 shadow-lg text-[9px] pointer-events-none z-20 space-y-0.5"
-                                       :style="'left: ' + Math.min(160, Math.max(10, ((lineHoverIndex[ruleCard.id] / (timeline.length - 1)) * 280) - 50)) + 'px; top: 6px;'">
+                                       :style="isHovering(ruleCard.id) ? ('left: ' + Math.min(160, Math.max(10, ((lineHoverIndex[ruleCard.id] / (timeline.length - 1)) * 280) - 50)) + 'px; top: 6px;') : 'display: none;'">
                                     <div class="font-bold text-slate-400 text-center" x-text="isHovering(ruleCard.id) ? timeline[lineHoverIndex[ruleCard.id]] : ''">12:00</div>
                                     <div class="flex items-center gap-1.5">
                                       <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> 上行: <span class="font-bold font-outfit" x-text="isHovering(ruleCard.id) ? ((ruleCard.upload[lineHoverIndex[ruleCard.id]] || 0).toFixed(1) + ' Mbps') : ''"></span>
@@ -2804,7 +2804,7 @@
 
                                 <div x-show="isHovering(line.id)"
                                      class="absolute bg-slate-900/95 text-white rounded px-2.5 py-1 shadow-lg text-[9px] pointer-events-none z-20 space-y-0.5"
-                                     :style="'left: ' + Math.min(160, Math.max(10, ((lineHoverIndex[line.id] / (timeline.length - 1)) * 280) - 50)) + 'px; top: 6px;'">
+                                     :style="isHovering(line.id) ? ('left: ' + Math.min(160, Math.max(10, ((lineHoverIndex[line.id] / (timeline.length - 1)) * 280) - 50)) + 'px; top: 6px;') : 'display: none;'">
                                   <div class="font-bold text-slate-400 text-center" x-text="timeline[lineHoverIndex[line.id]]">12:00</div>
                                   <div class="flex items-center gap-1.5">
                                     <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> 上行: <span class="font-bold font-outfit" x-text="line.upload[lineHoverIndex[line.id]] + ' Mbps'"></span>

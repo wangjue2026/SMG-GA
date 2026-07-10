@@ -2759,7 +2759,7 @@
                         <div x-show="subtype === 'auth' && row.target && (row.target.includes('10.') || row.target.includes('172.16.'))" x-cloak
                           class="mt-1.5 mr-8 flex items-center gap-1.5 text-[11px] text-orange-500 bg-orange-50 border border-orange-200 rounded px-2.5 py-1.5">
                           <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01"/></svg>
-                          <span>源站对象中客户端接入地址为IP格式，可能会联动影响员工手动更新客户端接入地址</span>
+                          <span>源站对象中客户端接入地址为IP格式，规则生效后会需要员工手动更新客户端接入地址</span>
                           <button @click="row.target = ''" class="ml-auto text-orange-400 hover:text-orange-600 flex-shrink-0">×</button>
                         </div>
                       </div>
