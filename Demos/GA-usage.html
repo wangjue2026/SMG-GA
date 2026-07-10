@@ -309,6 +309,9 @@
         getData(region) {
           return this.bandwidthStatus === 'tight' ? this.tightData[region] : this.normalData[region];
         },
+        isHovering(id) {
+          return typeof this.lineHoverIndex[id] === 'number' && this.lineHoverIndex[id] >= 0;
+        },
         // 返回所有规则（去重排序）
         get allRuleOptions() {
           const set = new Set();
@@ -2634,7 +2637,7 @@
                                     <div class="border-b border-dashed border-slate-300 w-full"></div>
                                   </div>
 
-                                  <template x-if="lineHoverIndex[ruleCard.id] !== undefined && lineHoverIndex[ruleCard.id] >= 0">
+                                  <template x-if="isHovering(ruleCard.id)">
                                     <div class="absolute top-0 bottom-0 border-l border-dashed border-blue-400 pointer-events-none z-10"
                                          :style="'left: ' + ((lineHoverIndex[ruleCard.id] / (timeline.length - 1)) * 100) + '%;'"></div>
                                   </template>
@@ -2654,25 +2657,25 @@
                                           stroke-dasharray="3 3" />
                                     <path :d="getPath(ruleCard.upload, ruleCard.watermark, 280, 80)" stroke="#3B82F6" stroke-width="1.0" fill="none" />
                                     <path :d="getPath(ruleCard.download, ruleCard.watermark, 280, 80)" stroke="#10B981" stroke-width="1.0" fill="none" />
-                                    <g x-show="lineHoverIndex[ruleCard.id] !== undefined && lineHoverIndex[ruleCard.id] >= 0">
+                                    <g x-show="isHovering(ruleCard.id)">
                                       <circle :cx="(lineHoverIndex[ruleCard.id] / (timeline.length - 1)) * 280"
-                                              :cy="80 - ((ruleCard.upload[lineHoverIndex[ruleCard.id] !== undefined && lineHoverIndex[ruleCard.id] >= 0 ? lineHoverIndex[ruleCard.id] : 0] || 0) / (ruleCard.watermark * 1.25)) * 80"
+                                              :cy="80 - ((ruleCard.upload[isHovering(ruleCard.id) ? lineHoverIndex[ruleCard.id] : 0] || 0) / (ruleCard.watermark * 1.25)) * 80"
                                               r="3" fill="#3B82F6" stroke="#FFFFFF" stroke-width="1" />
                                       <circle :cx="(lineHoverIndex[ruleCard.id] / (timeline.length - 1)) * 280"
-                                              :cy="80 - ((ruleCard.download[lineHoverIndex[ruleCard.id] !== undefined && lineHoverIndex[ruleCard.id] >= 0 ? lineHoverIndex[ruleCard.id] : 0] || 0) / (ruleCard.watermark * 1.25)) * 80"
+                                              :cy="80 - ((ruleCard.download[isHovering(ruleCard.id) ? lineHoverIndex[ruleCard.id] : 0] || 0) / (ruleCard.watermark * 1.25)) * 80"
                                               r="3" fill="#10B981" stroke="#FFFFFF" stroke-width="1" />
                                     </g>
                                   </svg>
 
-                                  <div x-show="lineHoverIndex[ruleCard.id] !== undefined && lineHoverIndex[ruleCard.id] >= 0"
+                                  <div x-show="isHovering(ruleCard.id)"
                                        class="absolute bg-slate-900/95 text-white rounded px-2.5 py-1 shadow-lg text-[9px] pointer-events-none z-20 space-y-0.5"
                                        :style="'left: ' + Math.min(160, Math.max(10, ((lineHoverIndex[ruleCard.id] / (timeline.length - 1)) * 280) - 50)) + 'px; top: 6px;'">
-                                    <div class="font-bold text-slate-400 text-center" x-text="lineHoverIndex[ruleCard.id] !== undefined && lineHoverIndex[ruleCard.id] >= 0 ? timeline[lineHoverIndex[ruleCard.id]] : ''">12:00</div>
+                                    <div class="font-bold text-slate-400 text-center" x-text="isHovering(ruleCard.id) ? timeline[lineHoverIndex[ruleCard.id]] : ''">12:00</div>
                                     <div class="flex items-center gap-1.5">
-                                      <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> 上行: <span class="font-bold font-outfit" x-text="lineHoverIndex[ruleCard.id] !== undefined && lineHoverIndex[ruleCard.id] >= 0 ? ((ruleCard.upload[lineHoverIndex[ruleCard.id]] || 0).toFixed(1) + ' Mbps') : ''"></span>
+                                      <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> 上行: <span class="font-bold font-outfit" x-text="isHovering(ruleCard.id) ? ((ruleCard.upload[lineHoverIndex[ruleCard.id]] || 0).toFixed(1) + ' Mbps') : ''"></span>
                                     </div>
                                     <div class="flex items-center gap-1.5">
-                                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 下行: <span class="font-bold font-outfit" x-text="lineHoverIndex[ruleCard.id] !== undefined && lineHoverIndex[ruleCard.id] >= 0 ? ((ruleCard.download[lineHoverIndex[ruleCard.id]] || 0).toFixed(1) + ' Mbps') : ''"></span>
+                                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 下行: <span class="font-bold font-outfit" x-text="isHovering(ruleCard.id) ? ((ruleCard.download[lineHoverIndex[ruleCard.id]] || 0).toFixed(1) + ' Mbps') : ''"></span>
                                     </div>
                                   </div>
                                 </div>
@@ -2776,7 +2779,7 @@
                                   <div class="border-b border-dashed border-slate-300 w-full"></div>
                                 </div>
 
-                                <template x-if="lineHoverIndex[line.id] !== undefined && lineHoverIndex[line.id] >= 0">
+                                <template x-if="isHovering(line.id)">
                                   <div class="absolute top-0 bottom-0 border-l border-dashed border-blue-400 pointer-events-none z-10"
                                        :style="'left: ' + ((lineHoverIndex[line.id] / (timeline.length - 1)) * 100) + '%;'"></div>
                                 </template>
@@ -2787,7 +2790,7 @@
 
                                   <path :d="getPath(line.upload, line.watermark, 280, 80)" stroke="#3B82F6" stroke-width="1.0" fill="none" />
                                   <path :d="getPath(line.download, line.watermark, 280, 80)" stroke="#10B981" stroke-width="1.0" fill="none" />
-                                  <template x-if="lineHoverIndex[line.id] !== undefined && lineHoverIndex[line.id] >= 0">
+                                  <template x-if="isHovering(line.id)">
                                     <g>
                                       <circle :cx="(lineHoverIndex[line.id] / (timeline.length - 1)) * 280"
                                               :cy="80 - (line.upload[lineHoverIndex[line.id]] / (line.watermark * 1.25)) * 80"
@@ -2799,7 +2802,7 @@
                                   </template>
                                 </svg>
 
-                                <div x-show="lineHoverIndex[line.id] !== undefined && lineHoverIndex[line.id] >= 0"
+                                <div x-show="isHovering(line.id)"
                                      class="absolute bg-slate-900/95 text-white rounded px-2.5 py-1 shadow-lg text-[9px] pointer-events-none z-20 space-y-0.5"
                                      :style="'left: ' + Math.min(160, Math.max(10, ((lineHoverIndex[line.id] / (timeline.length - 1)) * 280) - 50)) + 'px; top: 6px;'">
                                   <div class="font-bold text-slate-400 text-center" x-text="timeline[lineHoverIndex[line.id]]">12:00</div>
