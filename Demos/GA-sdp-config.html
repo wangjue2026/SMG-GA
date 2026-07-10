@@ -1489,6 +1489,9 @@
           copiedRowId: null,
           searchQueries: {},
           selectedRegionFilter: {},
+          searchLoading: {},     // { 'w-rowId': true/false } 记录每行是否正在搜索中
+          searchResults: {},     // { 'w-rowId': [...] | null } 缓存每行搜索结果，null 表示使用默认集
+          searchTimers: {},      // { 'w-rowId': timerId } 防抖定时器句柄
           saveConfig() {
             // 1. 获取第一行的源站对象
             const firstRow = this.sourceRows.find(r => r.target) || this.sourceRows[0] || { target: '', location: '' };
@@ -1734,14 +1737,70 @@
             { label: '首尔办公代理网关', ips: ['52.78.1.9'] },
           ],
           mockWebApps: [
+            // ---- 上海数据中心 (20条) ----
             { label: 'ERP系统', url: 'https://erp.sangfor.com', region: '上海数据中心' },
-            { label: '智慧OA', url: 'https://oa.sangfor.com', region: '北京总部' },
             { label: 'AI中台业务', url: 'https://ai.sangfor.com', region: '上海数据中心' },
-            { label: '财务管理系统', url: 'https://finance.sangfor.com', region: '深圳数据中心' },
+            { label: 'HR人事系统', url: 'https://hr.sangfor.com', region: '上海数据中心' },
+            { label: '采购管理系统', url: 'https://purchase.corp.cn', region: '上海数据中心' },
+            { label: '合同管理平台', url: 'https://contract.corp.cn', region: '上海数据中心' },
+            { label: '库存管理系统 (WMS)', url: 'https://wms.corp.cn', region: '上海数据中心' },
+            { label: '制造执行系统 (MES)', url: 'https://mes.corp.cn', region: '上海数据中心' },
+            { label: '数据中台', url: 'https://data.corp.cn', region: '上海数据中心' },
+            { label: '报表分析平台 (BI)', url: 'https://bi.corp.cn', region: '上海数据中心' },
+            { label: '薪酬管理系统', url: 'https://salary.corp.cn', region: '上海数据中心' },
+            { label: '资产管理系统', url: 'https://asset.corp.cn', region: '上海数据中心' },
+            { label: '供应链协同平台', url: 'https://scm.corp.cn', region: '上海数据中心' },
+            { label: '质检管理系统 (QMS)', url: 'https://qms.corp.cn', region: '上海数据中心' },
+            { label: '员工自助服务门户', url: 'https://ess.corp.cn', region: '上海数据中心' },
+            { label: '客服工单系统', url: 'https://ticket.corp.cn', region: '上海数据中心' },
+            { label: '绩效管理平台', url: 'https://kpi.corp.cn', region: '上海数据中心' },
+            { label: '预算管理系统', url: 'https://budget.corp.cn', region: '上海数据中心' },
+            { label: '税务申报平台', url: 'https://tax.corp.cn', region: '上海数据中心' },
+            { label: '物流追踪系统', url: 'https://logistics.corp.cn', region: '上海数据中心' },
+            { label: '电子档案系统', url: 'https://archive.corp.cn', region: '上海数据中心' },
+            // ---- 北京总部 (15条) ----
+            { label: '智慧OA', url: 'https://oa.sangfor.com', region: '北京总部' },
             { label: '知识库平台', url: 'https://wiki.sangfor.com', region: '北京总部' },
-            { label: '客户关系管理 (CRM)', url: 'https://crm.sangfor.com', region: '新加坡地区' },
+            { label: '行政审批系统', url: 'https://approval.corp.cn', region: '北京总部' },
+            { label: '协同办公平台', url: 'https://collab.corp.cn', region: '北京总部' },
+            { label: '会议室预订系统', url: 'https://room.corp.cn', region: '北京总部' },
+            { label: '企业门户 (Intranet)', url: 'https://intranet.corp.cn', region: '北京总部' },
+            { label: '法务合规管理', url: 'https://legal.corp.cn', region: '北京总部' },
+            { label: '内控审计平台', url: 'https://audit.corp.cn', region: '北京总部' },
+            { label: '战略规划系统', url: 'https://strategy.corp.cn', region: '北京总部' },
+            { label: '招聘管理系统 (ATS)', url: 'https://ats.corp.cn', region: '北京总部' },
+            { label: '培训学习平台 (LMS)', url: 'https://lms.corp.cn', region: '北京总部' },
+            { label: '邮件系统 (Exchange)', url: 'https://mail.corp.cn', region: '北京总部' },
+            { label: '即时通讯平台', url: 'https://im.corp.cn', region: '北京总部' },
+            { label: '流程引擎平台', url: 'https://bpm.corp.cn', region: '北京总部' },
+            { label: '公文管理系统', url: 'https://doc.corp.cn', region: '北京总部' },
+            // ---- 深圳数据中心 (15条) ----
+            { label: '财务管理系统', url: 'https://finance.sangfor.com', region: '深圳数据中心' },
             { label: '研发GitLab', url: 'https://git.sangfor.com', region: '深圳数据中心' },
-            { label: 'HR系统', url: 'https://hr.sangfor.com', region: '上海数据中心' },
+            { label: 'CI/CD 流水线', url: 'https://cicd.devops.cn', region: '深圳数据中心' },
+            { label: '容器管理平台 (K8s)', url: 'https://k8s.devops.cn', region: '深圳数据中心' },
+            { label: '安全态势感知 (SOC)', url: 'https://soc.security.cn', region: '深圳数据中心' },
+            { label: '代码质量检测 (SonarQube)', url: 'https://sonar.devops.cn', region: '深圳数据中心' },
+            { label: '应用性能监控 (APM)', url: 'https://apm.devops.cn', region: '深圳数据中心' },
+            { label: '制品仓库 (Nexus)', url: 'https://nexus.devops.cn', region: '深圳数据中心' },
+            { label: '测试管理平台', url: 'https://testlink.devops.cn', region: '深圳数据中心' },
+            { label: '漏洞扫描系统', url: 'https://vulnscan.security.cn', region: '深圳数据中心' },
+            { label: '日志分析平台 (ELK)', url: 'https://elk.devops.cn', region: '深圳数据中心' },
+            { label: '数据库管理平台', url: 'https://dms.corp.cn', region: '深圳数据中心' },
+            { label: '配置管理数据库 (CMDB)', url: 'https://cmdb.devops.cn', region: '深圳数据中心' },
+            { label: 'IT服务台 (ITSM)', url: 'https://itsm.corp.cn', region: '深圳数据中心' },
+            { label: '微服务网关', url: 'https://gateway.devops.cn', region: '深圳数据中心' },
+            // ---- 新加坡地区 (10条) ----
+            { label: '客户关系管理 (CRM)', url: 'https://crm.sangfor.com', region: '新加坡地区' },
+            { label: '海外电商平台', url: 'https://shop.global.com', region: '新加坡地区' },
+            { label: '全球营销自动化', url: 'https://marketing.global.com', region: '新加坡地区' },
+            { label: '海外客服中心', url: 'https://support.global.com', region: '新加坡地区' },
+            { label: '跨境支付系统', url: 'https://payment.global.com', region: '新加坡地区' },
+            { label: '海外合规申报平台', url: 'https://compliance.global.com', region: '新加坡地区' },
+            { label: '多语言内容管理 (CMS)', url: 'https://cms.global.com', region: '新加坡地区' },
+            { label: '海外分销管理系统', url: 'https://distribution.global.com', region: '新加坡地区' },
+            { label: '全球数据同步中台', url: 'https://datasync.global.com', region: '新加坡地区' },
+            { label: '东南亚业务门户', url: 'https://sea.global.com', region: '新加坡地区' },
           ],
           mockAuthAddrs: [
             { label: 'https://www.atrust.sangfor.com:8888', type: 'client' },
@@ -1845,15 +1904,57 @@
             row.targets = [];
             row.target = '';
           },
-          getFilteredWebApps(row) {
-            const q = (this.searchQueries['w-'+row.id] || '').toLowerCase().trim();
-            const r = this.selectedRegionFilter[row.id] || '全部';
-            return this.mockWebApps.filter(app => {
-              const matchesQuery = !q || app.label.toLowerCase().includes(q) || app.url.toLowerCase().includes(q);
-              const matchesRegion = r === '全部' || app.region === r;
-              return matchesQuery && matchesRegion;
-            });
+          // Step 3: 防抖搜索函数（模拟远程检索）
+          triggerWebSearch(row) {
+            const key = 'w-' + row.id;
+            const q = (this.searchQueries[key] || '').trim();
+
+            // 清除上一次防抖计时器
+            if (this.searchTimers[key]) {
+              clearTimeout(this.searchTimers[key]);
+            }
+
+            // 无关键词：立即重置为默认状态，不走 loading
+            if (!q) {
+              this.searchLoading[key] = false;
+              this.searchResults[key] = null; // null 表示使用默认集合
+              return;
+            }
+
+            // 有关键词：进入 loading 状态，300ms 后执行模拟匹配
+            this.searchLoading[key] = true;
+
+            this.searchTimers[key] = setTimeout(() => {
+              const r = this.selectedRegionFilter[row.id] || '全部';
+              const ql = q.toLowerCase();
+              this.searchResults[key] = this.mockWebApps.filter(app => {
+                const matchesQuery = app.label.toLowerCase().includes(ql)
+                                  || app.url.toLowerCase().includes(ql);
+                const matchesRegion = r === '全部' || app.region === r;
+                return matchesQuery && matchesRegion;
+              });
+              this.searchLoading[key] = false;
+            }, 300);
           },
+          // Step 4: 改造 getFilteredWebApps，有关键词时使用缓存结果，无关键词时显示前20条
+          getFilteredWebApps(row) {
+            const key = 'w-' + row.id;
+            const q = (this.searchQueries[key] || '').trim();
+            const r = this.selectedRegionFilter[row.id] || '全部';
+
+            // 有关键词：返回 triggerWebSearch 写入的缓存结果
+            if (q) {
+              const cached = this.searchResults[key];
+              if (cached === undefined || cached === null) return []; // 还未出结果（loading 中）
+              return cached;
+            }
+
+            // 无关键词：按 region 过滤后，取前 20 条作为默认展示
+            return this.mockWebApps
+              .filter(app => r === '全部' || app.region === r)
+              .slice(0, 20);
+          },
+
           isAllFilteredSelected(row) {
             const filtered = this.getFilteredWebApps(row);
             if (filtered.length === 0) return false;
@@ -2392,19 +2493,29 @@
                               <div x-show="openDropdown === ('w-'+row.id)" x-cloak
                                 class="absolute z-30 top-9 left-0 bg-white border border-slate-200 rounded shadow-lg text-xs flex flex-col w-[380px] md:w-[420px]">
                                 
-                                <!-- 局部搜索框 -->
+                                <!-- 局部搜索框（改为 @input 触发防抖，右侧加 loading spinner） -->
                                 <div class="p-2 border-b border-slate-100">
-                                  <input type="text"
-                                    placeholder="输入关键字搜索应用名称或 URL..."
-                                    x-model="searchQueries['w-'+row.id]"
-                                    @click.stop
-                                    class="w-full h-8 border border-slate-200 rounded px-2.5 text-xs focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20">
+                                  <div class="relative">
+                                    <input type="text"
+                                      placeholder="输入关键字搜索应用名称或 URL..."
+                                      :value="searchQueries['w-'+row.id]"
+                                      @input="searchQueries['w-'+row.id] = $event.target.value; triggerWebSearch(row)"
+                                      @click.stop
+                                      class="w-full h-8 border border-slate-200 rounded px-2.5 pr-8 text-xs focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20">
+                                    <div x-show="searchLoading['w-'+row.id]"
+                                         class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+                                      <svg class="w-3.5 h-3.5 text-brand animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                      </svg>
+                                    </div>
+                                  </div>
                                 </div>
 
-                                <!-- 滚动区域过滤 Tag 栏 -->
+                                <!-- 滚动区域过滤 Tag 栏（切换 region 时联动重新搜索） -->
                                 <div class="flex items-center gap-1.5 px-3 py-2 bg-slate-50 border-b border-slate-100 overflow-x-auto select-none no-scrollbar" @click.stop>
                                   <template x-for="rTag in ['全部', ...new Set(mockWebApps.map(a => a.region))]" :key="rTag">
-                                    <button @click.stop="selectedRegionFilter[row.id] = rTag"
+                                    <button @click.stop="selectedRegionFilter[row.id] = rTag; triggerWebSearch(row)"
                                       class="px-2.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap transition-colors"
                                       :class="(selectedRegionFilter[row.id] || '全部') === rTag ? 'bg-[#1C6EFF] text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'">
                                       <span x-text="rTag"></span>
@@ -2426,28 +2537,63 @@
                                   </span>
                                 </div>
 
-                                <!-- 列表渲染 -->
+                                <!-- 列表渲染区域 -->
                                 <div class="max-h-52 overflow-y-auto w-full" @click.stop>
-                                  <template x-for="app in getFilteredWebApps(row)" :key="app.url">
-                                    <div @click.stop="toggleWebTarget(row, app.url, app.label, app.region)"
-                                      class="px-3 py-2 hover:bg-blue-50/50 cursor-pointer flex items-center justify-between gap-3 text-xs border-b border-slate-100 last:border-0"
-                                      :class="(row.targets || []).some(t => t.ip === app.url) ? 'bg-blue-50/10' : ''">
-                                      <div class="flex items-center gap-2.5 min-w-0">
-                                        <input type="checkbox"
-                                          :checked="(row.targets || []).some(t => t.ip === app.url)"
-                                          @change.prevent="toggleWebTarget(row, app.url, app.label, app.region)"
-                                          class="w-3.5 h-3.5 rounded border-slate-300 text-brand focus:ring-brand accent-blue-600">
-                                        <div class="flex flex-col min-w-0">
-                                          <span class="font-semibold text-slate-700 truncate" x-text="app.label"></span>
-                                          <span class="text-slate-400 font-mono text-[10px] mt-0.5 truncate" x-text="app.url"></span>
-                                        </div>
-                                      </div>
-                                      <span class="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[9px] border border-slate-200 flex-shrink-0" x-text="app.region"></span>
+
+                                  <!-- 无关键词时顶部提示（默认前20条） -->
+                                  <template x-if="!(searchQueries['w-'+row.id] || '').trim() && getFilteredWebApps(row).length > 0">
+                                    <div class="px-3 py-1.5 text-[10px] text-slate-400 border-b border-slate-100 bg-slate-50/30 flex items-center gap-1">
+                                      <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                      <span>默认展示前 20 个应用，可输入关键词搜索更多</span>
                                     </div>
                                   </template>
-                                  <template x-if="getFilteredWebApps(row).length === 0">
-                                    <div class="px-3 py-8 text-center text-slate-400 text-xs">没有找到匹配的WEB应用</div>
+
+                                  <!-- loading 状态占位 -->
+                                  <template x-if="searchLoading['w-'+row.id]">
+                                    <div class="px-3 py-8 text-center text-slate-400 text-xs flex flex-col items-center gap-2">
+                                      <svg class="w-4 h-4 text-brand animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                      </svg>
+                                      <span>正在搜索应用...</span>
+                                    </div>
                                   </template>
+
+                                  <!-- 应用列表（非 loading 时渲染） -->
+                                  <template x-if="!searchLoading['w-'+row.id]">
+                                    <div>
+                                      <template x-for="app in getFilteredWebApps(row)" :key="app.url">
+                                        <div @click.stop="toggleWebTarget(row, app.url, app.label, app.region)"
+                                          class="px-3 py-2 hover:bg-blue-50/50 cursor-pointer flex items-center justify-between gap-3 text-xs border-b border-slate-100 last:border-0"
+                                          :class="(row.targets || []).some(t => t.ip === app.url) ? 'bg-blue-50/10' : ''">
+                                          <div class="flex items-center gap-2.5 min-w-0">
+                                            <input type="checkbox"
+                                              :checked="(row.targets || []).some(t => t.ip === app.url)"
+                                              @change.prevent="toggleWebTarget(row, app.url, app.label, app.region)"
+                                              class="w-3.5 h-3.5 rounded border-slate-300 text-brand focus:ring-brand accent-blue-600">
+                                            <div class="flex flex-col min-w-0">
+                                              <span class="font-semibold text-slate-700 truncate" x-text="app.label"></span>
+                                              <span class="text-slate-400 font-mono text-[10px] mt-0.5 truncate" x-text="app.url"></span>
+                                            </div>
+                                          </div>
+                                          <span class="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[9px] border border-slate-200 flex-shrink-0" x-text="app.region"></span>
+                                        </div>
+                                      </template>
+
+                                      <!-- 空状态文案区分 -->
+                                      <template x-if="getFilteredWebApps(row).length === 0">
+                                        <div class="px-3 py-8 text-center text-slate-400 text-xs">
+                                          <template x-if="(searchQueries['w-'+row.id] || '').trim()">
+                                            <span>未找到与「<span class="text-slate-600" x-text="searchQueries['w-'+row.id]"></span>」匹配的应用</span>
+                                          </template>
+                                          <template x-if="!(searchQueries['w-'+row.id] || '').trim()">
+                                            <span>当前分组下暂无应用</span>
+                                          </template>
+                                        </div>
+                                      </template>
+                                    </div>
+                                  </template>
+
                                 </div>
                               </div>
                             </div>
