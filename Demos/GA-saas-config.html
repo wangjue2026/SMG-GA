@@ -64,6 +64,23 @@
 
   <!-- 引入 SASE 全球加速 Alpine 状态与逻辑 -->
   <script src="assets/atrust-data.js"></script>
+  <script>
+    window.safeStorage = {
+      getItem(key, defaultValue = null) {
+        try {
+          const val = localStorage.getItem(key);
+          return val !== null ? val : defaultValue;
+        } catch (e) {
+          return defaultValue;
+        }
+      },
+      setItem(key, value) {
+        try {
+          localStorage.setItem(key, value);
+        } catch (e) {}
+      }
+    };
+  </script>
   <style>
     @keyframes flowRight {
       0% { transform: translateX(-150%); }

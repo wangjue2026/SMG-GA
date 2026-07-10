@@ -64,6 +64,23 @@
 
   <!-- 引入 SASE 全球加速 Alpine 状态与逻辑 -->
   <script src="assets/atrust-data.js"></script>
+  <script>
+    window.safeStorage = {
+      getItem(key, defaultValue = null) {
+        try {
+          const val = localStorage.getItem(key);
+          return val !== null ? val : defaultValue;
+        } catch (e) {
+          return defaultValue;
+        }
+      },
+      setItem(key, value) {
+        try {
+          localStorage.setItem(key, value);
+        } catch (e) {}
+      }
+    };
+  </script>
   <style>
     @keyframes flowRight {
       0% { transform: translateX(-150%); }
@@ -1770,7 +1787,6 @@
 
           /* ---- 方法 ---- */
           addRow() {
-            if (this.sourceRows.length >= 5) return;
             this.sourceRows.push({ id: this.nextRowId++, target: '', targets: [], location: '' });
           },
           removeRow(id) {
@@ -2606,11 +2622,9 @@
 
                   <!-- 添加按钮 -->
                   <button @click="addRow()"
-                    :disabled="sourceRows.length >= 5"
                     class="mt-2 flex items-center gap-1.5 text-xs text-brand hover:opacity-75 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     <span>添加</span>
-                    <span class="text-slate-400" x-text="'(' + sourceRows.length + '/5)'"></span>
                   </button>
                 </div>
               </div><!-- /step 1 -->
@@ -2823,7 +2837,7 @@
                               <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
                                 :class="getPopConfig(row.id).sourceIpPassthrough ? 'left-4.5' : 'left-0.5'"></div>
                             </button>
-                            <span class="text-slate-400">基于PP协议透传终端真实 IP，支撑零信任安全策略与访问审计溯源</span>
+                            <span class="text-slate-400">基于PP协议透传终端真实 IP，支撑安全策略与访问审计溯源</span>
                           </div>
 
                           <!-- 传输优化 -->

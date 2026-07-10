@@ -21,11 +21,11 @@
     rel="stylesheet">
 
   <!-- 引入 Alpine.js 及 Collapse 插件实现顺滑手风琴折叠 -->
-  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="assets/lib/alpine-collapse.min.js"></script>
+  <script defer src="assets/lib/alpine.min.js"></script>
 
   <!-- 引入 Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="assets/lib/tailwind-cdn.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -64,6 +64,23 @@
 
   <!-- 引入 SASE 全球加速 Alpine 状态与逻辑 -->
   <script src="assets/atrust-data.js"></script>
+  <script>
+    window.safeStorage = {
+      getItem(key, defaultValue = null) {
+        try {
+          const val = localStorage.getItem(key);
+          return val !== null ? val : defaultValue;
+        } catch (e) {
+          return defaultValue;
+        }
+      },
+      setItem(key, value) {
+        try {
+          localStorage.setItem(key, value);
+        } catch (e) {}
+      }
+    };
+  </script>
   <style>
     @keyframes flowRight {
       0% { transform: translateX(-150%); }
@@ -1370,7 +1387,7 @@
           searchQueries: {},
 
           /* ---- Step 1 — 源站行列表 ---- */
-          sourceRows: [{ id: 1, target: '', location: '', ports: [{ id: 1, protocol: 'TCP', listenPort: '待自动生成', originPort: '' }] }],
+          sourceRows: [{ id: 1, target: '', location: '', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' }] }],
           nextRowId: 2,
 
           /* ---- Step 2 — 每个源站的加速范围配置 key=id ---- */
@@ -1383,13 +1400,13 @@
           /* ---- 各子类型独立的数据备份 ---- */
           typeData: {
             ip: {
-              sourceRows: [{ id: 1, target: '', location: '', ports: [{ id: 1, protocol: 'TCP', listenPort: '待自动生成', originPort: '' }] }],
+              sourceRows: [{ id: 1, target: '', location: '', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' }] }],
               nextRowId: 2,
               popConfigs: {},
               selectedRowId: null
             },
             domain: {
-              sourceRows: [{ id: 1, target: '', location: '', ports: [{ id: 1, protocol: 'TCP', listenPort: '待自动生成', originPort: '' }] }],
+              sourceRows: [{ id: 1, target: '', location: '', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' }] }],
               nextRowId: 2,
               popConfigs: {},
               selectedRowId: null
@@ -1428,7 +1445,7 @@
 
           /* ---- 端口方法 ---- */
           addPortRow(row) {
-            row.ports.push({ id: this.nextPortRowId++, protocol: 'TCP', listenPort: '待自动生成', originPort: '' });
+            row.ports.push({ id: this.nextPortRowId++, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' });
           },
           removePortRow(row, portId) {
             if (row.ports.length <= 1) return;
@@ -1437,8 +1454,7 @@
 
           /* ---- 源站行方法 ---- */
           addRow() {
-            if (this.sourceRows.length >= 5) return;
-            this.sourceRows.push({ id: this.nextRowId++, target: '', location: '', ports: [{ id: 1, protocol: 'TCP', listenPort: '待自动生成', originPort: '' }] });
+            this.sourceRows.push({ id: this.nextRowId++, target: '', location: '', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' }] });
           },
           removeRow(id) {
             if (this.sourceRows.length <= 1) return;
@@ -1701,6 +1717,7 @@
 
             localStorage.setItem('ga_save_success', 'true');
             localStorage.setItem('ga_new_policy', JSON.stringify(newPolicy));
+            console.log('Saved to localStorage:', localStorage.getItem('ga_new_policy'));
           },
           addToTodoList() {
             const newPolicyStr = localStorage.getItem('ga_new_policy');
@@ -2085,11 +2102,9 @@
 
                   <!-- 添加按钮 -->
                   <button @click="addRow()"
-                    :disabled="sourceRows.length >= 5"
                     class="mt-2 flex items-center gap-1.5 text-xs text-brand hover:opacity-75 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                     <span>添加</span>
-                    <span class="text-slate-400" x-text="'(' + sourceRows.length + '/5)'"></span>
                   </button>
                 </div>
               </div><!-- /step 1 -->
@@ -2247,7 +2262,7 @@
                             <thead>
                               <tr class="bg-slate-50 text-slate-500 font-medium border-b border-slate-200 select-none">
                                 <th class="py-2.5 px-3 w-1/4">协议 <span class="text-slate-400 cursor-help" title="选择端口代理协议">ⓘ</span></th>
-                                <th class="py-2.5 px-3 w-1/4">监听端口</th>
+                                <th class="py-2.5 px-3 w-1/4">加速端口</th>
                                 <th class="py-2.5 px-3 w-1/4">回源端口</th>
                                 <th class="py-2.5 px-3 w-[80px] text-center">操作</th>
                               </tr>
@@ -2258,8 +2273,9 @@
                                   <td class="py-2 px-3">
                                     <div class="relative">
                                       <select x-model="pRow.protocol" class="w-full h-8 pl-2 pr-6 border border-slate-200 rounded bg-white text-slate-700 focus:outline-none text-xs appearance-none cursor-pointer">
-                                        <option value="TCP">TCP</option>
-                                        <option value="UDP">UDP</option>
+                                        <template x-for="opt in (hasDomainSelected(row) ? ['TCP-TCP', 'UDP-UDP', 'HTTP-HTTP', 'HTTPS-HTTPS'] : ['TCP-TCP', 'UDP-UDP'])" :key="opt">
+                                          <option :value="opt" x-text="opt" :selected="pRow.protocol === opt"></option>
+                                        </template>
                                       </select>
                                       <span class="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-slate-400">▼</span>
                                     </div>
@@ -2337,7 +2353,7 @@
                               <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
                                 :class="getPopConfig(row.id).sourceIpPassthrough ? 'left-4.5' : 'left-0.5'"></div>
                             </button>
-                            <span class="text-slate-400">基于PP协议透传终端真实 IP，支撑零信任安全策略与访问审计溯源</span>
+                            <span class="text-slate-400">基于PP协议透传终端真实 IP，支撑安全策略与访问审计溯源</span>
                           </div>
                           <!-- 传输优化 -->
                           <div class="flex items-center gap-3">
