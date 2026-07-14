@@ -303,10 +303,33 @@
         probeHistoryData: [],
         detailDrawerAdvanced: {
           exclusiveIp: false,
-          sourceIpPassthrough: true,
+          sourceIpPassthrough: false,
           transportOptimize: true,
           healthCheck: true,
-          healthProtocol: 'TCP'
+          healthProtocol: 'TCP',
+          healthPort: '441',
+          healthInterval: 3,
+          healthThreshold: 3
+        },
+        showHealthModal: false,
+        tempHealthConfig: { protocol: 'TCP', port: '441', interval: 3, threshold: 3 },
+        openHealthModal() {
+          const cfg = this.detailDrawerAdvanced;
+          this.tempHealthConfig = {
+            protocol: cfg.healthProtocol || 'TCP',
+            port: cfg.healthPort !== undefined ? cfg.healthPort : '441',
+            interval: cfg.healthInterval !== undefined ? cfg.healthInterval : 3,
+            threshold: cfg.healthThreshold !== undefined ? cfg.healthThreshold : 3
+          };
+          this.showHealthModal = true;
+        },
+        saveHealthConfig() {
+          const cfg = this.detailDrawerAdvanced;
+          cfg.healthProtocol = this.tempHealthConfig.protocol;
+          cfg.healthPort = this.tempHealthConfig.port;
+          cfg.healthInterval = this.tempHealthConfig.interval;
+          cfg.healthThreshold = this.tempHealthConfig.threshold;
+          this.showHealthModal = false;
         },
 
         isDomain(srcObject) {
@@ -332,6 +355,18 @@
             return parts.join('.');
           }
           return ip;
+        },
+        getRegionByNode(nodeName) {
+          if (!nodeName) return '其他地区';
+          const name = String(nodeName).trim();
+          const mainland = ['广州', '北京', '深圳', '上海', '成都', '武汉', '杭州', '南京', '西安'];
+          const apac = ['香港', '澳门', '台湾', '新加坡', '曼谷', '东京', '吉隆坡', '首尔', '悉尼', '墨尔本'];
+          const western = ['巴黎', '西雅图', '洛杉矶', '法兰克福', '纽约', '旧金山', '伦敦', '加利福尼亚'];
+          
+          if (mainland.some(c => name.includes(c))) return '中国大陆';
+          if (apac.some(c => name.includes(c))) return '亚太地区';
+          if (western.some(c => name.includes(c))) return '欧美地区';
+          return '其他地区';
         },
 
         openDetailDrawer(rule) {
@@ -396,10 +431,13 @@
 
           this.detailDrawerAdvanced = {
             exclusiveIp: rule.exclusiveIp && rule.exclusiveIp !== '-',
-            sourceIpPassthrough: true,
+            sourceIpPassthrough: false,
             transportOptimize: true,
             healthCheck: true,
-            healthProtocol: 'TCP'
+            healthProtocol: 'TCP',
+            healthPort: '441',
+            healthInterval: 3,
+            healthThreshold: 3
           };
         },
 
@@ -2151,7 +2189,7 @@
               <div class="flex items-center gap-2">
                 <!-- Add Acceleration Button & Dropdown -->
                 <div class="relative">
-                  <button class="bg-brand hover:bg-brand-hover text-white text-xs px-3 py-1.5 rounded-[2px] flex items-center gap-1.5 font-medium transition-colors shadow-sm select-none"
+                  <button class="bg-brand hover:bg-brand-hover text-white text-xs px-3 h-8 rounded-[2px] flex items-center gap-1.5 font-medium transition-colors shadow-sm select-none"
                           @click="addDropdownOpen = !addDropdownOpen">
                     <span>新增加速</span>
                     <svg class="w-3 h-3 transition-transform duration-200" :class="addDropdownOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2164,7 +2202,7 @@
                     <!-- Item 1 -->
                     <a href="GA-sdp-config.html" class="block px-4 py-2.5 hover:bg-[#F5F7FA] transition-colors group">
                       <div class="text-xs font-semibold text-text-title group-hover:text-brand">零信任业务加速</div>
-                      <div class="text-[11px] text-text-mute mt-1">适用于分支或移动终端安全、快速访问私有应用</div>
+                      <div class="text-[11px] text-text-mute mt-1">适用于分支 or 移动终端安全、快速访问私有应用</div>
                     </a>
                     <div class="border-t border-dashed border-border/60 mx-4"></div>
                     <!-- Item 2 -->
@@ -2188,7 +2226,7 @@
                 </div>
                 
                 <!-- Log Button -->
-                <a href="#" class="border border-[#D3D7DE] hover:bg-bg-light text-text-title text-xs px-3 py-1.5 rounded-[2px] flex items-center gap-1.5 font-medium transition-colors select-none"
+                <a href="#" class="border border-[#D3D7DE] hover:bg-bg-light text-text-title text-xs px-3 h-8 rounded-[2px] flex items-center gap-1.5 font-medium transition-colors select-none"
                    @click.prevent="logDrawerOpen = true">
                   <span>加速日志</span>
                   <svg class="w-3.5 h-3.5 text-text-mute" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2199,7 +2237,7 @@
               
               <!-- Right: ProSearch -->
               <div class="relative flex-1 max-w-[480px]">
-                <div class="flex items-center border border-[#D3D7DE] rounded-[2px] bg-white transition-all duration-200 focus-within:border-brand focus-within:shadow-[0_4px_16px_rgba(30,35,43,0.14)] relative pr-[32px] min-h-[32px] py-1 pl-1">
+                <div class="flex items-center border border-[#D3D7DE] rounded-[2px] bg-white transition-all duration-200 focus-within:border-brand focus-within:shadow-[0_4px_16px_rgba(30,35,43,0.14)] relative pr-[32px] h-8 pl-1">
                   <!-- Tag List -->
                   <div class="flex flex-wrap gap-1 items-center max-w-[calc(100%-8px)]">
                     <template x-for="tag in searchTags" :key="tag.fieldKey">
@@ -2378,9 +2416,15 @@
                       <!-- Visual Route Columns (accRegion -> srcRegion -> srcObject) -->
                       <td class="px-4 relative text-left hover:z-30">
                         <!-- Horizontal Connecting Line Half (Only goes to the right) -->
-                        <div class="absolute top-1/2 left-[100px] right-0 h-[2px] bg-[#34D399] -translate-y-1/2 z-0 opacity-80"></div>
+                        <div class="absolute top-1/2 left-[100px] right-0 h-[2px] bg-[#34D399]/60 -translate-y-1/2 z-0 opacity-80"></div>
                         <div class="group/pill relative inline-block z-10 w-[168px] text-left">
-                          <span class="inline-block w-full text-center bg-[#E6F4EA] text-[#137333] px-3 py-1 rounded-[2px] text-[11px] shadow-sm cursor-help relative z-10 border border-[#34D399]/30 truncate" x-text="rule.accRegion"></span>
+                          <span class="inline-flex items-center justify-center gap-1.5 w-full bg-[#E6F4EA] text-[#137333] px-3 py-1 rounded-[2px] text-[11px] shadow-sm cursor-help relative z-10">
+                            <svg class="w-3.5 h-3.5 text-[#137333]/70 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            <span class="truncate" x-text="rule.accRegion"></span>
+                          </span>
                           
                           <!-- Hover Popover for Acc Region -->
                           <div class="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[360px] bg-white border border-border shadow-[0_4px_24px_rgba(0,0,0,0.12)] rounded-sm p-4 z-[100] opacity-0 invisible group-hover/pill:opacity-100 group-hover/pill:visible transition-all pointer-events-none group-hover/pill:pointer-events-auto text-left before:content-[''] before:absolute before:h-2 before:-top-2 before:left-0 before:right-0">
@@ -2427,16 +2471,26 @@
                       </td>
                       
                       <td class="px-4 relative text-left">
-                        <div class="absolute top-1/2 left-0 right-0 h-[2px] bg-[#34D399] -translate-y-1/2 z-0 opacity-80"></div>
-                        <span class="inline-block w-[168px] text-center bg-[#E6F4EA] text-[#137333] px-3 py-1 rounded-[2px] text-[11px] shadow-sm relative z-10 border border-[#34D399]/30 truncate" x-text="rule.srcRegion"></span>
+                        <div class="absolute top-1/2 left-0 right-0 h-[2px] bg-gradient-to-r from-[#34D399]/60 to-[#1C6EFF]/60 -translate-y-1/2 z-0 opacity-80"></div>
+                        <span class="inline-flex items-center justify-center gap-1.5 w-[168px] bg-[#E6F4EA] text-[#137333] px-3 py-1 rounded-[2px] text-[11px] shadow-sm relative z-10">
+                          <svg class="w-3.5 h-3.5 text-[#137333]/70 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                          </svg>
+                          <span class="truncate" x-text="rule.srcRegion"></span>
+                        </span>
                       </td>
                       
                       <td class="px-4 relative text-left">
                         <!-- Horizontal Connecting Line Half (Only goes to the left) -->
-                        <div class="absolute top-1/2 left-0 w-[100px] h-[2px] bg-[#34D399] -translate-y-1/2 z-0 opacity-80"></div>
-                        <span class="inline-block w-[168px] text-center bg-[#F1F3F4] text-text-title px-3 py-1 rounded-[2px] text-[11px] shadow-sm relative z-10 border border-border/50 truncate" x-text="getSrcObject(rule)" :title="getSrcObject(rule)"></span>
+                        <div class="absolute top-1/2 left-0 w-[100px] h-[2px] bg-[#1C6EFF]/50 -translate-y-1/2 z-0 opacity-80"></div>
+                        <span class="inline-flex items-center justify-center gap-1.5 w-[168px] bg-[#E8F4FF] text-[#0237B3] px-3 py-1 rounded-[2px] text-[11px] shadow-sm relative z-10" :title="getSrcObject(rule)">
+                          <svg class="w-3.5 h-3.5 text-[#0237B3]/70 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                          </svg>
+                          <span class="truncate" x-text="getSrcObject(rule)"></span>
+                        </span>
                       </td>
-                      
                       <td class="px-4 text-text-mute max-w-[220px] relative group/copy">
                         <div class="flex flex-col gap-1 py-1">
                           <div class="flex items-center justify-between">
@@ -2682,14 +2736,13 @@
                       </span>
                     </div>
                     
-
-                    
                     <!-- 源站节点列表表格 (表头不加粗, 直角，高 32/40) -->
                     <table class="sd-table w-full border border-border/60 rounded-none text-xs text-left" style="table-layout: fixed;">
                       <thead>
                         <tr class="bg-[#FAFAFA] border-b border-border/50 h-8">
-                          <th class="font-normal text-text-mute px-3 w-[160px]">POP 节点</th>
-                          <th class="font-normal text-text-mute px-3 w-[320px]">IP地址</th>
+                          <th class="font-normal text-text-mute px-3 w-[120px]">POP 节点</th>
+                          <th class="font-normal text-text-mute px-3 w-[120px]">所属大区</th>
+                          <th class="font-normal text-text-mute px-3 w-[260px]">IP地址</th>
                           <th class="font-normal text-text-mute px-3">带宽上限</th>
                           <th class="font-normal text-text-mute px-3 text-center w-[80px]">操作</th>
                         </tr>
@@ -2698,6 +2751,7 @@
                         <template x-for="(node, index) in detailDrawerOriginNodes" :key="node.id">
                           <tr class="border-b border-border/40 hover:bg-slate-50/50 h-10">
                             <td class="px-3 text-text-title" x-text="node.node"></td>
+                            <td class="px-3 text-text-title" x-text="getRegionByNode(node.node)"></td>
                             <td class="px-3 font-outfit text-text-title" x-text="node.ip"></td>
                             <td class="px-3">
                               <!-- Inline editable bandwidth limit -->
@@ -2855,8 +2909,9 @@
                     <table class="sd-table w-full border border-border/60 rounded-none text-xs text-left" :style="detailDrawerRule && !isDomain(detailDrawerRule.srcObject) ? 'table-layout: fixed;' : ''">
                       <thead>
                         <tr class="bg-[#FAFAFA] border-b border-border/50 h-8">
-                          <th class="font-normal text-text-mute px-3 w-[160px]">POP 节点</th>
-                          <th class="font-normal text-text-mute px-3 w-[320px]" x-show="detailDrawerRule && !isDomain(detailDrawerRule.srcObject)">IP地址</th>
+                          <th class="font-normal text-text-mute px-3 w-[120px]">POP 节点</th>
+                          <th class="font-normal text-text-mute px-3 w-[120px]">所属大区</th>
+                          <th class="font-normal text-text-mute px-3 w-[260px]" x-show="detailDrawerRule && !isDomain(detailDrawerRule.srcObject)">IP地址</th>
                           <th class="font-normal text-text-mute px-3">带宽上限</th>
                           <th class="font-normal text-text-mute px-3 text-center w-[80px]">操作</th>
                         </tr>
@@ -2865,6 +2920,7 @@
                         <template x-for="node in detailDrawerAccRanges" :key="node.id">
                           <tr class="border-b border-border/40 hover:bg-slate-50/50 h-10">
                             <td class="px-3 text-text-title" x-text="node.node"></td>
+                            <td class="px-3 text-text-title" x-text="getRegionByNode(node.node)"></td>
                             <td class="px-3 py-1 font-outfit text-text-title" x-show="detailDrawerRule && !isDomain(detailDrawerRule.srcObject)">
                               <div class="flex flex-wrap gap-2">
                                 <span class="inline-block px-2 py-0.5 bg-[#F2F3F5] text-text rounded font-outfit text-[11px] border border-border/10 animate-fade-in"
@@ -3009,16 +3065,11 @@
                           <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
                             :class="detailDrawerAdvanced.healthCheck ? 'left-4.5' : 'left-0.5'"></div>
                         </button>
-                        <div x-show="detailDrawerAdvanced.healthCheck" x-transition class="flex items-center gap-2 text-slate-400 text-xs">
-                          <span>检测协议</span>
-                          <div class="relative">
-                            <select x-model="detailDrawerAdvanced.healthProtocol" class="h-6 pl-2 pr-6 border border-slate-200 rounded bg-white text-slate-700 text-xs focus:outline-none appearance-none cursor-pointer">
-                              <option value="TCP">TCP</option>
-                              <option value="ICMP">ICMP</option>
-                            </select>
-                            <span class="absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-[8px] text-slate-400">▼</span>
-                          </div>
-                        </div>
+                        <span x-show="detailDrawerAdvanced.healthCheck"
+                              @click="openHealthModal()"
+                              class="text-brand hover:underline cursor-pointer ml-1 text-xs select-none font-medium">
+                          配置
+                        </span>
                       </div>
 
                     </div>
@@ -3072,6 +3123,148 @@
                 @click="confirmModal.onConfirm(); confirmModal.show = false;">确定</button>
         <button class="sd-btn sd-btn-default px-4 text-md h-8 text-sm" 
                 @click="confirmModal.show = false">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 连通性检测配置 Modal -->
+  <div x-show="showHealthModal" class="fixed inset-0 z-[1010] flex items-center justify-center" x-cloak>
+    <!-- 背景遮罩 -->
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="showHealthModal = false"></div>
+    
+    <!-- 弹窗主体 (2px 圆角) -->
+    <div class="relative bg-white rounded-[2px] shadow-2xl border border-slate-200 w-[480px] max-w-full overflow-hidden flex flex-col"
+         x-show="showHealthModal"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-95">
+      <!-- 头部 (高度 48px，无分割线) -->
+      <div class="h-12 px-4 flex items-center justify-between flex-shrink-0 select-none">
+        <h3 class="text-base font-semibold text-slate-800">
+          连通性检测
+        </h3>
+        <button @click="showHealthModal = false" class="text-slate-400 hover:text-slate-600 text-lg font-medium p-1">×</button>
+      </div>
+      
+      <!-- 内容 (左右边距 32px，上下紧贴，各行间距为 8px 即 space-y-2) -->
+      <div class="px-8 py-5 flex-1 overflow-y-auto space-y-2 text-xs text-slate-700">
+        <!-- 检查协议 -->
+        <div class="flex items-start gap-4">
+          <div class="flex items-center h-8 w-[90px] flex-shrink-0 select-none">
+            <span class="w-2.5 mr-1 flex-shrink-0"></span><!-- 必填星号占位 -->
+            <span class="text-[#6F7785] font-medium text-xs">检查协议</span>
+          </div>
+          <div class="flex-1 flex flex-col min-w-0">
+            <div class="flex items-center h-8 gap-2">
+              <div class="flex-1 flex items-center gap-6 h-8">
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                  <input type="radio" name="healthProtocol" value="TCP" x-model="tempHealthConfig.protocol" class="text-brand focus:ring-brand w-3.5 h-3.5" />
+                  <span class="text-slate-700 text-xs">TCP</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                  <input type="radio" name="healthProtocol" value="ICMP" x-model="tempHealthConfig.protocol" class="text-brand focus:ring-brand w-3.5 h-3.5" />
+                  <span class="text-slate-700 text-xs">ICMP</span>
+                </label>
+              </div>
+              <div class="w-4 flex-shrink-0"></div><!-- 辅助列对齐 -->
+            </div>
+          </div>
+        </div>
+        
+        <!-- 端口 -->
+        <div class="flex items-start gap-4" x-show="tempHealthConfig.protocol === 'TCP'">
+          <div class="flex items-center h-8 w-[90px] flex-shrink-0 select-none">
+            <span class="w-2.5 mr-1 flex-shrink-0"></span>
+            <span class="text-[#6F7785] font-medium text-xs">端口</span>
+          </div>
+          <div class="flex-1 flex flex-col min-w-0">
+            <div class="flex items-center h-8 gap-2">
+              <div class="flex-1 h-8">
+                <input type="text" 
+                       x-model="tempHealthConfig.port" 
+                       placeholder="请输入端口号 (1-65535)"
+                       class="h-8 px-3 border rounded-[2px] bg-white text-slate-800 focus:outline-none w-full text-xs"
+                       :class="tempHealthConfig.port && (!/^[1-9]\d*$/.test(tempHealthConfig.port) || tempHealthConfig.port < 1 || tempHealthConfig.port > 65535) ? 'border-[#CF171D] bg-red-50/20' : 'border-slate-200 focus:border-brand'" />
+              </div>
+              <div class="w-4 flex-shrink-0"></div><!-- 辅助列对齐 -->
+            </div>
+            <div x-show="tempHealthConfig.port && (!/^[1-9]\d*$/.test(tempHealthConfig.port) || tempHealthConfig.port < 1 || tempHealthConfig.port > 65535)" class="text-[#CF171D] text-xs mt-1">
+              请输入 1-65535 之间的有效端口号
+            </div>
+          </div>
+        </div>
+        
+        <!-- 检查间隔时间 -->
+        <div class="flex items-start gap-4">
+          <div class="flex items-center h-8 w-[90px] flex-shrink-0 select-none">
+            <span class="w-2.5 mr-1 flex-shrink-0"></span>
+            <span class="text-[#6F7785] font-medium text-xs">检查间隔时间</span>
+          </div>
+          <div class="flex-1 flex flex-col min-w-0">
+            <div class="flex items-center h-8 gap-2">
+              <div class="flex-1 h-8 relative">
+                <input type="number" 
+                       x-model.number="tempHealthConfig.interval" 
+                       min="1" max="60"
+                       class="h-8 pl-3 pr-8 border rounded-[2px] bg-white text-slate-800 focus:outline-none w-full text-xs"
+                       :class="(tempHealthConfig.interval < 1 || tempHealthConfig.interval > 60 || !tempHealthConfig.interval) ? 'border-[#CF171D] bg-red-50/20' : 'border-slate-200 focus:border-brand'" />
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 select-none pointer-events-none">秒</span>
+              </div>
+              <div class="w-4 flex-shrink-0"></div><!-- 辅助列对齐 -->
+            </div>
+            <div x-show="tempHealthConfig.interval < 1 || tempHealthConfig.interval > 60 || !tempHealthConfig.interval" class="text-[#CF171D] text-xs mt-1">
+              检查间隔时间范围为 1-60 秒
+            </div>
+          </div>
+        </div>
+        
+        <!-- 健康检查阈值 -->
+        <div class="flex items-start gap-4">
+          <div class="flex items-center h-8 w-[90px] flex-shrink-0 select-none">
+            <span class="w-2.5 mr-1 flex-shrink-0"></span>
+            <span class="text-[#6F7785] font-medium text-xs">健康检查阈值</span>
+          </div>
+          <div class="flex-1 flex flex-col min-w-0">
+            <div class="flex items-center h-8 gap-2">
+              <div class="flex-1 h-8 relative">
+                <input type="number" 
+                       x-model.number="tempHealthConfig.threshold" 
+                       min="2" max="10"
+                       class="h-8 pl-3 pr-8 border rounded-[2px] bg-white text-slate-800 focus:outline-none w-full text-xs"
+                       :class="(tempHealthConfig.threshold < 2 || tempHealthConfig.threshold > 10 || !tempHealthConfig.threshold) ? 'border-[#CF171D] bg-red-50/20' : 'border-slate-200 focus:border-brand'" />
+                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 select-none pointer-events-none">次</span>
+              </div>
+              <!-- 辅助列对齐且展示说明图标 -->
+              <div class="w-4 flex-shrink-0 flex items-center justify-center relative group cursor-pointer h-8">
+                <svg class="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="absolute hidden group-hover:block bg-slate-800 text-white text-[10px] rounded-[2px] p-2 z-50 bottom-full right-0 mb-2 shadow-lg pointer-events-none w-48 text-left leading-relaxed">
+                  该阈值指的是当连续触发阈值次数失败时则视为连通性异常
+                  <div class="absolute top-full right-1.5 -mt-1 border-4 border-transparent border-t-slate-800"></div>
+                </div>
+              </div>
+            </div>
+            <div x-show="tempHealthConfig.threshold < 2 || tempHealthConfig.threshold > 10 || !tempHealthConfig.threshold" class="text-[#CF171D] text-xs mt-1">
+              健康检查阈值范围为 2-10 次
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 底部按钮栏 (高度 56px，无分割线，右对齐，主按钮在左，取消按钮在右，圆角为 2px) -->
+      <div class="h-[56px] px-8 flex items-center justify-end gap-2 bg-slate-50/50 flex-shrink-0">
+        <button @click="saveHealthConfig()" 
+                :disabled="(tempHealthConfig.protocol === 'TCP' && (!tempHealthConfig.port || !/^[1-9]\d*$/.test(tempHealthConfig.port) || tempHealthConfig.port < 1 || tempHealthConfig.port > 65535)) || tempHealthConfig.interval < 1 || tempHealthConfig.interval > 60 || tempHealthConfig.threshold < 2 || tempHealthConfig.threshold > 10"
+                class="h-8 px-4 rounded-[2px] text-[14px] bg-brand text-white font-medium hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          确定
+        </button>
+        <button @click="showHealthModal = false" class="h-8 px-4 rounded-[2px] text-[14px] border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors font-medium">
+          取消
+        </button>
       </div>
     </div>
   </div>
