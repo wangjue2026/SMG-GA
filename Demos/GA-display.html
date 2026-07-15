@@ -291,6 +291,7 @@
         
         nameEditing: false,
         descEditing: false,
+        originAddrEditing: false,
         originalRuleName: '',
         originalRuleDesc: '',
         
@@ -557,18 +558,18 @@
 
         // Rule list: 12 mock items
         rules: [
-          { id: 'POL-001', name: 'oa.sangfor.com', desc: '欧洲访问国内集团办公OA系统加速', scenario: '零信任业务加速', subType: 'web应用', status: '加速中', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: 'oa.sangfor.com（上海办公网关）', accDomain: '-', exclusiveIp: '-' },
-          { id: 'POL-002', name: 'saauth.sangfor.com.cn', desc: '海外研发中心安全认证中心链路优化', scenario: '零信任业务加速', subType: 'web应用', status: '加速中', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: 'saauth.sangfor.com.cn', accDomain: 'https://saauth.sangfor.com.cn/sa/auth...', exclusiveIp: '-' },
-          { id: 'POL-003', name: '10.23.22.3', desc: '零信任核心接入网关跨境传输加速', scenario: '零信任业务加速', subType: '接入&认证', status: '加速中', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: '10.23.22.3', accDomain: 'https://saauth.sangfor.com.cn/sa/auth...', exclusiveIp: '-' },
-          { id: 'POL-004', name: '10.23.12.1', desc: '自定义大文件传输与SSH控制隧道加速', scenario: '自定义IP/域名加速', status: '加速中', accRegion: '吉隆坡、首尔等7个', srcRegion: '广州', srcObject: '10.23.12.1:443/441/4433...', accDomain: '-', exclusiveIp: '10.23.45.23:441' },
-          { id: 'POL-005', name: '10.23.1.23', desc: '分支机构本地ERP及业务数据汇聚通道', scenario: '分支组网加速', status: '加速中', accRegion: '武汉、深圳、上海', srcRegion: '巴黎', srcObject: '主节点：10.23.1.23', accDomain: '-', exclusiveIp: '-' },
-          { id: 'POL-006', name: '10.50.2.11', desc: '海外办公访问公共服务加速优化', scenario: 'SaaS应用加速', status: '未启用', accRegion: '东京、首尔等3个', srcRegion: '北京', srcObject: '10.50.2.11', accDomain: 'https://github.com', exclusiveIp: '-' },
-          { id: 'POL-007', name: '10.23.22.7', desc: '零信任-安全客户端接入网关链路增强', scenario: '零信任业务加速', subType: '隧道应用', status: '未启用', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: '10.23.22.7（上海办公网关）', accDomain: '-', exclusiveIp: '10.24.53.33:4883' },
-          { id: 'POL-008', name: 'office.com', desc: '微软Office云办公服务跨境快速通道', scenario: '零信任业务加速', subType: 'web应用', status: '运行异常', accRegion: '香港、新加坡等4个', srcRegion: '深圳', srcObject: 'office.com', accDomain: 'https://office.com', exclusiveIp: '10.23.45.24:443' },
-          { id: 'POL-009', name: '10.88.9.12', desc: '自定义远程财务系统访问优化加速', scenario: '自定义IP/域名加速', status: '加速中', accRegion: '伦敦、法兰克福等5个', srcRegion: '上海', srcObject: '10.88.9.12:80', accDomain: '-', exclusiveIp: '-' },
-          { id: 'POL-010', name: '10.1.44.89', desc: '西雅图分支机构跨大西洋网络加速', scenario: '分支组网加速', status: '加速中', accRegion: '纽约、旧金山', srcRegion: '西雅图', srcObject: '主节点：10.1.44.89', accDomain: '-', exclusiveIp: '10.23.45.28' },
-          { id: 'POL-011', name: '10.2.2.2', desc: 'Salesforce销售管理系统访问优化', scenario: 'SaaS应用加速', status: '加速中', accRegion: '悉尼、墨尔本', srcRegion: '广州', srcObject: '10.2.2.2', accDomain: 'https://salesforce.com', exclusiveIp: '-' },
-          { id: 'POL-012', name: '10.200.1.1', desc: '零信任接入中心认证及数据安全链路', scenario: '零信任业务加速', subType: '接入&认证', status: '运行异常', accRegion: '香港、吉隆坡等6个', srcRegion: '成都', srcObject: '10.200.1.1', accDomain: 'https://login.partner.microsoftonline...', exclusiveIp: '-' }
+          { id: 'POL-001', name: 'oa.sangfor.com', desc: '欧洲访问国内集团办公OA系统加速', scenario: '零信任业务加速', subType: 'web应用', status: '加速中', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: 'oa.sangfor.com（上海办公网关）', originAddr: '34.234.22.1', accDomain: '-', exclusiveIp: '-' },
+          { id: 'POL-002', name: 'saauth.sangfor.com.cn', desc: '海外研发中心安全认证中心链路优化', scenario: '零信任业务加速', subType: 'web应用', status: '加速中', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: 'saauth.sangfor.com.cn', originAddr: '52.76.18.90', accDomain: 'https://saauth.sangfor.com.cn/sa/auth...', exclusiveIp: '-' },
+          { id: 'POL-003', name: '10.23.22.3', desc: '零信任核心接入网关跨境传输加速', scenario: '零信任业务加速', subType: '接入&认证', status: '加速中', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: '10.23.22.3', originAddr: '-', accDomain: 'https://saauth.sangfor.com.cn/sa/auth...', exclusiveIp: '-' },
+          { id: 'POL-004', name: '10.23.12.1', desc: '自定义大文件传输与SSH控制隧道加速', scenario: '自定义IP/域名加速', status: '加速中', accRegion: '吉隆坡、首尔等7个', srcRegion: '广州', srcObject: '10.23.12.1:443/441/4433...', originAddr: '-', accDomain: '-', exclusiveIp: '10.23.45.23:441' },
+          { id: 'POL-005', name: '10.23.1.23', desc: '分支机构本地ERP及业务数据汇聚通道', scenario: '分支组网加速', status: '加速中', accRegion: '武汉、深圳、上海', srcRegion: '巴黎', srcObject: '主节点：10.23.1.23', originAddr: '-', accDomain: '-', exclusiveIp: '-' },
+          { id: 'POL-006', name: '10.50.2.11', desc: '海外办公访问公共服务加速优化', scenario: 'SaaS应用加速', status: '未启用', accRegion: '东京、首尔等3个', srcRegion: '北京', srcObject: '10.50.2.11', originAddr: '-', accDomain: 'https://github.com', exclusiveIp: '-' },
+          { id: 'POL-007', name: '10.23.22.7', desc: '零信任-安全客户端接入网关链路增强', scenario: '零信任业务加速', subType: '隧道应用', status: '未启用', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: '10.23.22.7（上海办公网关）', originAddr: '-', accDomain: '-', exclusiveIp: '10.24.53.33:4883' },
+          { id: 'POL-008', name: 'office.com', desc: '微软Office云办公服务跨境快速通道', scenario: '零信任业务加速', subType: 'web应用', status: '运行异常', accRegion: '香港、新加坡等4个', srcRegion: '深圳', srcObject: 'office.com', originAddr: '104.215.148.63', accDomain: 'https://office.com', exclusiveIp: '10.23.45.24:443' },
+          { id: 'POL-009', name: '10.88.9.12', desc: '自定义远程财务系统访问优化加速', scenario: '自定义IP/域名加速', status: '加速中', accRegion: '伦敦、法兰克福等5个', srcRegion: '上海', srcObject: '10.88.9.12:80', originAddr: '-', accDomain: '-', exclusiveIp: '-' },
+          { id: 'POL-010', name: '10.1.44.89', desc: '西雅图分支机构跨大西洋网络加速', scenario: '分支组网加速', status: '加速中', accRegion: '纽约、旧金山', srcRegion: '西雅图', srcObject: '主节点：10.1.44.89', originAddr: '-', accDomain: '-', exclusiveIp: '10.23.45.28' },
+          { id: 'POL-011', name: '10.2.2.2', desc: 'Salesforce销售管理系统访问优化', scenario: 'SaaS应用加速', status: '加速中', accRegion: '悉尼、墨尔本', srcRegion: '广州', srcObject: '10.2.2.2', originAddr: '-', accDomain: 'https://salesforce.com', exclusiveIp: '-' },
+          { id: 'POL-012', name: '10.200.1.1', desc: '零信任接入中心认证及数据安全链路', scenario: '零信任业务加速', subType: '接入&认证', status: '运行异常', accRegion: '香港、吉隆坡等6个', srcRegion: '成都', srcObject: '10.200.1.1', originAddr: '-', accDomain: 'https://login.partner.microsoftonline...', exclusiveIp: '-' }
         ],
         originalRules: null,
         showSdwanPublishModal: false,
@@ -2687,7 +2688,7 @@
                     </div>
                     
                     <!-- 描述 -->
-                    <div class="col-span-8 flex items-center gap-2">
+                    <div class="col-span-5 flex items-center gap-2">
                       <span class="w-10 flex-shrink-0 text-text-mute">描述</span>
                       <div class="flex items-center gap-1 text-text-title flex-1 min-w-0">
                         <span x-show="!descEditing" x-text="detailDrawerRule && detailDrawerRule.desc && detailDrawerRule.desc !== '-' ? detailDrawerRule.desc : '-'" class="truncate"></span>
@@ -2696,6 +2697,17 @@
                           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                         </button>
                       </div>
+                    </div>
+
+                    <!-- 状态（移至第一行右侧） -->
+                    <div class="col-span-3 flex items-center gap-2">
+                      <span class="text-text-mute flex-shrink-0">状态</span>
+                      <button @click.stop="toggleDrawerRuleStatus()"
+                        class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0 focus:outline-none"
+                        :class="detailDrawerRule && detailDrawerRule.status !== '未启用' ? 'bg-brand' : 'bg-slate-200'">
+                        <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                          :class="detailDrawerRule && detailDrawerRule.status !== '未启用' ? 'left-4.5' : 'left-0.5'"></div>
+                      </button>
                     </div>
                     
                     <!-- 源站对象 -->
@@ -2709,16 +2721,17 @@
                       <span class="w-10 flex-shrink-0 text-text-mute">类型</span>
                       <span class="text-text-title truncate" x-text="detailDrawerRule ? (detailDrawerRule.scenario + (detailDrawerRule.subType ? '（' + detailDrawerRule.subType + '）' : '')) : ''"></span>
                     </div>
-                    
-                    <!-- 状态 -->
+
+                    <!-- 源站地址 -->
                     <div class="col-span-3 flex items-center gap-2">
-                      <span class="text-text-mute flex-shrink-0">状态</span>
-                      <button @click.stop="toggleDrawerRuleStatus()"
-                        class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0 focus:outline-none"
-                        :class="detailDrawerRule && detailDrawerRule.status !== '未启用' ? 'bg-brand' : 'bg-slate-200'">
-                        <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
-                          :class="detailDrawerRule && detailDrawerRule.status !== '未启用' ? 'left-4.5' : 'left-0.5'"></div>
-                      </button>
+                      <span class="text-text-mute flex-shrink-0">源站地址</span>
+                      <div class="flex items-center gap-1 text-text-title flex-1 min-w-0">
+                        <span x-show="!originAddrEditing" x-text="detailDrawerRule ? (detailDrawerRule.originAddr || '-') : '-'" class="truncate font-outfit"></span>
+                        <input x-show="originAddrEditing" x-model="detailDrawerRule.originAddr" @blur="originAddrEditing = false" @keydown.enter="originAddrEditing = false" placeholder="请输入地址" class="w-full h-6 border border-border rounded px-1.5 text-xs outline-none focus:border-brand font-outfit" x-cloak>
+                        <button @click="originAddrEditing = !originAddrEditing" class="focus:outline-none flex-shrink-0 text-text-mute hover:text-brand" title="修改源站地址">
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

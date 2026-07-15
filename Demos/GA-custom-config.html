@@ -2187,12 +2187,15 @@
                                 <input
                                   type="text"
                                   x-model="row.originAddress"
-                                  placeholder="请输入源站 IP 地址"
+                                  placeholder="请输入地址"
                                   class="w-full h-8 border border-slate-200 rounded px-3 text-xs text-slate-700 placeholder-slate-300 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20">
-                                <!-- 固定提示文字 -->
-                                <p class="mt-1.5 text-[10px] text-slate-400 leading-relaxed">
-                                  当源站对象为域名时，为避免DNS或其他不可知原因导致源站解析失败时可正常访问业务
-                                </p>
+                                <!-- 固定提示文字（info 提示条） -->
+                                <div class="mt-2 flex items-start gap-1.5 bg-blue-50 border border-blue-100 rounded px-2.5 py-2">
+                                  <svg class="w-3 h-3 flex-shrink-0 mt-0.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/></svg>
+                                  <p class="text-[10px] text-blue-500 leading-relaxed">
+                                    如果源站对象当前只是一个对外的业务域名，建议单独配置一个源站地址（真实服务器地址）用于全球加速回源，避免DNS或其他不可知原因导致源站解析失败情况
+                                  </p>
+                                </div>
                               </div>
                             </div>
 
