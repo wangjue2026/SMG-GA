@@ -1232,8 +1232,9 @@
             
               <!-- 1. 已开通的加速资源面板 -->
               <div>
-                <div class="flex items-center gap-2 mb-4">
+                <div class="flex items-center justify-between mb-4">
                   <span class="text-sm font-semibold text-text-title">已开通的加速资源</span>
+                  <a href="#" class="text-xs text-brand hover:underline">查看授权与用量</a>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -1297,7 +1298,8 @@
 
               <!-- 2. 选择加速场景区域 -->
               <div>
-                <div class="text-sm font-semibold text-text-title mb-4">选择加速场景</div>
+                <div class="text-sm font-semibold text-text-title mb-2">您希望改善哪类访问体验？</div>
+                <div class="text-xs text-text-mute mb-4">只需要选择业务场景，系统会在后续步骤推荐接入节点和加速路径。</div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <!-- 场景 1: 零信任访问加速 -->
@@ -1314,7 +1316,7 @@
                         <span class="text-sm font-semibold text-text-title">零信任访问加速</span>
                         <span class="px-1.5 py-0.2 bg-gray-100 text-gray-500 rounded text-[10px]">aTrust</span>
                       </div>
-                      <div class="text-xs text-text-mute line-clamp-2">针对零信任远程接入场景进行流量加速，涵盖隧道建立与 Web 应用访问加速，同时优化登录接入与身份认证链路，提升员工跨地域访问内网资源的体验。</div>
+                      <div class="text-xs text-text-mute line-clamp-2">让跨地域员工更快访问隧道应用、Web 应用，以及客户端接入和认证服务。</div>
                     </div>
                     <div class="absolute right-3 top-3" x-show="selectedScenario === 'atrust'">
                       <div class="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center text-[10px]">✓</div>
@@ -1332,10 +1334,10 @@
                     </div>
                     <div class="space-y-1 pr-8">
                       <div class="flex items-center gap-2">
-                        <span class="text-sm font-semibold text-text-title">分支组网加速</span>
+                        <span class="text-sm font-semibold text-text-title">分支互联加速</span>
                         <span class="px-1.5 py-0.2 bg-gray-100 text-gray-500 rounded text-[10px]">AF / SD-WAN</span>
                       </div>
-                      <div class="text-xs text-text-mute line-clamp-2">连接全球跨地域分支机构与企业总部、混合云数据中心，构建高性能、高安全性的骨干网段，实现跨境数据资源的高效安全共享。</div>
+                      <div class="text-xs text-text-mute line-clamp-2">改善分支到总部、数据中心及其他分支的访问质量，系统根据现有拓扑自动规划路径。</div>
                     </div>
                     <div class="absolute right-3 top-3" x-show="selectedScenario === 'sdwan'">
                       <div class="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center text-[10px]">✓</div>
@@ -1355,7 +1357,7 @@
                       <div class="flex items-center gap-2">
                         <span class="text-sm font-semibold text-text-title">SaaS 应用加速</span>
                       </div>
-                      <div class="text-xs text-text-mute line-clamp-2">针对公网应用访问场景进行加速，适用于 GitHub、Zoom、Microsoft 365 等海外应用，有效缓解跨境访问延迟高、音视频丢包卡顿等问题。</div>
+                      <div class="text-xs text-text-mute line-clamp-2">让指定地区的员工更稳定地访问 GitHub、Zoom、Microsoft 365 等 SaaS 应用。</div>
                     </div>
                     <div class="absolute right-3 top-3" x-show="selectedScenario === 'saas'">
                       <div class="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center text-[10px]">✓</div>
@@ -1373,9 +1375,10 @@
                     </div>
                     <div class="space-y-1 pr-8">
                       <div class="flex items-center gap-2">
-                        <span class="text-sm font-semibold text-text-title">自定义 IP/域名加速</span>
+                        <span class="text-sm font-semibold text-text-title">自定义加速</span>
+                        <span class="px-1.5 py-0.2 bg-orange-50 text-orange-600 border border-orange-100 rounded text-[10px] font-medium ml-0.5">高级</span>
                       </div>
-                      <div class="text-xs text-text-mute line-clamp-2">通用加速场景，适用于任意 IP 地址段或域名的自定义加速配置，灵活满足特定业务系统或服务的跨地域访问加速需求。</div>
+                      <div class="text-xs text-text-mute line-clamp-2">适用于无法直接通过内置模板加速、由客户独立管理安全接入和网络加速的场景，支持按 IP、域名、协议和端口配置</div>
                     </div>
                     <div class="absolute right-3 top-3" x-show="selectedScenario === 'custom'">
                       <div class="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center text-[10px]">✓</div>
@@ -1430,7 +1433,7 @@
                   <button class="sd-btn sd-btn-primary flex items-center justify-center shadow-md hover:scale-[1.02] active:scale-[0.98] transition-transform text-white"
                           style="width: 240px !important; height: 44px !important; font-size: 14px !important; font-weight: bold !important;"
                           @click="const routes = { 'atrust': 'GA-sdp-config.html', 'sdwan': 'GA-sdwan-config.html', 'saas': 'GA-saas-config.html', 'custom': 'GA-custom-config.html' }; location.href = routes[selectedScenario]">
-                    创建加速
+                    开始配置
                   </button>
                 </div>
 

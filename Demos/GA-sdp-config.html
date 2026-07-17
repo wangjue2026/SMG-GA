@@ -2336,7 +2336,7 @@
           <div :class="step === 3 ? 'w-full' : 'w-[60%]'" class="flex-shrink-0 flex flex-col min-w-0 overflow-hidden transition-all duration-300">
 
             <!-- 步骤条 Stepper -->
-            <div class="px-6 pt-4 pb-4 flex-shrink-0">
+            <div class="px-6 pt-4 pb-6 flex-shrink-0">
               <div class="flex items-center gap-0 text-xs select-none">
                 <!-- Step 1 -->
                 <div class="flex items-center gap-2">
@@ -2344,7 +2344,7 @@
                     :class="step === 1 ? 'bg-brand text-white' : step > 1 ? 'bg-slate-200 text-slate-500' : 'bg-slate-200 text-slate-500'">
                     1
                   </div>
-                  <span :class="step === 1 ? 'text-slate-800 font-semibold' : 'text-slate-400'">选择加速目标</span>
+                  <span :class="step === 1 ? 'text-slate-800 font-semibold' : 'text-slate-400'">选择要加速的业务</span>
                 </div>
                 <span class="mx-3 text-slate-300">/</span>
                 <!-- Step 2 -->
@@ -2353,7 +2353,7 @@
                     :class="step === 2 ? 'bg-brand text-white' : step > 2 ? 'bg-slate-200 text-slate-500' : 'bg-slate-200 text-slate-400'">
                     2
                   </div>
-                  <span :class="step === 2 ? 'text-slate-800 font-semibold' : 'text-slate-400'">确定加速范围</span>
+                  <span :class="step === 2 ? 'text-slate-800 font-semibold' : 'text-slate-400'">选择用户访问区域</span>
                 </div>
                 <span class="mx-3 text-slate-300">/</span>
                 <!-- Step 3 -->
@@ -2362,13 +2362,13 @@
                     :class="step === 3 ? 'bg-brand text-white' : 'bg-slate-200 text-slate-400'">
                     3
                   </div>
-                  <span :class="step === 3 ? 'text-slate-800 font-semibold' : 'text-slate-400'">发布</span>
+                  <span :class="step === 3 ? 'text-slate-800 font-semibold' : 'text-slate-400'">确认并创建</span>
                 </div>
               </div>
             </div>
 
             <!-- 内容滚动区 -->
-            <div class="flex-1 overflow-y-auto px-6 pb-4 space-y-5" style="scrollbar-width:thin">
+            <div class="flex-1 overflow-y-auto px-6 pb-4" style="scrollbar-width:thin">
 
               <!-- ============================================================
                 STEP 1：选择加速目标
@@ -2378,8 +2378,8 @@
                 <!-- 基础信息 -->
                 <div>
                   <div class="flex items-center gap-1.5 mb-3">
-                    <div class="w-0.5 h-3.5 bg-brand rounded-full"></div>
-                    <span class="text-sm font-semibold text-slate-800">基础信息</span>
+                    <div class="w-0.5 h-3 bg-brand rounded-full"></div>
+                    <span class="text-xs font-bold text-slate-800">基础信息</span>
                   </div>
                   <div class="flex items-start gap-3">
                     <label class="text-xs text-slate-600 w-20 flex-shrink-0 text-right pt-2">
@@ -2387,9 +2387,9 @@
                     </label>
                     <div class="flex gap-2.5 flex-1 flex-wrap">
                       <template x-for="opt in [
-                        { value: 'tunnel', title: '隧道应用访问加速', desc: '基于四层加密隧道专线加速传输' },
-                        { value: 'web',    title: 'WEB应用访问加速',  desc: '面向内网页业务提供七层应用专项加速' },
-                        { value: 'auth',   title: '接入与认证加速',   desc: '优化客户端接入、身份验证的加速体验' }
+                        { value: 'tunnel', title: '隧道应用加速', desc: '加速指定业务区域发布的全部隧道应用' },
+                        { value: 'web',    title: 'Web 应用加速',  desc: '批量选择需要改善访问体验的 Web 应用' },
+                        { value: 'auth',   title: '客户端接入与认证加速',   desc: '加速客户端接入、控制中心和认证服务' }
                       ]" :key="opt.value">
                         <label :for="'subtype-' + opt.value"
                           class="w-[180px] flex-shrink-0 border rounded p-2.5 cursor-pointer transition-all duration-150 min-w-0 bg-white"
@@ -2413,14 +2413,14 @@
                 <!-- 选择加速目标 Section -->
                 <div>
                   <div class="flex items-center gap-1.5 mb-2">
-                    <div class="w-0.5 h-3.5 bg-brand rounded-full"></div>
-                    <span class="text-sm font-semibold text-slate-800" x-text="subtype === 'tunnel' ? '选择需要加速的业务' : '选择加速目标'"></span>
+                    <div class="w-0.5 h-3 bg-brand rounded-full"></div>
+                    <span class="text-xs font-bold text-slate-800" x-text="subtype === 'tunnel' ? '选择需要加速的业务' : '选择要加速的业务'"></span>
                   </div>
                   <!-- 说明文字（按子场景切换） -->
                   <p class="text-xs text-slate-500 mb-3 leading-relaxed">
-                    <span x-show="subtype === 'tunnel'">代理网关代理着隧道应用的访问，加速代理网关可实现区域内全部隧道应用访问加速。请选择代理网关区域作为源站对象：</span>
-                    <span x-show="subtype === 'web'" x-cloak>请直接选择现有的零信任WEB类型应用作为源站对象：</span>
-                    <span x-show="subtype === 'auth'" x-cloak>请选择客户端接入的服务器地址作为源站对象进行加速：</span>
+                    <span x-show="subtype === 'tunnel'">请选择代理网关区域，系统会自动关联该区域的代理网关，并加速其发布的全部隧道应用。</span>
+                    <span x-show="subtype === 'web'" x-cloak>可批量选择 Web 应用；同一业务区域的应用会自动共用回源路径。</span>
+                    <span x-show="subtype === 'auth'" x-cloak>系统已读取客户端接入地址及相关认证服务器，请选择需要加速的对象。</span>
                   </p>
 
                   <!-- 源站行列表 -->
@@ -2472,7 +2472,7 @@
                                   <svg class="w-3.5 h-3.5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
                                   </svg>
-                                  <span>同一规则内请选择源站位置相同的线路</span>
+                                  <span>如需多选，请选择同一源站地理位置的线路</span>
                                 </div>
                                 <!-- 树形结构内容 -->
                                 <div class="p-2 space-y-1 select-none">
@@ -2705,7 +2705,7 @@
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                                 <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full left-1/2 -translate-x-1/2 mb-1.5 shadow-lg pointer-events-none w-52 leading-relaxed text-left normal-case font-normal">
-                                  源站区域可以理解为高速公路“下车点”，请选择源站对象所在的地理位置，如果不存在则选择距离源站较近的选项
+                                  指您的业务服务器（源站）实际部署的物理位置。全球骨干网流量将在此处“下车”并访问您的源站。请选择与服务器最邻近的区域以获取最佳时延。
                                 </span>
                               </span>
                             </div>
@@ -2842,11 +2842,11 @@
                             x-transition:enter="transition ease-out duration-150"
                             x-transition:enter-start="opacity-0 -translate-y-1"
                             x-transition:enter-end="opacity-100 translate-y-0"
-                            class="mt-3 space-y-3">
+                            class="mt-4 space-y-3">
 
                             <!-- 源站地址配置：左标题右输入框，间距 16px -->
                             <div class="flex items-start gap-4 pr-8">
-                              <div class="flex-shrink-0 pt-1.5">
+                              <div class="w-[110px] flex-shrink-0 pt-1.5">
                                 <span class="text-[11px] text-slate-500 leading-tight">源站地址</span>
                               </div>
                               <div class="flex-1 min-w-0">
@@ -2859,9 +2859,45 @@
                                 <div class="mt-2 flex items-start gap-1.5 bg-blue-50 border border-blue-100 rounded px-2.5 py-2">
                                   <svg class="w-3 h-3 flex-shrink-0 mt-0.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/></svg>
                                   <p class="text-[10px] text-blue-500 leading-relaxed">
-                                    如果源站对象当前只是一个对外的业务域名，建议单独配置一个源站地址（真实服务器地址）用于全球加速回源，避免DNS或其他不可知原因导致源站解析失败情况
+                                    若您的源站对象是业务域名，建议单独在此指定真实服务器 IP 作为源站回源地址。这能防止因外部 DNS 解析异常、域名过期或解析网络波动导致加速通道回源失败。
                                   </p>
                                 </div>
+                              </div>
+                            </div>
+
+                            <!-- 源站连通性检查 -->
+                            <div class="flex items-center gap-4 pr-8 text-xs">
+                              <div class="w-[110px] flex-shrink-0">
+                                <span class="text-[11px] text-slate-500 leading-tight">源站连通性检查</span>
+                              </div>
+                              <div class="flex items-center gap-2">
+                                <button @click="getPopConfig(row.id).healthCheck = !getPopConfig(row.id).healthCheck"
+                                  class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
+                                  :class="getPopConfig(row.id).healthCheck ? 'bg-brand' : 'bg-slate-200'">
+                                  <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                                    :class="getPopConfig(row.id).healthCheck ? 'left-4.5' : 'left-0.5'"></div>
+                                </button>
+                                <span x-show="getPopConfig(row.id).healthCheck"
+                                      @click="openHealthModal(row.id)"
+                                      class="text-brand hover:underline cursor-pointer ml-1 text-xs select-none font-normal">
+                                  配置
+                                </span>
+                              </div>
+                            </div>
+
+                            <!-- 客户端源IP透传 -->
+                            <div class="flex items-center gap-4 pr-8 text-xs">
+                              <div class="w-[110px] flex-shrink-0">
+                                <span class="text-[11px] text-slate-500 leading-tight">客户端源IP透传</span>
+                              </div>
+                              <div class="flex items-center gap-3">
+                                <button @click="getPopConfig(row.id).sourceIpPassthrough = !getPopConfig(row.id).sourceIpPassthrough"
+                                  class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
+                                  :class="getPopConfig(row.id).sourceIpPassthrough ? 'bg-brand' : 'bg-slate-200'">
+                                  <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                                    :class="getPopConfig(row.id).sourceIpPassthrough ? 'left-4.5' : 'left-0.5'"></div>
+                                </button>
+                                <span class="text-slate-400 text-[10px]">基于PP协议透传终端真实 IP，支撑安全策略与访问审计溯源</span>
                               </div>
                             </div>
 
@@ -2885,8 +2921,8 @@
               ============================================================ -->
               <div x-show="step === 2" x-cloak class="space-y-3">
                 <div class="flex items-center gap-1.5">
-                  <div class="w-0.5 h-3.5 bg-brand rounded-full"></div>
-                  <span class="text-sm font-semibold text-slate-800">确定加速范围</span>
+                  <div class="w-0.5 h-3 bg-brand rounded-full"></div>
+                  <span class="text-xs font-bold text-slate-800">确定加速范围及带宽<span class="text-slate-400 font-normal text-xs ml-1">（哪些地区用户需要更快的访问体验）</span></span>
                 </div>
 
                 <!-- 每个源站一张卡片 -->
@@ -2912,13 +2948,13 @@
                     <!-- 卡片体 -->
                     <div class="p-4 space-y-3">
                       <div class="text-xs text-slate-500 flex items-center gap-1">
-                        <span class="text-red-500">*</span><span class="text-black font-medium">1. 选择加速区域</span><span class="text-[#A1A7B3]">（上车点）</span>
+                        <span class="text-red-500">*</span><span class="text-black font-normal">1. 选择用户加速区域</span><span class="text-[#A1A7B3]">（上车点）</span>
                         <span class="relative group cursor-help inline-flex items-center">
                           <svg class="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full left-1/2 -translate-x-1/2 mb-1.5 shadow-lg pointer-events-none w-52 leading-relaxed text-left normal-case font-normal">
-                            选择可覆盖终端请求较近位置的 POP 节点
+                            指您的员工（用户群）所在的地理区域。员工的请求流量将从这里“上车”进入骨干专网。请勾选员工主要分布的城市或邻近区域。
                           </span>
                         </span>
                       </div>
@@ -2953,7 +2989,7 @@
                           class="absolute z-20 left-0 right-0 top-10 bg-white border border-slate-200 rounded shadow-lg text-xs flex flex-col max-h-60 overflow-hidden w-full">
                           <!-- 搜索输入框 -->
                           <div class="p-2 border-b border-slate-100 flex-shrink-0 relative">
-                            <input type="text" x-model="searchQueries['pop-'+row.id]" placeholder="搜索加速区域..."
+                            <input type="text" x-model="searchQueries['pop-'+row.id]" placeholder="搜索用户所在的城市，不存在则选择地理位置就近的选项"
                               class="w-full h-7 border border-slate-200 rounded pl-7 pr-2 text-xs focus:outline-none focus:border-brand text-slate-700">
                             <svg class="w-3.5 h-3.5 text-slate-400 absolute left-4.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -3023,7 +3059,7 @@
                                 <div class="px-4 py-6 text-center text-slate-400">
                                   <div class="mb-2 text-slate-500 font-medium">选项不存在</div>
                                   <div class="text-[11px] text-slate-400">
-                                    为您推荐较近 of 选项
+                                    为您推荐就近的加速节点
                                     <button @click.stop="if(!getPopConfig(row.id).selectedPops.includes(getRecommendedPop(searchQueries['pop-'+row.id]).key)) { togglePop(row.id, getRecommendedPop(searchQueries['pop-'+row.id]).key); } searchQueries['pop-'+row.id] = '';"
                                       class="text-brand font-semibold hover:underline border-b border-brand border-dashed mx-1 px-0.5"
                                       x-text="getRecommendedPop(searchQueries['pop-'+row.id]).name">
@@ -3039,7 +3075,7 @@
                       <!-- 2. 带宽分配 -->
                       <div class="mt-4 space-y-2">
                         <div class="text-xs text-slate-500 flex items-center gap-1">
-                          <span class="text-black font-medium">2. 带宽分配</span>
+                          <span class="text-black font-normal">2. 带宽分配</span>
                           <span class="relative group cursor-help inline-flex items-center">
                             <svg class="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -3171,7 +3207,7 @@
                                   <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                                 <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full left-1/2 -translate-x-1/2 mb-1.5 shadow-lg pointer-events-none w-52 leading-relaxed text-left normal-case font-normal">
-                                  该源站享有专用的公网出口 IP，便于源站端安全策略（如防火墙白名单）单独放行，并隔离共用出口公网 IP 所带来的潜在风控拦截风险。
+                                  为当前业务分配专属的回源出口公网 IP。这有利于源站防火墙实施精确的白名单放行策略，并能有效规避因与其他企业共用出口公网 IP 所导致的潜在安全与风控拦截风险。
                                 </span>
                               </span>
                             </div>
@@ -3193,18 +3229,6 @@
                             <span class="text-slate-400 ml-auto select-none">（全局容量剩余：8/20）</span>
                           </div>
 
-                          <!-- 源IP透传 -->
-                          <div class="flex items-center gap-3">
-                            <span class="w-[110px] text-slate-500 flex-shrink-0">客户端源IP透传</span>
-                            <button @click="getPopConfig(row.id).sourceIpPassthrough = !getPopConfig(row.id).sourceIpPassthrough"
-                              class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
-                              :class="getPopConfig(row.id).sourceIpPassthrough ? 'bg-brand' : 'bg-slate-200'">
-                              <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
-                                :class="getPopConfig(row.id).sourceIpPassthrough ? 'left-4.5' : 'left-0.5'"></div>
-                            </button>
-                            <span class="text-slate-400">基于PP协议透传终端真实 IP，支撑安全策略与访问审计溯源</span>
-                          </div>
-
                           <!-- 传输优化 -->
                           <div class="flex items-center gap-3">
                             <span class="w-[110px] text-slate-500 flex-shrink-0">传输优化</span>
@@ -3216,22 +3240,6 @@
                             </button>
                             <span class="text-slate-400">跨境弱网链路传输增强，降低延迟与丢包</span>
                           </div>
-
-                          <!-- 健康检查 -->
-                          <div class="flex items-center gap-3 flex-wrap">
-                            <span class="w-[110px] text-slate-500 flex-shrink-0">连通性检查</span>
-                            <button @click="getPopConfig(row.id).healthCheck = !getPopConfig(row.id).healthCheck"
-                              class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
-                              :class="getPopConfig(row.id).healthCheck ? 'bg-brand' : 'bg-slate-200'">
-                              <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
-                                :class="getPopConfig(row.id).healthCheck ? 'left-4.5' : 'left-0.5'"></div>
-                            </button>
-                            <span x-show="getPopConfig(row.id).healthCheck"
-                                  @click="openHealthModal(row.id)"
-                                  class="text-brand hover:underline cursor-pointer ml-1 text-xs select-none font-medium">
-                              配置
-                            </span>
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -3241,7 +3249,7 @@
                 <!-- 无源站提示 -->
                 <div x-show="sourceRows.filter(r => r.target).length === 0" x-cloak
                   class="text-center py-8 text-xs text-slate-400">
-                  请在上一步配置源站对象后再进行加速范围设置
+                  请先在上一步选择要加速的业务
                 </div>
               </div><!-- /step 2 -->
 
@@ -3250,7 +3258,7 @@
               ============================================================ -->
               <div x-show="step === 3" x-cloak class="space-y-3">
                 <div class="flex items-baseline gap-2">
-                  <span class="text-sm font-semibold text-slate-800">加速链路预览</span>
+                  <span class="text-xs font-bold text-slate-800">加速链路预览</span>
                   <span class="text-xs text-[#5E6573]">
                     （本次配置加速路径规则 <strong class="font-bold" x-text="step3Rules().length"></strong> 条）
                   </span>
@@ -3774,7 +3782,7 @@
               <!-- 绿标提示 -->
               <div class="flex items-center gap-3">
                 <div class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm font-bold flex-shrink-0">✓</div>
-                <div class="text-sm font-semibold text-slate-800">配置已保存，请发布CNAME记录使加速生效</div>
+                <div class="text-sm font-semibold text-slate-800">规则已创建，完成 DNS 配置后加速生效</div>
               </div>
               
               <!-- 蓝底原理 Alert 框 -->
@@ -3785,7 +3793,7 @@
                   <svg class="w-3.5 h-3.5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
                   </svg>
-                  <span>为什么配置了源站域名，还需要发布 CNAME?</span>
+                  <span>为什么配置了源站域名，还需要在 DNS 中配置 CNAME 记录？</span>
                 </div>
                 
                 <!-- 拓扑/示意图 -->
@@ -3843,8 +3851,8 @@
                 
                 <!-- 文字释义 -->
                 <div class="text-[11px] text-slate-500 leading-normal space-y-1">
-                  <div>您刚才填写的<span class="text-brand font-medium">源站域名</span>，只是告诉了 SASE 节点 <span class="text-emerald-600 font-semibold bg-emerald-50 px-1 rounded">去哪里获取您的真实数据</span> (图示步骤1)。</div>
-                  <div>但此时用户的访问仍直接绕过防护打在您的源站上。您必须前往 DNS 服务商添加 <strong>CNAME 记录</strong>，这相当于在公网设立一个路牌，将用户流量 <span class="text-orange-500 font-semibold bg-orange-50 px-1 rounded">牵引到 SASE 节点上</span> (图示步骤2)，加速与防护能力才能真正生效。</div>
+                  <div>您刚才配置的<span class="text-brand font-medium">源站域名</span>仅代表 SASE 节点知道<span class="text-emerald-600 font-semibold bg-emerald-50 px-1 rounded">“去哪里获取真实数据”</span>（如图中步骤 1）。</div>
+                  <div>此时用户的访问流量依然直接请求您的真实源站，不受全球加速和安全防护的保护。您必须前往公网 DNS 服务商处，将原域名的解析指向加速域名（如图中步骤 2），引流配置才能最终生效。</div>
                 </div>
               </div>
               
@@ -3899,14 +3907,14 @@
               <div class="space-y-2">
                 <div class="flex items-center gap-2 text-xs font-semibold text-slate-800">
                   <span class="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center text-[10px]">2</span>
-                  <span>将加速域名发布至公网DNS服务器的解析记录中</span>
+                  <span>在您的公网 DNS 解析服务中配置 CNAME 记录</span>
                 </div>
                 
                 <div class="bg-slate-50 border border-slate-100 p-3 rounded-lg text-xs text-slate-600 leading-normal flex items-start gap-2">
                   <span class="text-slate-400 select-none">•</span>
                   <div>
-                    请在您的公网DNS中，将复制的域名添加到对应的CNAME记录中，后续用户将优先解析到加速域名进行访问
-                    <a href="#" class="text-brand hover:underline ml-1 cursor-pointer">如何发布?</a>
+                    请登录您的公网 DNS 服务商管理后台（如阿里云、腾讯云等），为您填写的源站域名修改或新建一条 CNAME 类型的解析记录，记录值填写在第一步中复制的【加速域名】。解析生效后，用户的访问流量将会自动引流至就近的 SASE 节点。
+                    <a href="#" class="text-brand hover:underline ml-1 cursor-pointer">如何配置?</a>
                   </div>
                 </div>
               </div>

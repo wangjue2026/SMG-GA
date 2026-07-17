@@ -97,26 +97,21 @@
         detailDrawerConfigAdvancedOpen: false,
         nameEditing: false,
         descEditing: false,
+        originAddrEditing: false,
         originalRuleName: '',
         originalRuleDesc: '',
+        originalRuleOriginAddr: '',
+        drawerEditing: false,
+        tempDrawerRuleName: '',
+        tempDrawerRuleDesc: '',
+        tempDrawerRuleOriginAddr: '',
         detailDrawerOriginNodes: [],
         detailDrawerAccRanges: [],
         detailDrawerRulesList: [],
-        detailDrawerProbeTime: '',
-        detailDrawerShowProbeChart: false,
-        hoverProbeIndex: -1,
-        probeHistoryData: [],
-        detailDrawerAdvanced: {
-          exclusiveIp: false,
-          sourceIpPassthrough: true,
-          transportOptimize: true,
-          healthCheck: true,
-          healthProtocol: 'TCP'
-        },
         ruleDetailsMap: {
           'POL-001': {
             id: 'POL-001',
-            name: 'POL-001 oa.sangfor.com',
+            name: 'oa.sangfor.com',
             desc: '欧洲访问国内集团办公OA系统加速',
             scenario: '零信任业务加速',
             subType: 'web应用',
@@ -126,13 +121,14 @@
             srcObject: 'oa.sangfor.com（上海办公网关）',
             accDomain: '-',
             exclusiveIp: '-',
+            originAddr: '34.234.22.1',
             originNodes: [
               { id: 1, node: '广州', region: '中国大陆', ip: '119.23.4.15', limit: '100Mbps', editing: false }
             ]
           },
           'POL-002': {
             id: 'POL-002',
-            name: 'POL-002 saauth.sangfor.com.cn',
+            name: 'saauth.sangfor.com.cn',
             desc: '海外研发中心安全认证中心链路优化',
             scenario: '零信任业务加速',
             subType: 'web应用',
@@ -142,13 +138,14 @@
             srcObject: 'saauth.sangfor.com.cn',
             accDomain: 'ztna-acc-sg.company.net',
             exclusiveIp: '-',
+            originAddr: '52.76.18.90',
             originNodes: [
               { id: 1, node: '广州', region: '中国大陆', ip: 'saauth.sangfor.com.cn', limit: '100Mbps', editing: false }
             ]
           },
           'POL-003': {
             id: 'POL-003',
-            name: 'POL-003 10.23.22.3',
+            name: '10.23.22.3',
             desc: '零信任核心接入网关跨境传输加速',
             scenario: '零信任业务加速',
             subType: '接入&认证',
@@ -158,13 +155,14 @@
             srcObject: '10.23.22.3',
             accDomain: '10.23.22.3.cname.sangfor.com',
             exclusiveIp: '-',
+            originAddr: '-',
             originNodes: [
               { id: 1, node: '广州', region: '中国大陆', ip: '10.23.22.3', limit: '100Mbps', editing: false }
             ]
           },
           'POL-004': {
             id: 'POL-004',
-            name: 'POL-004 10.23.12.1',
+            name: '10.23.12.1',
             desc: '自定义大文件传输与SSH控制隧道加速',
             scenario: '自定义IP/域名加速',
             status: '加速中',
@@ -173,13 +171,14 @@
             srcObject: '10.23.12.1:443/441/4433...',
             accDomain: '-',
             exclusiveIp: '10.23.45.23:441',
+            originAddr: '-',
             originNodes: [
               { id: 1, node: '广州', region: '中国大陆', ip: '10.23.12.1', limit: '100Mbps', editing: false }
             ]
           },
           'POL-005': {
             id: 'POL-005',
-            name: 'POL-005 10.23.1.23',
+            name: '10.23.1.23',
             desc: '分支机构本地ERP及业务数据汇聚通道',
             scenario: '分支组网加速',
             status: '加速中',
@@ -188,13 +187,14 @@
             srcObject: '主节点：10.23.1.23',
             accDomain: '-',
             exclusiveIp: '-',
+            originAddr: '-',
             originNodes: [
               { id: 1, node: '巴黎', region: '欧美地区', ip: '10.23.1.23', limit: '100Mbps', editing: false }
             ]
           },
           'POL-006': {
             id: 'POL-006',
-            name: 'POL-006 10.50.2.11',
+            name: '10.50.2.11',
             desc: '海外办公访问公共服务加速优化',
             scenario: 'SaaS应用加速',
             status: '未启用',
@@ -203,6 +203,7 @@
             srcObject: '10.50.2.11',
             accDomain: 'https://github.com',
             exclusiveIp: '-',
+            originAddr: '-',
             originNodes: [
               { id: 1, node: '北京', region: '中国大陆', ip: '10.50.2.11', limit: '100Mbps', editing: false }
             ]
@@ -548,8 +549,10 @@
 
           this.nameEditing = false;
           this.descEditing = false;
+          this.drawerEditing = false;
           this.originalRuleName = ruleDetail.name;
           this.originalRuleDesc = ruleDetail.desc || '-';
+          this.originalRuleOriginAddr = ruleDetail.originAddr || '-';
 
           // Initialize last probe time to 30 seconds ago
           const now = new Date(Date.now() - 30 * 1000);
@@ -605,8 +608,20 @@
           if (this.detailDrawerRule) {
             this.detailDrawerRule.name = this.originalRuleName;
             this.detailDrawerRule.desc = this.originalRuleDesc;
+            this.detailDrawerRule.originAddr = this.originalRuleOriginAddr;
           }
+          this.drawerEditing = false;
           this.detailDrawerOpen = false;
+        },
+        toggleDrawerRuleStatus() {
+          if (!this.detailDrawerRule) return;
+          if (this.detailDrawerRule.status === '未启用') {
+            this.detailDrawerRule.status = '加速中';
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: '启用成功', type: 'success' } }));
+          } else {
+            this.detailDrawerRule.status = '未启用';
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: '禁用成功', type: 'success' } }));
+          }
         },
         copyAccRanges() {
           let text = '';
@@ -659,10 +674,12 @@
           const newName = this.detailDrawerRule.name;
           const newDesc = this.detailDrawerRule.desc;
           const newStatus = this.detailDrawerRule.status;
+          const newOriginAddr = this.detailDrawerRule.originAddr;
           
           if (this.ruleDetailsMap[ruleId]) {
             this.ruleDetailsMap[ruleId].name = newName;
             this.ruleDetailsMap[ruleId].desc = newDesc;
+            this.ruleDetailsMap[ruleId].originAddr = newOriginAddr;
             this.ruleDetailsMap[ruleId].status = newStatus;
             this.ruleDetailsMap[ruleId].originNodes = JSON.parse(JSON.stringify(this.detailDrawerOriginNodes));
             if (this.detailDrawerAdvanced.exclusiveIp) {
@@ -2935,59 +2952,113 @@
           <!-- 抽屉体内容区域 (独立滚动) -->
           <div class="flex-1 overflow-y-auto px-8 py-0 custom-scrollbar bg-white">
             
-            <!-- 基本信息模块 -->
-            <div class="space-y-3 pt-2 mb-4">
-              <span class="text-xs font-semibold text-text-title relative pl-3 block select-none">
-                <span class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-3 bg-brand rounded-sm"></span>
-                基本信息
-              </span>
-              
-              <div class="grid grid-cols-12 gap-y-3.5 gap-x-6 text-xs text-text-mute">
-                <!-- 规则名称 -->
-                <div class="col-span-4 flex items-center gap-2">
-                  <span class="w-14 flex-shrink-0 text-text-mute">规则名称</span>
-                  <div class="flex items-center gap-1 text-text-title flex-1 min-w-0">
-                    <span x-show="!nameEditing" x-text="detailDrawerRule ? detailDrawerRule.name : ''" class="truncate font-outfit"></span>
-                    <input x-show="nameEditing" x-model="detailDrawerRule.name" @blur="nameEditing = false" @keydown.enter="nameEditing = false" class="w-full h-6 border border-border rounded px-1.5 text-xs outline-none focus:border-brand font-outfit" x-cloak>
-                    <button @click="nameEditing = !nameEditing" class="focus:outline-none flex-shrink-0 text-text-mute hover:text-brand" title="修改名称">
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+            <!-- 新的顶部基本信息卡片 -->
+            <div class="bg-slate-50/60 border border-slate-100/80 rounded-lg p-5 mb-5 space-y-4">
+              <!-- 第一行：状态点 + 规则名称/输入框 + 编辑/保存取消按钮 + 右侧加速状态开关 -->
+              <div class="flex items-center justify-between gap-4">
+                <!-- 左侧：状态点 + 名称 -->
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                  <!-- 状态点 (加速中-绿，未启用-灰，运行异常-红) -->
+                  <div class="flex-shrink-0 w-2.5 h-2.5 rounded-full relative"
+                       :class="detailDrawerRule ? (detailDrawerRule.status === '加速中' ? 'bg-emerald-500' : (detailDrawerRule.status === '运行异常' ? 'bg-rose-500' : 'bg-slate-400')) : 'bg-slate-400'">
+                    <!-- 加速中时有呼吸闪烁动画 -->
+                    <span x-show="detailDrawerRule && detailDrawerRule.status === '加速中'"
+                          class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  </div>
+
+                  <!-- 规则名称显示/编辑 -->
+                  <div class="flex-1 min-w-0 flex items-center gap-2">
+                    <!-- 非编辑状态 -->
+                    <div x-show="!drawerEditing" class="flex items-center gap-2 min-w-0">
+                      <span class="text-base font-bold text-slate-800 truncate font-outfit"
+                            x-text="detailDrawerRule ? detailDrawerRule.name : ''"></span>
+                      <button @click="
+                        tempDrawerRuleName = detailDrawerRule.name;
+                        tempDrawerRuleDesc = detailDrawerRule.desc || '-';
+                        tempDrawerRuleOriginAddr = detailDrawerRule.originAddr || '-';
+                        drawerEditing = true;
+                      " class="focus:outline-none text-slate-400 hover:text-brand transition-colors p-1" title="编辑基本信息">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    <!-- 编辑状态 -->
+                    <div x-show="drawerEditing" class="flex items-center gap-2 flex-1 max-w-md" x-cloak>
+                      <input type="text" x-model="detailDrawerRule.name"
+                             class="w-full h-8 border border-slate-300 rounded px-2.5 text-sm font-outfit text-slate-800 focus:border-brand focus:ring-1 focus:ring-brand/20 outline-none transition-all">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 右侧：加速状态与开关，如果是编辑状态则显示保存/取消按钮 -->
+                <div class="flex items-center gap-4 flex-shrink-0">
+                  <!-- 编辑状态下的按钮组 -->
+                  <div x-show="drawerEditing" class="flex items-center gap-2" x-cloak>
+                    <button @click="
+                      originalRuleName = detailDrawerRule.name;
+                      originalRuleDesc = detailDrawerRule.desc;
+                      originalRuleOriginAddr = detailDrawerRule.originAddr;
+                      drawerEditing = false;
+                      window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: '保存成功', type: 'success' } }));
+                    " class="px-3 py-1 bg-brand text-white text-xs font-medium rounded hover:bg-brand/90 transition-colors shadow-sm focus:outline-none">
+                      保存
+                    </button>
+                    <button @click="
+                      detailDrawerRule.name = tempDrawerRuleName;
+                      detailDrawerRule.desc = tempDrawerRuleDesc;
+                      detailDrawerRule.originAddr = tempDrawerRuleOriginAddr;
+                      drawerEditing = false;
+                    " class="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium rounded transition-colors focus:outline-none">
+                      取消
+                    </button>
+                  </div>
+
+                  <!-- 加速状态开关 -->
+                  <div x-show="!drawerEditing" class="flex items-center gap-2">
+                    <span class="text-xs text-slate-500 font-medium select-none">加速状态</span>
+                    <button @click.stop="toggleDrawerRuleStatus()"
+                            class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0 focus:outline-none"
+                            :class="detailDrawerRule && detailDrawerRule.status !== '未启用' ? 'bg-brand' : 'bg-slate-200'">
+                      <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                           :class="detailDrawerRule && detailDrawerRule.status !== '未启用' ? 'left-4.5' : 'left-0.5'"></div>
                     </button>
                   </div>
                 </div>
-                
-                <!-- 描述 -->
-                <div class="col-span-8 flex items-center gap-2">
-                  <span class="w-10 flex-shrink-0 text-text-mute">描述</span>
-                  <div class="flex items-center gap-1 text-text-title flex-1 min-w-0">
-                    <span x-show="!descEditing" x-text="detailDrawerRule && detailDrawerRule.desc && detailDrawerRule.desc !== '-' ? detailDrawerRule.desc : '-'" class="truncate"></span>
-                    <input x-show="descEditing" x-model="detailDrawerRule.desc" @blur="descEditing = false" @keydown.enter="descEditing = false" class="w-full h-6 border border-border rounded px-1.5 text-xs outline-none focus:border-brand" x-cloak>
-                    <button @click="descEditing = !descEditing" class="focus:outline-none flex-shrink-0 text-text-mute hover:text-brand" title="修改描述">
-                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                    </button>
-                  </div>
-                </div>
-                
+              </div>
+
+              <!-- 第二部分：辅助信息与描述/源站地址的修改 -->
+              <div class="grid grid-cols-2 gap-y-3.5 gap-x-8 pt-3 border-t border-slate-100/60 text-xs text-slate-500">
                 <!-- 源站对象 -->
-                <div class="col-span-4 flex items-center gap-2">
-                  <span class="w-14 flex-shrink-0 text-text-mute">源站对象</span>
-                  <span class="text-text-title truncate font-outfit" x-text="detailDrawerRule ? (detailDrawerRule.srcObject || '-') : ''"></span>
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="text-slate-400 w-16 flex-shrink-0">源站对象</span>
+                  <span class="text-slate-700 truncate font-outfit" x-text="detailDrawerRule ? (detailDrawerRule.srcObject || '-') : ''"></span>
                 </div>
-                
-                <!-- 类型 -->
-                <div class="col-span-5 flex items-center gap-2">
-                  <span class="w-10 flex-shrink-0 text-text-mute">类型</span>
-                  <span class="text-text-title truncate" x-text="detailDrawerRule ? (detailDrawerRule.scenario + (detailDrawerRule.subType ? '（' + detailDrawerRule.subType + '）' : '')) : ''"></span>
+
+                <!-- 加速类型 -->
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="text-slate-400 w-16 flex-shrink-0">加速类型</span>
+                  <span class="text-slate-700 truncate" x-text="detailDrawerRule ? (detailDrawerRule.scenario + (detailDrawerRule.subType ? '（' + detailDrawerRule.subType + '）' : '')) : ''"></span>
                 </div>
-                
-                <!-- 状态 -->
-                <div class="col-span-3 flex items-center gap-2">
-                  <span class="text-text-mute flex-shrink-0">状态</span>
-                  <button @click.stop="detailDrawerRule.status = (detailDrawerRule.status === '未启用' ? '加速中' : '未启用')"
-                    class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0 focus:outline-none"
-                    :class="detailDrawerRule && detailDrawerRule.status !== '未启用' ? 'bg-brand' : 'bg-slate-200'">
-                    <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
-                      :class="detailDrawerRule && detailDrawerRule.status !== '未启用' ? 'left-4.5' : 'left-0.5'"></div>
-                  </button>
+
+                <!-- 规则描述 (可编辑) -->
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="text-slate-400 w-16 flex-shrink-0">规则描述</span>
+                  <div class="flex-1 min-w-0 text-slate-700">
+                    <span x-show="!drawerEditing" x-text="detailDrawerRule && detailDrawerRule.desc && detailDrawerRule.desc !== '-' ? detailDrawerRule.desc : '-'" class="truncate block"></span>
+                    <input x-show="drawerEditing" type="text" x-model="detailDrawerRule.desc"
+                           class="w-full h-7 border border-slate-200 rounded px-2 text-xs text-slate-800 focus:border-brand focus:ring-1 focus:ring-brand/20 outline-none transition-all" x-cloak>
+                  </div>
+                </div>
+
+                <!-- 源站地址 (可编辑) -->
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="text-slate-400 w-16 flex-shrink-0">源站地址</span>
+                  <div class="flex-1 min-w-0 text-slate-700">
+                    <span x-show="!drawerEditing" x-text="detailDrawerRule ? (detailDrawerRule.originAddr || '-') : '-'" class="font-outfit truncate block"></span>
+                    <input x-show="drawerEditing" type="text" x-model="detailDrawerRule.originAddr" placeholder="请输入源站地址"
+                           class="w-full h-7 border border-slate-200 rounded px-2 text-xs font-outfit text-slate-800 focus:border-brand focus:ring-1 focus:ring-brand/20 outline-none transition-all" x-cloak>
+                  </div>
                 </div>
               </div>
             </div>
