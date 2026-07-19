@@ -2431,7 +2431,7 @@
                           <!-- 源站对象 -->
                           <div class="flex-1 min-w-0">
                             <div class="text-[12px] text-slate-500 mb-1">
-                              <span class="text-red-500">*</span>源站对象
+                              <span class="text-red-500">*</span>需要加速的业务对象<span class="text-[#A1A7B3]">（源站对象）</span>
                             </div>
                             <!-- 隧道场景：代理网关树形下拉（多选Tag呈现） -->
                             <div x-show="subtype === 'tunnel'" class="relative" x-cloak
@@ -2441,7 +2441,7 @@
                                 :class="row.target ? 'text-slate-700' : 'text-[#A1A7B3]'">
                                 <div class="flex flex-wrap items-center gap-1.5 pr-6 w-full">
                                   <template x-if="!row.targets || row.targets.length === 0">
-                                    <span class="text-[#A1A7B3]">请选择代理网关区域访问地址</span>
+                                    <span class="text-[#A1A7B3]">请选择隧道应用所在的代理网关区域地址</span>
                                   </template>
                                   <template x-for="(t, tIdx) in (row.targets || [])" :key="t.ip">
                                     <template x-if="tIdx < 2">
@@ -2698,8 +2698,8 @@
 
                           <!-- 源站地理位置 -->
                           <div class="flex-1 min-w-0">
-                            <div class="text-[12px] text-slate-500 mb-1 flex items-center">
-                              <span class="text-red-500">*</span>源站区域<span class="text-[#A1A7B3]">（下车点）</span>
+                             <div class="text-[12px] text-slate-500 mb-1 flex items-center">
+                              <span class="text-red-500">*</span>业务所在地理区域<span class="text-[#A1A7B3]">（源站区域/下车点）</span>
                               <span class="relative group cursor-help ml-1 inline-flex items-center">
                                 <svg class="w-3.5 h-3.5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -2717,7 +2717,7 @@
                                   <template x-if="row.location">
                                     <span class="text-brand font-medium">🌐</span>
                                   </template>
-                                  <span x-text="row.location || '请选择距离源站最近的下车点'"></span>
+                                  <span x-text="row.location || '请选择'"></span>
                                 </span>
                                 <svg :class="row.location ? 'group-hover:hidden' : ''" class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
@@ -2731,7 +2731,7 @@
                                 class="absolute z-30 top-9 left-0 w-80 bg-white border border-slate-200 rounded shadow-lg text-xs flex flex-col">
                                 <!-- 搜索输入框 -->
                                 <div class="p-2 border-b border-slate-100 flex-shrink-0 relative">
-                                  <input type="text" x-model="searchQueries['l-'+row.id]" placeholder="搜索源站区域..."
+                                  <input type="text" x-model="searchQueries['l-'+row.id]" placeholder="搜索地理位置，不存在则选择距离最近位置的选项"
                                     class="w-full h-7 border border-slate-200 rounded pl-7 pr-2 text-xs focus:outline-none focus:border-brand text-slate-700">
                                   <svg class="w-3.5 h-3.5 text-slate-400 absolute left-4.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -2818,6 +2818,30 @@
                           <div x-show="sourceRows.length <= 1" class="w-5 flex-shrink-0"></div>
                         </div>
 
+                        <!-- 动态展示源站地址输入框 -->
+                        <div x-show="subtype === 'web' || hasDomainSelected(row)" x-cloak
+                          x-transition:enter="transition ease-out duration-150"
+                          x-transition:enter-start="opacity-0 -translate-y-1"
+                          x-transition:enter-end="opacity-100 translate-y-0"
+                          class="mt-3 pt-3 border-t border-slate-200/60 pr-8">
+                          <div class="text-[12px] text-slate-500 mb-1">源站地址</div>
+                          <div class="min-w-0">
+                            <input
+                              type="text"
+                              x-model="row.originAddress"
+                              placeholder="指定真实服务器的公网 IP 作为源站回源地址"
+                              class="w-full h-8 border border-slate-200 rounded px-3 text-xs text-slate-700 placeholder-slate-300 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20">
+                            <!-- 动态引导提示条 -->
+                            <div class="mt-2 flex items-start gap-2 bg-[#F7F7F8] rounded-[2px] px-2 py-2 min-h-[32px]">
+                              <svg class="w-4 h-4 flex-shrink-0 text-[#6F7785] mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/></svg>
+                              <div class="text-xs text-[#6F7785] leading-relaxed font-normal">
+                                <span x-show="subtype === 'web'">当前场景源站全为域名。<strong class="font-bold">建议在此指定真实业务网关的公网 IP 作为源站回源地址</strong>，以规避因 DNS 解析异常、解析网络波动或域名过期引发的回源失败。同一区域内的多个域名共享相同的源站通道，仅需配置一个回源 IP 即可。</span>
+                                <span x-show="subtype !== 'web'">已检测到源站对象中包含域名。<strong class="font-bold">建议在此指定真实服务器的公网 IP 作为源站回源地址</strong>，以规避因 DNS 解析异常、解析网络波动或域名过期引发的回源失败。同一区域内的多个域名共享相同的源站通道，仅需配置一个回源 IP 即可。</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
                         <!-- IP类型警告 -->
                         <div x-show="subtype === 'auth' && row.target && (row.target.includes('10.') || row.target.includes('172.16.'))" x-cloak
                           class="mt-1.5 mr-8 flex items-center gap-1.5 text-[11px] text-orange-500 bg-orange-50 border border-orange-200 rounded px-2.5 py-1.5">
@@ -2844,26 +2868,6 @@
                             x-transition:enter-end="opacity-100 translate-y-0"
                             class="mt-4 space-y-3">
 
-                            <!-- 源站地址配置：左标题右输入框，间距 16px -->
-                            <div class="flex items-start gap-4 pr-8">
-                              <div class="w-[110px] flex-shrink-0 pt-1.5">
-                                <span class="text-[11px] text-slate-500 leading-tight">源站地址</span>
-                              </div>
-                              <div class="flex-1 min-w-0">
-                                <input
-                                  type="text"
-                                  x-model="row.originAddress"
-                                  placeholder="请输入地址"
-                                  class="w-full h-8 border border-slate-200 rounded px-3 text-xs text-slate-700 placeholder-slate-300 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20">
-                                <!-- 固定提示文字（info 提示条） -->
-                                <div class="mt-2 flex items-start gap-1.5 bg-blue-50 border border-blue-100 rounded px-2.5 py-2">
-                                  <svg class="w-3 h-3 flex-shrink-0 mt-0.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/></svg>
-                                  <p class="text-[10px] text-blue-500 leading-relaxed">
-                                    若您的源站对象是业务域名，建议单独在此指定真实服务器 IP 作为源站回源地址。这能防止因外部 DNS 解析异常、域名过期或解析网络波动导致加速通道回源失败。
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
 
                             <!-- 源站连通性检查 -->
                             <div class="flex items-center gap-4 pr-8 text-xs">
@@ -2897,7 +2901,7 @@
                                   <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
                                     :class="getPopConfig(row.id).sourceIpPassthrough ? 'left-4.5' : 'left-0.5'"></div>
                                 </button>
-                                <span class="text-slate-400 text-[10px]">基于PP协议透传终端真实 IP，支撑安全策略与访问审计溯源</span>
+                                <span class="text-slate-400 text-[12px]">基于 Proxy Protocol 协议透传终端真实 IP，支撑安全策略与访问审计溯源</span>
                               </div>
                             </div>
 
@@ -2922,7 +2926,7 @@
               <div x-show="step === 2" x-cloak class="space-y-3">
                 <div class="flex items-center gap-1.5">
                   <div class="w-0.5 h-3 bg-brand rounded-full"></div>
-                  <span class="text-xs font-bold text-slate-800">确定加速范围及带宽<span class="text-slate-400 font-normal text-xs ml-1">（哪些地区用户需要更快的访问体验）</span></span>
+                  <span class="text-xs font-bold text-slate-800">确定加速范围及带宽</span>
                 </div>
 
                 <!-- 每个源站一张卡片 -->
@@ -2948,7 +2952,7 @@
                     <!-- 卡片体 -->
                     <div class="p-4 space-y-3">
                       <div class="text-xs text-slate-500 flex items-center gap-1">
-                        <span class="text-red-500">*</span><span class="text-black font-normal">1. 选择用户加速区域</span><span class="text-[#A1A7B3]">（上车点）</span>
+                        <span class="text-red-500">*</span><span class="text-black font-normal">1. 哪些地区用户需要更快的访问体验</span><span class="text-[#A1A7B3]">（加速区域/上车点）</span>
                         <span class="relative group cursor-help inline-flex items-center">
                           <svg class="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
