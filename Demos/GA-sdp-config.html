@@ -2824,7 +2824,7 @@
                           x-transition:enter-start="opacity-0 -translate-y-1"
                           x-transition:enter-end="opacity-100 translate-y-0"
                           class="mt-3 pt-3 border-t border-slate-200/60 pr-8">
-                          <div class="text-[12px] text-slate-500 mb-1">源站地址</div>
+                          <div class="text-[12px] text-slate-500 mb-1">真实服务器 IP（源站地址）</div>
                           <div class="min-w-0">
                             <input
                               type="text"
@@ -2832,12 +2832,17 @@
                               placeholder="指定真实服务器的公网 IP 作为源站回源地址"
                               class="w-full h-8 border border-slate-200 rounded px-3 text-xs text-slate-700 placeholder-slate-300 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20">
                             <!-- 动态引导提示条 -->
-                            <div class="mt-2 flex items-start gap-2 bg-[#F7F7F8] rounded-[2px] px-2 py-2 min-h-[32px]">
-                              <svg class="w-4 h-4 flex-shrink-0 text-[#6F7785] mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/></svg>
-                              <div class="text-xs text-[#6F7785] leading-relaxed font-normal">
-                                <span x-show="subtype === 'web'">当前场景源站全为域名。<strong class="font-bold">建议在此指定真实业务网关的公网 IP 作为源站回源地址</strong>，以规避因 DNS 解析异常、解析网络波动或域名过期引发的回源失败。同一区域内的多个域名共享相同的源站通道，仅需配置一个回源 IP 即可。</span>
-                                <span x-show="subtype !== 'web'">已检测到源站对象中包含域名。<strong class="font-bold">建议在此指定真实服务器的公网 IP 作为源站回源地址</strong>，以规避因 DNS 解析异常、解析网络波动或域名过期引发的回源失败。同一区域内的多个域名共享相同的源站通道，仅需配置一个回源 IP 即可。</span>
+                            <div x-show="!row.hideOriginNotice" class="mt-2 flex items-start justify-between gap-2 bg-[#F7F7F8] rounded-[2px] px-2.5 py-2 min-h-[32px]">
+                              <div class="flex items-start gap-2 min-w-0">
+                                <svg class="w-4 h-4 flex-shrink-0 text-[#6F7785] mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/></svg>
+                                <div class="text-xs text-[#6F7785] leading-relaxed font-normal space-y-0.5">
+                                  <div>1. 当源站对象为域名时，建议补充真实服务器的公网 IP 作为源站回源地址，避免 DNS 解析异常、域名过期等情况导致回源失败。</div>
+                                  <div>2. 同一区域内的多个域名对象共享相同的源站通道，仅需配置一个回源 IP 即可。</div>
+                                </div>
                               </div>
+                              <button @click="row.hideOriginNotice = true" class="text-slate-400 hover:text-slate-600 p-0.5 flex-shrink-0 transition-colors" title="关闭提示">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                              </button>
                             </div>
                           </div>
                         </div>
