@@ -110,48 +110,7 @@
       box-shadow: none !important;
     }
 
-    /* 弹窗飞入右上角动效 */
-    @keyframes flyToTodoCorner {
-      0% {
-        transform: translate(-50%, -50%) scale(1);
-        top: 50%;
-        left: 50%;
-        opacity: 1;
-      }
-      100% {
-        transform: translate(calc(50vw - 40px), calc(-50vh + 24px)) scale(0.05);
-        opacity: 0.1;
-      }
-    }
-    .modal-flyaway {
-      position: fixed !important;
-      animation: flyToTodoCorner 1200ms cubic-bezier(0.25, 1, 0.5, 1) forwards !important;
-      pointer-events: none !important;
-      transform-origin: top right !important;
-      z-index: 1000 !important;
-    }
-    /* +1 数字飘升动效（从入口下方漂浮到上方，停留且不超出头部被遮挡） */
-    @keyframes floatUpFade {
-      0% {
-        transform: translateY(0);
-        opacity: 0;
-      }
-      15% {
-        transform: translateY(-8px);
-        opacity: 1;
-      }
-      80% {
-        transform: translateY(-16px);
-        opacity: 1;
-      }
-      100% {
-        transform: translateY(-26px);
-        opacity: 0;
-      }
-    }
-    .animate-float-up-fade {
-      animation: floatUpFade 2500ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
-    }
+
     
     /* ==== 解决嵌套表格高度被父表格样式继承导致行高过高问题 ==== */
     table.sd-table td .popover-table th,
@@ -180,13 +139,9 @@
         pageMode: 'deployed',
         
         // Todo List States
-        todoHover: false,
         todoItems: [],
-        showTodoCnameModal: localStorage.getItem('ga_show_flyaway') === 'true',
+        showTodoCnameModal: false,
         selectedTodoItem: null,
-        highlightTodo: false,
-        isFlying: false,
-        showPlusOne: false,
         
         isTodo(ruleId) {
           return this.todoItems.some(item => item.id === ruleId);
@@ -218,6 +173,7 @@
           
           const rule = this.rules.find(r => r.id === id);
           if (rule) {
+            rule.status = '加速中';
             if (rule.accDomain === '-') {
               rule.accDomain = rule.name + '.cname.sangfor.com';
             }
@@ -232,6 +188,7 @@
           
           const rule = this.rules.find(r => r.id === id);
           if (rule) {
+            rule.status = '加速中';
             if (rule.accDomain === '-') {
               rule.accDomain = rule.name + '.cname.sangfor.com';
             }
@@ -248,7 +205,7 @@
         searchFields: [
           { key: 'name', label: '规则名称', type: 'input', default: true },
           { key: 'scenario', label: '加速类型', type: 'select', options: ['零信任业务加速', '自定义IP/域名加速', '分支组网加速', 'SaaS应用加速'] },
-          { key: 'status', label: '状态', type: 'select', options: ['加速中', '未启用', '异常'] },
+          { key: 'status', label: '状态', type: 'select', options: ['加速中', '未生效', '未启用', '异常'] },
           { key: 'accDomain', label: '加速域名', type: 'input' },
           { key: 'exclusiveIp', label: '独享IP', type: 'input' }
         ],
@@ -567,7 +524,7 @@
         // Rule list: 12 mock items
         rules: [
           { id: 'POL-001', name: 'oa.sangfor.com', desc: '欧洲访问国内集团办公OA系统加速', scenario: '零信任业务加速', subType: 'web应用', status: '加速中', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: 'oa.sangfor.com（上海办公网关）', originAddr: '34.234.22.1', accDomain: '-', exclusiveIp: '-' },
-          { id: 'POL-002', name: 'saauth.sangfor.com.cn', desc: '海外研发中心安全认证中心链路优化', scenario: '零信任业务加速', subType: 'web应用', status: '加速中', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: 'saauth.sangfor.com.cn', originAddr: '52.76.18.90', accDomain: 'https://saauth.sangfor.com.cn/sa/auth...', exclusiveIp: '-' },
+          { id: 'POL-002', name: 'saauth.sangfor.com.cn', desc: '海外研发中心安全认证中心链路优化', scenario: '零信任业务加速', subType: 'web应用', status: '未生效', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: 'saauth.sangfor.com.cn', originAddr: '52.76.18.90', accDomain: 'https://saauth.sangfor.com.cn/sa/auth...', exclusiveIp: '-' },
           { id: 'POL-003', name: '10.23.22.3', desc: '零信任核心接入网关跨境传输加速', scenario: '零信任业务加速', subType: '接入&认证', status: '加速中', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: '10.23.22.3', originAddr: '-', accDomain: 'https://saauth.sangfor.com.cn/sa/auth...', exclusiveIp: '-' },
           { id: 'POL-004', name: '10.23.12.1', desc: '自定义大文件传输与SSH控制隧道加速', scenario: '自定义IP/域名加速', status: '加速中', accRegion: '吉隆坡、首尔等7个', srcRegion: '广州', srcObject: '10.23.12.1:443/441/4433...', originAddr: '-', accDomain: '-', exclusiveIp: '10.23.45.23:441' },
           { id: 'POL-005', name: '10.23.1.23', desc: '分支机构本地ERP及业务数据汇聚通道', scenario: '分支组网加速', status: '加速中', accRegion: '武汉、深圳、上海', srcRegion: '巴黎', srcObject: '主节点：10.23.1.23', originAddr: '-', accDomain: '-', exclusiveIp: '-' },
@@ -623,7 +580,6 @@
           }
 
           const saveSuccess = localStorage.getItem('ga_save_success');
-          const showFlyaway = localStorage.getItem('ga_show_flyaway');
           if (saveSuccess === 'true') {
             const newPolicyStr = localStorage.getItem('ga_new_policy');
             if (newPolicyStr) {
@@ -634,36 +590,6 @@
                 allowedKeys.forEach(k => { if (raw[k] !== undefined) newPolicy[k] = raw[k]; });
                 this.rules.unshift(newPolicy);
                 this.rules = [...this.rules];
-                
-                // 如果需要执行飞回右上角收纳动画
-                if (showFlyaway === 'true' && this.isTodo(newPolicy.id)) {
-                  const item = this.todoItems.find(t => t.id === newPolicy.id);
-                  if (item) {
-                    this.selectedTodoItem = item;
-                    this.showTodoCnameModal = true;
-                    this.isFlying = false;
-                    
-                    // 停留2秒，使遮罩淡出，弹窗缩小飞入右上角待办入口
-                    setTimeout(() => {
-                      this.isFlying = true;
-                      
-                      // 1200ms 飞入动画结束后：关闭弹窗，展示+1微动效，触发呼吸灯
-                      setTimeout(() => {
-                        this.showTodoCnameModal = false;
-                        this.isFlying = false;
-                        localStorage.removeItem('ga_show_flyaway');
-                        
-                        this.showPlusOne = true;
-                        this.highlightTodo = true;
-                        
-                        setTimeout(() => {
-                          this.showPlusOne = false;
-                          this.highlightTodo = false;
-                        }, 3500);
-                      }, 1200);
-                    }, 2000);
-                  }
-                }
               } catch (e) {
                 console.error(e);
               }
@@ -2018,91 +1944,7 @@
           class="h-[48px] px-6 border-b border-bg-line bg-white flex items-center justify-between flex-shrink-0">
           <div class="text-base font-semibold text-text-title font-sans">加速配置</div>
           
-          <!-- 右侧待办事项入口 -->
-          <div class="relative flex items-center" 
-               @mouseenter="todoHover = true" 
-               @mouseleave="todoHover = false">
-            <!-- +1 飘浮动效 -->
-            <template x-if="showPlusOne">
-              <div class="absolute top-[22px] right-[2px] text-xs text-red-500 z-[210] pointer-events-none select-none animate-float-up-fade font-outfit" style="font-weight: 900 !important;">
-                +1
-              </div>
-            </template>
-            <!-- 待办事项入口按钮 -->
-            <div class="h-8 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-start px-2 cursor-pointer transition-all duration-300 ease-in-out select-none relative"
-                 :class="todoHover ? 'w-[112px] bg-brand/5 border-brand/30 shadow-sm' : (highlightTodo ? 'w-8 bg-brand/10 border-brand animate-pulse' : 'w-8 bg-slate-50 border-slate-200')">
-              <div class="flex items-center gap-1.5 overflow-hidden w-full">
-                <!-- 图标 -->
-                <div class="flex-shrink-0 w-4 h-4 flex items-center justify-center">
-                  <svg class="w-4 h-4 transition-colors duration-300" :class="todoHover ? 'text-brand' : 'text-slate-500'" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                  </svg>
-                </div>
-                <!-- 文字 -->
-                <span class="text-[11px] font-semibold text-brand whitespace-nowrap transition-opacity duration-300"
-                      :class="todoHover ? 'opacity-100' : 'opacity-0'"
-                      x-show="todoHover" x-cloak>
-                  备忘事项 <span class="font-outfit" x-text="todoItems.length"></span>
-                </span>
-              </div>
-              <!-- 红点 -->
-              <span class="absolute -top-[1px] -right-[1px] w-2 h-2 bg-risk rounded-full border border-white"
-                    x-show="todoItems.length > 0 && !todoHover"></span>
-            </div>
-            
-            <!-- 下拉浮层 -->
-            <div class="absolute right-0 top-full mt-1.5 w-80 bg-white border border-slate-200/80 rounded shadow-[0_4px_24px_rgba(30,35,43,0.14)] z-[200] overflow-hidden transition-all duration-200"
-                 x-show="todoHover"
-                 x-transition:enter="transition ease-out duration-150"
-                 x-transition:enter-start="opacity-0 translate-y-1"
-                 x-transition:enter-end="opacity-100 translate-y-0"
-                 x-transition:leave="transition ease-in duration-100"
-                 x-transition:leave-start="opacity-100 translate-y-0"
-                 x-transition:leave-end="opacity-0 translate-y-1"
-                 x-cloak>
-              <!-- 浮层头部 -->
-              <div class="py-2.5 px-4 border-b border-slate-100 select-none bg-slate-50">
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-semibold text-slate-700">备忘事项</span>
-                  <span class="text-[10px] bg-brand/10 text-brand px-1.5 py-0.5 rounded font-medium" x-text="`未配置: ${todoItems.length}`"></span>
-                </div>
-                <div class="text-[10px] text-text-mute mt-1">
-                  请确认是否完成以下 CNAME 发布
-                </div>
-              </div>
-              <!-- 列表内容 -->
-              <div class="max-h-[260px] overflow-y-auto custom-scrollbar">
-                <!-- 空状态 -->
-                <div class="flex flex-col items-center justify-center py-8 text-slate-400 gap-2 select-none" x-show="todoItems.length === 0">
-                  <svg class="w-8 h-8 opacity-50" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                  <span class="text-xs text-text-mute">暂无备忘事项</span>
-                </div>
-                
-                <!-- 待办列表 -->
-                <template x-for="item in todoItems" :key="item.id">
-                  <div class="p-3 px-4 border-b border-slate-100 hover:bg-slate-50/50 flex items-center justify-between gap-3">
-                    <div class="min-w-0 flex-1">
-                      <div class="flex items-center gap-1.5">
-                        <span class="text-xs font-semibold text-text-title truncate max-w-[140px]" x-text="item.name" :title="item.name"></span>
-                        <span class="text-[9px] bg-orange-50 border border-orange-100 text-[#FA721B] px-1 rounded flex-shrink-0">待配置</span>
-                      </div>
-                      <div class="text-[10px] text-text-mute mt-1.5 flex items-center gap-2">
-                        <span x-text="item.scenario"></span>
-                        <span class="w-[1px] h-2 bg-slate-200"></span>
-                        <span x-text="item.time"></span>
-                      </div>
-                    </div>
-                    <div class="flex items-center gap-3 flex-shrink-0 select-none">
-                      <button @click="openTodoConfig(item.id)" class="text-xs text-brand hover:text-brand-hover font-medium cursor-pointer focus:outline-none">详情</button>
-                      <button @click="markTodoAsDone(item.id)" class="text-xs text-brand hover:text-brand-hover font-medium cursor-pointer focus:outline-none">我已处理</button>
-                    </div>
-                  </div>
-                </template>
-              </div>
-            </div>
-          </div>
+
         </div>
 
         <!-- Scrollable content area / 滚动内容区域 -->
@@ -2264,7 +2106,7 @@
                                   @click="startEditingSelectTag(tag)"></span>
                             <!-- Option dropdown -->
                             <div class="absolute top-full left-0 mt-1.5 bg-white border border-[#D3D7DE] shadow-[0_4px_16px_rgba(30,35,43,0.14)] rounded-[2px] p-2 z-[110] min-w-[160px]">
-                              <template x-for="opt in (tag.fieldKey === 'status' ? ['加速中', '未启用', '运行异常'] : ['零信任-隧道应用访问加速', '零信任-web应用访问加速', '零信任-接入与认证加速', '分支组网加速', 'SaaS应用加速', '自定义IP/域名加速'])">
+                              <template x-for="opt in (tag.fieldKey === 'status' ? ['加速中', '未生效', '未启用', '运行异常'] : ['零信任-隧道应用访问加速', '零信任-web应用访问加速', '零信任-接入与认证加速', '分支组网加速', 'SaaS应用加速', '自定义IP/域名加速'])">
                                 <label class="flex items-center gap-2 py-1 px-1.5 hover:bg-bg-light cursor-pointer text-xs select-none">
                                   <input type="checkbox" :value="opt" x-model="searchSelectedOptions" class="rounded-[2px] border-border text-brand focus:ring-brand">
                                   <span x-text="opt"></span>
@@ -2399,6 +2241,14 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                               </svg>
                               <span class="text-xs font-medium text-success-hover">加速中</span>
+                            </span>
+                          </template>
+                          
+                          <!-- 未生效 (灰色圆点) -->
+                          <template x-if="rule.status === '未生效'">
+                            <span class="inline-flex items-center gap-1.5 text-text-mute">
+                              <span class="w-1.5 h-1.5 rounded-full bg-text-mute/80"></span>
+                              <span class="text-xs font-medium">未生效</span>
                             </span>
                           </template>
                           
@@ -2681,7 +2531,7 @@
                   <div class="flex items-center justify-between gap-4">
                     <!-- 左侧：状态点 + 名称 -->
                     <div class="flex items-center gap-3 min-w-0 flex-1">
-                      <!-- 状态点 (加速中-绿，未启用-灰，运行异常-红) -->
+                      <!-- 状态点 (加速中-绿，未生效/未启用-灰，运行异常-红) -->
                       <div class="flex-shrink-0 w-2.5 h-2.5 rounded-full relative"
                            :class="detailDrawerRule ? (detailDrawerRule.status === '加速中' ? 'bg-emerald-500' : (detailDrawerRule.status === '运行异常' ? 'bg-rose-500' : 'bg-slate-400')) : 'bg-slate-400'">
                         <!-- 加速中时有呼吸闪烁动画 -->
@@ -3335,11 +3185,11 @@
   <!-- 发布加速配置 CNAME Modal (针对待办项二次查看与配置) -->
   <div x-show="showTodoCnameModal" class="fixed inset-0 z-[990] flex items-center justify-center" x-cloak>
     <!-- 背景遮罩 -->
-    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" x-show="!isFlying" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showTodoCnameModal = false"></div>
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showTodoCnameModal = false"></div>
     
-    <!-- 弹窗主体：使用 class 绑定 transition 以避免 Alpine x-transition 离开动画覆写 flyaway 动画造成的二次闪烁 -->
+    <!-- 弹窗主体 -->
     <div class="relative bg-white rounded-xl shadow-2xl border border-slate-200 w-[680px] max-w-full overflow-hidden flex flex-col transition-all duration-300"
-         :class="isFlying ? 'modal-flyaway' : (showTodoCnameModal ? 'opacity-100 scale-100' : 'opacity-0 scale-95')"
+         :class="showTodoCnameModal ? 'opacity-100 scale-100' : 'opacity-0 scale-95'"
          @click.away="showTodoCnameModal = false">
       <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
         <h3 class="text-sm font-semibold text-slate-800">

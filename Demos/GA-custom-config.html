@@ -1432,7 +1432,7 @@
           searchQueries: {},
 
           /* ---- Step 1 — 源站行列表 ---- */
-          sourceRows: [{ id: 1, target: '', location: '', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' }] }],
+          sourceRows: [{ id: 1, target: '', location: '', originAddress: '', resolvedIp: '', dnsStatus: 'none', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' }] }],
           nextRowId: 2,
 
           /* ---- Step 2 — 每个源站的加速范围配置 key=id ---- */
@@ -1445,13 +1445,13 @@
           /* ---- 各子类型独立的数据备份 ---- */
           typeData: {
             ip: {
-              sourceRows: [{ id: 1, target: '', location: '', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' }] }],
+              sourceRows: [{ id: 1, target: '', location: '', originAddress: '', resolvedIp: '', dnsStatus: 'none', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' }] }],
               nextRowId: 2,
               popConfigs: {},
               selectedRowId: null
             },
             domain: {
-              sourceRows: [{ id: 1, target: '', location: '', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' }] }],
+              sourceRows: [{ id: 1, target: '', location: '', originAddress: '', resolvedIp: '', dnsStatus: 'none', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' }] }],
               nextRowId: 2,
               popConfigs: {},
               selectedRowId: null
@@ -1499,11 +1499,49 @@
 
           /* ---- 源站行方法 ---- */
           addRow() {
-            this.sourceRows.push({ id: this.nextRowId++, target: '', location: '', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' }] });
+            this.sourceRows.push({ id: this.nextRowId++, target: '', location: '', originAddress: '', resolvedIp: '', dnsStatus: 'none', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' }] });
           },
           removeRow(id) {
             if (this.sourceRows.length <= 1) return;
             this.sourceRows = this.sourceRows.filter(r => r.id !== id);
+          },
+          getResolvedIp(domain) {
+            if (!domain || !domain.trim()) return '';
+            const d = domain.trim().toLowerCase();
+            if (d.includes('sangfor') || d.includes('atrust')) {
+              return '119.29.18.22, 119.29.18.23';
+            }
+            if (d.includes('example') || d.includes('demo')) {
+              return '118.24.120.88, 118.24.120.89';
+            }
+            let hash = 0;
+            for (let i = 0; i < d.length; i++) hash = ((hash << 5) - hash) + d.charCodeAt(i);
+            const p1 = Math.abs(hash % 180) + 10;
+            const p2 = Math.abs((hash >> 3) % 180) + 10;
+            return `118.24.${p1}.${p2}, 118.24.${p1}.${p2 + 1}`;
+          },
+          resolveDomainIp(row) {
+            if (this.customType !== 'domain') return;
+            if (!row.target || !row.target.trim()) {
+              row.resolvedIp = '';
+              row.dnsStatus = 'none';
+              return;
+            }
+            const parsed = this.getResolvedIp(row.target);
+            row.resolvedIp = parsed;
+            row.dnsStatus = 'success';
+          },
+          retryResolveDomainIp(row) {
+            if (this.customType !== 'domain') return;
+            if (!row.target || !row.target.trim()) {
+              row.resolvedIp = '';
+              return;
+            }
+            row.resolvedIp = '';
+            setTimeout(() => {
+              row.resolvedIp = this.getResolvedIp(row.target);
+              row.dnsStatus = 'success';
+            }, 250);
           },
 
           getPopConfig(id) {
@@ -1851,6 +1889,8 @@
               try {
                 const policy = JSON.parse(newPolicyStr);
                 if (this.customType === 'domain') {
+                  policy.status = '未生效';
+                  localStorage.setItem('ga_new_policy', JSON.stringify(policy));
                   const savedTodos = localStorage.getItem('ga_todo_items');
                   let todos = savedTodos ? JSON.parse(savedTodos) : [];
                   if (!todos.some(t => t.id === policy.id)) {
@@ -2100,6 +2140,8 @@
                             <input type="text"
                               :placeholder="customType === 'ip' ? '请输入IP' : '请输入域名'"
                               x-model="row.target"
+                              @blur="resolveDomainIp(row)"
+                              @input="if (!row.target || !row.target.trim()) { row.resolvedIp = ''; row.dnsStatus = 'none'; }"
                               class="w-full h-8 border border-slate-200 rounded px-3 text-xs text-slate-700 placeholder-slate-300 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20">
                           </div>
 
@@ -2229,19 +2271,45 @@
                           x-transition:enter-start="opacity-0 -translate-y-1"
                           x-transition:enter-end="opacity-100 translate-y-0"
                           class="mt-3 pt-3 border-t border-slate-200/60 pr-8">
-                          <div class="text-[12px] text-[#454C59] mb-1"><span class="text-red-500 mr-0.5">*</span>业务真实服务器地址<span class="text-[#A1A7B3]">（源站地址）</span></div>
+                          <div class="text-[12px] text-[#454C59] mb-1.5 flex items-center justify-between">
+                            <div><span class="text-red-500 mr-0.5">*</span>业务真实服务器地址<span class="text-[#A1A7B3]">（源站地址）</span></div>
+                          </div>
+
+                          <!-- DNS 自动解析展示横条 -->
+                          <div x-show="row.resolvedIp" x-cloak class="mb-2 bg-blue-50/80 border border-blue-100/90 rounded px-2.5 py-1.5 flex items-center justify-between gap-2 text-xs">
+                            <div class="flex items-center gap-1.5 min-w-0">
+                              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-brand/10 text-brand flex-shrink-0">
+                                <svg class="w-3 h-3 text-brand" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                自动解析
+                              </span>
+                              <span class="text-slate-500 text-[11px] flex-shrink-0">DNS解析结果：</span>
+                              <span class="font-mono text-slate-800 font-medium truncate" x-text="row.resolvedIp"></span>
+                            </div>
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                              <button @click="row.originAddress = row.resolvedIp" class="text-brand hover:text-brand-hover font-medium text-[11px] flex items-center gap-0.5 transition-colors">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                一键填入
+                              </button>
+                              <span class="text-slate-200">|</span>
+                              <button @click="retryResolveDomainIp(row)" class="text-slate-400 hover:text-slate-600 text-[11px] flex items-center gap-0.5 transition-colors">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                重试
+                              </button>
+                            </div>
+                          </div>
+
                           <div class="min-w-0">
                             <input
                               type="text"
                               x-model="row.originAddress"
-                              placeholder="指定真实服务器的公网 IP 作为源站回源地址"
+                              placeholder="指定真实服务器的公网 IP/域名，支持配置多个，以英文逗号分隔（如: 119.29.18.22, 119.29.18.23）"
                               class="w-full h-8 border border-slate-200 rounded px-3 text-xs text-slate-700 placeholder-slate-300 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20">
                             <!-- 引导提示条 -->
                             <div x-show="!row.hideOriginNotice" class="mt-2 flex items-center justify-between gap-2 bg-[#F7F7F8] rounded-[2px] px-2.5 py-1.5 min-h-[32px]">
                               <div class="flex items-center gap-2 min-w-0">
                                 <svg class="w-4 h-4 flex-shrink-0 text-[#6F7785]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/></svg>
                                 <div class="text-xs text-[#6F7785] leading-relaxed font-normal">
-                                  源站对象为域名时，请补充真实服务器的公网IP/域名，避免DNS解析失败等异常情况导致回源失败
+                                  源站对象为域名时，已自动联动解析 IP 提示。请确认或补充真实服务器公网 IP/域名，支持配置多个（以英文逗号分隔），避免 DNS 解析异常或单点故障导致回源失败。
                                 </div>
                               </div>
                               <button @click="row.hideOriginNotice = true" class="text-slate-400 hover:text-slate-600 p-0.5 flex-shrink-0 transition-colors" title="关闭提示">
@@ -2616,7 +2684,7 @@
                             <thead>
                               <tr class="bg-slate-50 text-slate-500 font-medium border-b border-slate-200 select-none">
                                 <th class="py-2.5 px-3 w-1/4">协议 <span class="text-slate-400 cursor-help" title="选择端口代理协议">ⓘ</span></th>
-                                <th class="py-2.5 px-3 w-1/4">加速端口 <span class="relative group cursor-help inline-flex items-center align-middle"><svg class="w-3 h-3 text-slate-400 hover:text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full left-1/2 -translate-x-1/2 mb-1.5 shadow-lg pointer-events-none w-56 leading-relaxed text-left normal-case font-normal">加速入口端口，用户访问业务时连接该端口。未启用独享IP时将在规则创建后自动分配。</span></span></th>
+                                <th class="py-2.5 px-3 w-1/4">加速端口 <span class="relative group cursor-help inline-flex items-center align-middle"><svg class="w-3 h-3 text-slate-400 hover:text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full left-1/2 -translate-x-1/2 mb-1.5 shadow-lg pointer-events-none w-56 leading-relaxed text-left normal-case font-normal">加速节点的端口，用户访问业务时连接该端口。未启用独享IP时将在规则创建后自动分配。</span></span></th>
                                 <th class="py-2.5 px-3 w-1/4">回源端口 <span class="relative group cursor-help inline-flex items-center align-middle"><svg class="w-3 h-3 text-slate-400 hover:text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full left-1/2 -translate-x-1/2 mb-1.5 shadow-lg pointer-events-none w-56 leading-relaxed text-left normal-case font-normal">加速节点回源时连接源站的端口，通常与源站实际监听端口一致。</span></span></th>
                                 <th class="py-2.5 px-3 w-[80px] text-center">操作</th>
                               </tr>
@@ -3337,7 +3405,7 @@
               <button @click="saveConfig(); location.href='GA-display.html'" class="h-8 px-4 rounded text-xs bg-brand text-white font-medium hover:bg-brand-hover transition-colors shadow-sm">
                 已发布，测试加速
               </button>
-              <button @click="saveConfig(); addToTodoList(); localStorage.setItem('ga_show_flyaway', 'true'); location.href='GA-display.html'" class="h-8 px-4 rounded text-xs border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors focus:outline-none">
+              <button @click="showCnameModal = false; saveConfig(); addToTodoList(); location.href='GA-display.html'" class="h-8 px-4 rounded text-xs border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors focus:outline-none">
                 稍后在列表发布
               </button>
             </div>

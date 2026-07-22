@@ -1487,25 +1487,47 @@
           /* ---- 连通性检测弹窗状态 ---- */
           showHealthModal: false,
           healthModalRowId: null,
-          tempHealthConfig: { protocol: 'TCP', port: '441', interval: 3, threshold: 3 },
+          tempHealthConfig: { protocol: 'TCP', port: '', interval: 3, threshold: 3 },
+          toggleHealthCheck(id) {
+            const cfg = this.getPopConfig(id);
+            if (!cfg.healthCheck) {
+              cfg.healthCheck = true;
+              this.openHealthModal(id);
+            } else {
+              cfg.healthCheck = false;
+            }
+          },
           openHealthModal(id) {
             const cfg = this.getPopConfig(id);
             this.healthModalRowId = id;
             this.tempHealthConfig = {
               protocol: cfg.healthProtocol || 'TCP',
-              port: cfg.healthPort !== undefined ? cfg.healthPort : '441',
+              port: cfg.healthPort !== undefined ? cfg.healthPort : '',
               interval: cfg.healthInterval !== undefined ? cfg.healthInterval : 3,
               threshold: cfg.healthThreshold !== undefined ? cfg.healthThreshold : 3
             };
             this.showHealthModal = true;
           },
           saveHealthConfig() {
+            if (!this.tempHealthConfig.port || !/^[1-9]\d*$/.test(this.tempHealthConfig.port) || this.tempHealthConfig.port < 1 || this.tempHealthConfig.port > 65535) {
+              return;
+            }
             if (this.healthModalRowId !== null) {
               const cfg = this.getPopConfig(this.healthModalRowId);
+              cfg.healthCheck = true;
               cfg.healthProtocol = this.tempHealthConfig.protocol;
               cfg.healthPort = this.tempHealthConfig.port;
               cfg.healthInterval = this.tempHealthConfig.interval;
               cfg.healthThreshold = this.tempHealthConfig.threshold;
+            }
+            this.showHealthModal = false;
+          },
+          cancelHealthConfig() {
+            if (this.healthModalRowId !== null) {
+              const cfg = this.getPopConfig(this.healthModalRowId);
+              if (!cfg.healthPort) {
+                cfg.healthCheck = false;
+              }
             }
             this.showHealthModal = false;
           },
@@ -1623,6 +1645,8 @@
               try {
                 const policy = JSON.parse(newPolicyStr);
                 if (this.subtype === 'web') {
+                  policy.status = '未生效';
+                  localStorage.setItem('ga_new_policy', JSON.stringify(policy));
                   const savedTodos = localStorage.getItem('ga_todo_items');
                   let todos = savedTodos ? JSON.parse(savedTodos) : [];
                   if (!todos.some(t => t.id === policy.id)) {
@@ -2036,9 +2060,9 @@
                 exclusiveIp: false,
                 sourceIpPassthrough: false,
                 transportOptimize: true,
-                healthCheck: true,
+                healthCheck: false,
                 healthProtocol: 'TCP',
-                healthPort: '441',
+                healthPort: '',
                 healthInterval: 3,
                 healthThreshold: 3,
                 bandwidthType: 'share',
@@ -2248,9 +2272,52 @@
             }
             return this.sourceRows.find(r => r.target) || this.sourceRows[0] || null;
           },
+          regionQuotas: {
+            '中国大陆': 100,
+            '亚太地区': 100,
+            '欧美地区': 50,
+            '其他地区': 50
+          },
+          getSharedRegionSummaries(id) {
+            const popConfig = this.getPopConfig(id);
+            const selectedKeys = popConfig.selectedPops || [];
+            if (selectedKeys.length === 0) return [];
+
+            const grouped = {};
+            selectedKeys.forEach(key => {
+              let foundRegion = '其他地区';
+              let popName = key;
+              for (let r in this.mockPops) {
+                const p = this.mockPops[r].find(item => item.key === key);
+                if (p) {
+                  foundRegion = r;
+                  popName = p.name;
+                  break;
+                }
+              }
+              if (!grouped[foundRegion]) {
+                grouped[foundRegion] = [];
+              }
+              grouped[foundRegion].push(popName);
+            });
+
+            const results = [];
+            for (let region in grouped) {
+              const popNames = grouped[region];
+              const count = popNames.length;
+              const namesStr = count <= 2 ? popNames.join('、') : popNames.slice(0, 2).join('、') + `等 ${count} 个节点`;
+              const quotaNum = this.regionQuotas[region] || 50;
+              results.push({
+                region,
+                quotaNum,
+                nodesText: namesStr
+              });
+            }
+            return results;
+          },
           canNext() {
             if (this.step === 1) {
-              return this.sourceRows.some(r => r.target && r.location);
+              return this.sourceRows.length > 0 && this.sourceRows.every(r => r.target && r.location && ((this.subtype !== 'web' && !this.hasDomainSelected(r)) || (r.originAddress && r.originAddress.trim() !== '')));
             }
             return true;
           },
@@ -2430,8 +2497,8 @@
                         <div class="flex gap-3 items-start">
                           <!-- 源站对象 -->
                           <div class="flex-1 min-w-0">
-                            <div class="text-[12px] text-slate-500 mb-1">
-                              <span class="text-red-500">*</span>需要加速的业务对象<span class="text-[#A1A7B3]">（源站对象）</span>
+                            <div class="text-[12px] mb-1">
+                              <span class="text-red-500 mr-0.5">*</span><span class="text-[#454C59]">需要加速的业务对象</span><span class="text-[#A1A7B3]">（源站对象）</span>
                             </div>
                             <!-- 隧道场景：代理网关树形下拉（多选Tag呈现） -->
                             <div x-show="subtype === 'tunnel'" class="relative" x-cloak
@@ -2698,8 +2765,8 @@
 
                           <!-- 源站地理位置 -->
                           <div class="flex-1 min-w-0">
-                             <div class="text-[12px] text-slate-500 mb-1 flex items-center">
-                              <span class="text-red-500">*</span>业务所在地理区域<span class="text-[#A1A7B3]">（源站区域/下车点）</span>
+                             <div class="text-[12px] mb-1 flex items-center">
+                              <span class="text-red-500 mr-0.5">*</span><span class="text-[#454C59]">业务所在地理区域</span><span class="text-[#A1A7B3]">（源站区域/下车点）</span>
                               <span class="relative group cursor-help ml-1 inline-flex items-center">
                                 <svg class="w-3.5 h-3.5 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -2731,7 +2798,7 @@
                                 class="absolute z-30 top-9 left-0 w-80 bg-white border border-slate-200 rounded shadow-lg text-xs flex flex-col">
                                 <!-- 搜索输入框 -->
                                 <div class="p-2 border-b border-slate-100 flex-shrink-0 relative">
-                                  <input type="text" x-model="searchQueries['l-'+row.id]" placeholder="搜索地理位置，不存在则选择距离最近位置的选项"
+                                  <input type="text" x-model="searchQueries['l-'+row.id]" placeholder="搜索地理位置，不存在则选择位置距离最近的选项"
                                     class="w-full h-7 border border-slate-200 rounded pl-7 pr-2 text-xs focus:outline-none focus:border-brand text-slate-700">
                                   <svg class="w-3.5 h-3.5 text-slate-400 absolute left-4.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -2824,7 +2891,7 @@
                           x-transition:enter-start="opacity-0 -translate-y-1"
                           x-transition:enter-end="opacity-100 translate-y-0"
                           class="mt-3 pt-3 border-t border-slate-200/60 pr-8">
-                          <div class="text-[12px] text-slate-500 mb-1">真实服务器 IP（源站地址）</div>
+                          <div class="text-[12px] mb-1"><span class="text-red-500 mr-0.5">*</span><span class="text-[#454C59]">业务真实服务器地址</span><span class="text-[#A1A7B3]">（源站地址）</span></div>
                           <div class="min-w-0">
                             <input
                               type="text"
@@ -2880,7 +2947,7 @@
                                 <span class="text-[11px] text-slate-500 leading-tight">源站连通性检查</span>
                               </div>
                               <div class="flex items-center gap-2">
-                                <button @click="getPopConfig(row.id).healthCheck = !getPopConfig(row.id).healthCheck"
+                                <button @click="toggleHealthCheck(row.id)"
                                   class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
                                   :class="getPopConfig(row.id).healthCheck ? 'bg-brand' : 'bg-slate-200'">
                                   <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
@@ -3121,15 +3188,41 @@
 
                         <!-- 分配详情展示 -->
                         <div class="px-3 bg-slate-50 border border-slate-100 rounded text-xs">
-                          <!-- 区域带宽共享提示 -->
+                          <!-- 区域带宽共享提示与单行大区列表（参考自定义峰值带宽布局结构） -->
                           <template x-if="getPopConfig(row.id).bandwidthType === 'share'">
-                            <div class="text-slate-400 flex items-center gap-1.5 h-8">
-                              <svg class="w-4 h-4 text-brand flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              <span>
-                                各加速节点共享所在大区购买的总带宽额度。闲时单个节点最高可跑满大区总带宽限制
-                              </span>
+                            <div class="py-2.5 space-y-2">
+                              <div class="flex items-center gap-1.5 text-xs text-slate-500">
+                                <svg class="w-3.5 h-3.5 text-brand flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>各节点共享大区购买的总带宽额度，单节点在闲时最高可跑满大区限制：<template x-if="getPopConfig(row.id).selectedPops.length === 0"><span class="text-slate-400">请先在上方选择加速区域（上车点）</span></template></span>
+                              </div>
+
+                              <template x-if="getPopConfig(row.id).selectedPops.length > 0">
+                                <div class="bg-white border border-slate-200/80 rounded overflow-hidden">
+                                  <template x-for="item in getSharedRegionSummaries(row.id)" :key="item.region">
+                                    <div class="flex items-center justify-between py-2 px-3 border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
+                                      <!-- 左侧：图标 + 节点名称 + 大区归属 -->
+                                      <div class="flex items-center gap-1.5 text-slate-700 min-w-0 select-none">
+                                        <span class="text-brand text-sm flex-shrink-0">🌐</span>
+                                        <div class="truncate text-xs">
+                                          <span class="font-normal text-slate-800" x-text="item.nodesText"></span>
+                                          <span class="text-slate-400 text-[11px] ml-1" x-text="'（' + item.region + '）'"></span>
+                                        </div>
+                                      </div>
+
+                                      <!-- 右侧：禁用的共享大区带宽输入框 (展示额度) -->
+                                      <div class="flex items-center gap-2 flex-shrink-0 ml-3 select-none">
+                                        <span class="text-[11px] text-slate-400">共享大区带宽额度</span>
+                                        <div class="relative flex items-center">
+                                          <input type="text" :value="item.quotaNum" disabled class="w-16 h-7 px-2 border border-slate-200 rounded text-right text-slate-600 text-xs font-mono pr-6 bg-slate-100/80 cursor-not-allowed select-none" />
+                                          <span class="absolute right-2 text-slate-400 text-[10px] pointer-events-none select-none">M</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </template>
+                                </div>
+                              </template>
                             </div>
                           </template>
 
@@ -3626,7 +3719,7 @@
         <!-- 连通性检测配置 Modal -->
         <div x-show="showHealthModal" class="fixed inset-0 z-50 flex items-center justify-center" x-cloak>
           <!-- 背景遮罩 -->
-          <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="showHealthModal = false"></div>
+          <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="cancelHealthConfig()"></div>
           
           <!-- 弹窗主体 (2px 圆角) -->
           <div class="relative bg-white rounded-[2px] shadow-2xl border border-slate-200 w-[480px] max-w-full overflow-hidden flex flex-col"
@@ -3642,15 +3735,15 @@
               <h3 class="text-base font-semibold text-slate-800">
                 连通性检测
               </h3>
-              <button @click="showHealthModal = false" class="text-slate-400 hover:text-slate-600 text-lg font-medium p-1">×</button>
+              <button @click="cancelHealthConfig()" class="text-slate-400 hover:text-slate-600 text-lg font-medium p-1">×</button>
             </div>
             
             <!-- 内容 (左右边距 32px，上下紧贴，各行间距为 8px 即 space-y-2) -->
             <div class="px-8 py-5 flex-1 overflow-y-auto space-y-2 text-xs text-slate-700">
               <!-- 检查协议 -->
-              <div class="flex items-start gap-4 pr-8">
-                <div class="flex items-center h-8 w-[90px] flex-shrink-0 select-none">
-                  <span class="w-2.5 mr-1 flex-shrink-0"></span><!-- 必填星号占位 -->
+              <div class="flex items-start gap-4">
+                <div class="flex items-center h-8 w-[114px] flex-shrink-0 select-none">
+                  <span class="w-2.5 mr-1 flex-shrink-0"></span><!-- 非必填星号隐形占位 (10px) -->
                   <span class="text-[#6F7785] font-medium text-xs">检查协议</span>
                 </div>
                 <div class="flex-1 flex flex-col min-w-0">
@@ -3665,15 +3758,15 @@
                         <span class="text-slate-700 text-xs">ICMP</span>
                       </label>
                     </div>
-                    <div class="w-4 flex-shrink-0"></div><!-- 辅助列对齐 -->
+                    <div class="w-4 flex-shrink-0"></div><!-- 辅助列占位，确保控件右边缘对齐 -->
                   </div>
                 </div>
               </div>
               
-              <!-- 端口 -->
+              <!-- 端口 (必填项) -->
               <div class="flex items-start gap-4" x-show="tempHealthConfig.protocol === 'TCP'">
-                <div class="flex items-center h-8 w-[90px] flex-shrink-0 select-none">
-                  <span class="w-2.5 mr-1 flex-shrink-0"></span>
+                <div class="flex items-center h-8 w-[114px] flex-shrink-0 select-none">
+                  <span class="w-2.5 text-center text-red-500 mr-1 flex-shrink-0">*</span><!-- 必填星号容器 (10px)，确保文字首字对齐 -->
                   <span class="text-[#6F7785] font-medium text-xs">端口</span>
                 </div>
                 <div class="flex-1 flex flex-col min-w-0">
@@ -3685,7 +3778,7 @@
                              class="h-8 px-3 border rounded-[2px] bg-white text-slate-800 focus:outline-none w-full text-xs"
                              :class="tempHealthConfig.port && (!/^[1-9]\d*$/.test(tempHealthConfig.port) || tempHealthConfig.port < 1 || tempHealthConfig.port > 65535) ? 'border-[#CF171D] bg-red-50/20' : 'border-slate-200 focus:border-brand'" />
                     </div>
-                    <div class="w-4 flex-shrink-0"></div><!-- 辅助列对齐 -->
+                    <div class="w-4 flex-shrink-0"></div><!-- 辅助列占位，确保控件右边缘对齐 -->
                   </div>
                   <div x-show="tempHealthConfig.port && (!/^[1-9]\d*$/.test(tempHealthConfig.port) || tempHealthConfig.port < 1 || tempHealthConfig.port > 65535)" class="text-[#CF171D] text-xs mt-1">
                     请输入 1-65535 之间的有效端口号
@@ -3694,9 +3787,9 @@
               </div>
               
               <!-- 检查间隔时间 -->
-              <div class="flex items-start gap-4 pr-8">
-                <div class="flex items-center h-8 w-[90px] flex-shrink-0 select-none">
-                  <span class="w-2.5 mr-1 flex-shrink-0"></span>
+              <div class="flex items-start gap-4">
+                <div class="flex items-center h-8 w-[114px] flex-shrink-0 select-none">
+                  <span class="w-2.5 mr-1 flex-shrink-0"></span><!-- 非必填星号隐形占位 (10px) -->
                   <span class="text-[#6F7785] font-medium text-xs">检查间隔时间</span>
                 </div>
                 <div class="flex-1 flex flex-col min-w-0">
@@ -3709,7 +3802,7 @@
                              :class="(tempHealthConfig.interval < 1 || tempHealthConfig.interval > 60 || !tempHealthConfig.interval) ? 'border-[#CF171D] bg-red-50/20' : 'border-slate-200 focus:border-brand'" />
                       <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 select-none pointer-events-none">秒</span>
                     </div>
-                    <div class="w-4 flex-shrink-0"></div><!-- 辅助列对齐 -->
+                    <div class="w-4 flex-shrink-0"></div><!-- 辅助列占位，确保控件右边缘对齐 -->
                   </div>
                   <div x-show="tempHealthConfig.interval < 1 || tempHealthConfig.interval > 60 || !tempHealthConfig.interval" class="text-[#CF171D] text-xs mt-1">
                     检查间隔时间范围为 1-60 秒
@@ -3718,9 +3811,9 @@
               </div>
               
               <!-- 健康检查阈值 -->
-              <div class="flex items-start gap-4 pr-8">
-                <div class="flex items-center h-8 w-[90px] flex-shrink-0 select-none">
-                  <span class="w-2.5 mr-1 flex-shrink-0"></span>
+              <div class="flex items-start gap-4">
+                <div class="flex items-center h-8 w-[114px] flex-shrink-0 select-none">
+                  <span class="w-2.5 mr-1 flex-shrink-0"></span><!-- 非必填星号隐形占位 (10px) -->
                   <span class="text-[#6F7785] font-medium text-xs">健康检查阈值</span>
                 </div>
                 <div class="flex-1 flex flex-col min-w-0">
@@ -3758,7 +3851,7 @@
                       class="h-8 px-4 rounded-[2px] text-[14px] bg-brand text-white font-medium hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                 确定
               </button>
-              <button @click="showHealthModal = false" class="h-8 px-4 rounded-[2px] text-[14px] border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors font-medium">
+              <button @click="cancelHealthConfig()" class="h-8 px-4 rounded-[2px] text-[14px] border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors font-medium">
                 取消
               </button>
             </div>
@@ -3934,7 +4027,7 @@
               <button @click="saveConfig(); location.href='GA-display.html'" class="h-8 px-4 rounded text-xs bg-brand text-white font-medium hover:bg-brand-hover active:bg-brand-active transition-colors shadow-sm">
                 我已完成DNS配置
               </button>
-              <button @click="saveConfig(); addToTodoList(); localStorage.setItem('ga_show_flyaway', 'true'); location.href='GA-display.html'" class="h-8 px-4 rounded text-xs border border-slate-200 bg-white text-slate-600 font-medium hover:bg-slate-50 transition-colors focus:outline-none">
+              <button @click="showCnameModal = false; saveConfig(); addToTodoList(); location.href='GA-display.html'" class="h-8 px-4 rounded text-xs border border-slate-200 bg-white text-slate-600 font-medium hover:bg-slate-50 transition-colors focus:outline-none">
                 稍后配置
               </button>
             </div>
