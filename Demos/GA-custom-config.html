@@ -2307,7 +2307,7 @@
                               <div class="flex items-center gap-2 min-w-0">
                                 <svg class="w-4 h-4 flex-shrink-0 text-[#6F7785]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/></svg>
                                 <div class="text-xs text-[#6F7785] leading-relaxed font-normal">
-                                  源站对象为域名时，已自动联动解析 IP 提示。请确认或补充真实服务器公网 IP/域名，支持配置多个（以英文逗号分隔），避免 DNS 解析异常或单点故障导致回源失败。
+                                  源站对象为域名时，需补充真实服务器的公网 IP/域名，避免 DNS 解析异常等情况导致回源失败。系统会自动进行域名解析，请确认或补充真实 IP/域名，支持配置多个，以英文逗号隔开。
                                 </div>
                               </div>
                               <button @click="row.hideOriginNotice = true" class="text-slate-400 hover:text-slate-600 p-0.5 flex-shrink-0 transition-colors" title="关闭提示">
