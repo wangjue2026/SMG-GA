@@ -1,0 +1,223 @@
+/* ========================================================================
+   SASE 导航框架 Layout 专属 CSS 样式表 (sase-layout.css)
+   - 基于规范：SKillS/skill_seerdesign_demo_v2.0/z-SASE/nav-sase.md
+   - 深色侧边栏背景 #272E38，固定 240px 宽度
+   ======================================================================== */
+
+:root {
+  --sase-sidebar-bg: #272E38;
+  --sase-parent-active-bg: #1E232B;
+  --sase-sidebar-width: 240px;
+  --sase-header-height: 56px;
+  --sase-footer-height: 36px;
+}
+
+/* 侧边栏基础容器：固定 240px 宽度 */
+.sase-sidebar {
+  background-color: var(--sase-sidebar-bg);
+  color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  user-select: none;
+  position: relative;
+  z-index: 20;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.15);
+  width: var(--sase-sidebar-width) !important;
+  min-width: var(--sase-sidebar-width) !important;
+  max-width: var(--sase-sidebar-width) !important;
+  flex-shrink: 0 !important;
+}
+
+/* 顶部 Header 产品区 */
+.sase-header {
+  height: var(--sase-header-height);
+  min-height: var(--sase-header-height);
+  display: flex;
+  align-items: center;
+  padding-left: 8px;
+  padding-right: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: var(--sase-sidebar-bg);
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* Logo 样式：32px x 32px，渐变 linear-gradient(135deg, #4BFFC6, #1C6EFF) */
+.sase-logo {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--color-mint, #4BFFC6) 0%, var(--color-blue, #1C6EFF) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  box-shadow: 0 2px 8px rgba(28, 110, 255, 0.3);
+}
+
+/* 一级分组标题：16px 左边距，字号 12px，颜色 #A1A7B3 */
+.sase-group-l1 {
+  height: 32px;
+  padding-left: 16px;
+  padding-right: 12px;
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-graphite, #A1A7B3);
+  pointer-events: none;
+  background: transparent !important;
+  letter-spacing: 0.2px;
+}
+
+/* 二级分组标题：40px 左边距，字号 12px，颜色 #5E6573 */
+.sase-group-l2 {
+  height: 32px;
+  padding-left: 40px;
+  padding-right: 12px;
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-graphite-d20, #5E6573);
+  pointer-events: none;
+  background: transparent !important;
+  letter-spacing: 0.2px;
+}
+
+/* 一级菜单项：高度 36px，图标左边距 16px，图标 16x16，间距 8px */
+.sase-menu-l1 {
+  height: 36px;
+  padding-left: 16px;
+  padding-right: 12px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  font-size: 13px;
+  font-weight: 400;
+  color: #FFFFFF;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.sase-menu-l1:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* 一级菜单图标：16px × 16px，与文字间距 8px */
+.sase-menu-l1-icon {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  margin-right: 8px;
+  color: #FFFFFF;
+  transition: color 0.2s ease, filter 0.2s ease;
+}
+
+/* 父级高亮状态 (Parent Active) */
+.sase-menu-l1.parent-active {
+  background-color: var(--sase-parent-active-bg) !important; /* #1E232B */
+  color: #FFFFFF !important;
+}
+.sase-menu-l1.parent-active .sase-menu-l1-icon {
+  color: var(--color-blue, #1C6EFF) !important;
+}
+
+/* 叶子节点一级菜单选中态 */
+.sase-menu-l1.leaf-selected {
+  background: linear-gradient(90deg, rgba(28, 110, 255, 0.2) 0%, rgba(28, 110, 255, 0) 100%);
+  font-weight: 600;
+  color: #FFFFFF;
+}
+.sase-menu-l1.leaf-selected .sase-menu-l1-icon {
+  color: var(--color-blue, #1C6EFF);
+}
+.sase-menu-l1.leaf-selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: var(--color-blue, #1C6EFF);
+  z-index: 1;
+}
+
+/* 二级菜单容器：父级展开时背景固定为 #1E232B */
+.sase-submenu-container {
+  background-color: var(--sase-parent-active-bg); /* #1E232B */
+  overflow: hidden;
+}
+
+/* 二级菜单项：高度 32px，圆点左边距 40px，圆点 4x4，间距 8px */
+.sase-menu-l2 {
+  height: 32px;
+  padding-left: 40px;
+  padding-right: 12px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  font-size: 12px;
+  font-weight: 400;
+  color: #FFFFFF;
+  transition: background-color 0.15s ease, font-weight 0.15s ease;
+}
+.sase-menu-l2:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+/* 二级菜单圆点：4px × 4px */
+.sase-dot {
+  width: 4px;
+  height: 4px;
+  min-width: 4px;
+  min-height: 4px;
+  border-radius: 50%;
+  background-color: #FFFFFF;
+  opacity: 0.6;
+  margin-right: 8px;
+  transition: all 0.2s ease;
+}
+
+/* 二级菜单选中态 (Selected) */
+.sase-menu-l2.selected {
+  background: linear-gradient(90deg, rgba(28, 110, 255, 0.2) 0%, rgba(28, 110, 255, 0) 100%) !important;
+  font-weight: 600;
+  color: #FFFFFF !important;
+}
+
+/* 选中态 3px 垂直蓝色条：绝对定位紧贴左边缘，不改变圆点与文字坐标 */
+.sase-menu-l2.selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: var(--color-blue, #1C6EFF);
+  z-index: 1;
+}
+
+/* 选中态圆点：变绿 #4BFFC6 带发光阴影 */
+.sase-menu-l2.selected .sase-dot {
+  background-color: var(--color-mint, #4BFFC6) !important;
+  opacity: 1 !important;
+  box-shadow: 0 0 4px rgba(75, 255, 198, 0.5);
+  filter: drop-shadow(0 0 3px rgba(75, 255, 198, 0.3));
+}
+
+/* 用户信息区 Footer Area (36px 固定于侧边栏底部) */
+.sase-footer {
+  height: var(--sase-footer-height);
+  min-height: var(--sase-footer-height);
+  display: flex;
+  align-items: center;
+  padding-left: 16px;
+  background-color: var(--sase-sidebar-bg);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  z-index: 10;
+}

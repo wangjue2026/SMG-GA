@@ -1,0 +1,84 @@
+/* ========================================================================
+   Demo 运行时外壳与语言控制器 Floating Toolbar CSS (shell-switcher.css)
+   ======================================================================== */
+
+.demo-switcher-bar {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-graphite-l30, #E1E5EB);
+  border-radius: 20px;
+  padding: 4px 10px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+  font-size: 11px;
+  user-select: none;
+  font-family: var(--seer-font-family, sans-serif);
+  pointer-events: auto;
+  transition: all 0.25s ease-in-out;
+  cursor: pointer;
+}
+
+.demo-switcher-bar:hover {
+  background: #FFFFFF;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.16), 0 2px 6px rgba(0, 0, 0, 0.08);
+  border-color: #C0C8D6;
+}
+
+.demo-switcher-collapsed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.demo-switcher-expanded-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.demo-switcher-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--color-graphite-l40, #EDF1F7);
+  padding: 2px;
+  border-radius: 12px;
+}
+
+.demo-switcher-btn {
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-graphite-d30, #454C59);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 14px;
+}
+
+.demo-switcher-btn:hover {
+  color: var(--color-blue, #1C6EFF);
+}
+
+.demo-switcher-btn.active {
+  background: var(--color-blue, #1C6EFF);
+  color: #FFFFFF;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(28, 110, 255, 0.3);
+}
+
+.demo-switcher-divider {
+  width: 1px;
+  height: 12px;
+  background-color: var(--color-graphite-l30, #E1E5EB);
+  margin: 0 2px;
+}

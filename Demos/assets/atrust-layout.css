@@ -8,7 +8,7 @@
 /* aTrust 顶部导航 Segment Tabs */
 .at-top-nav-item {
   height: 32px;
-  padding: 0 16px;
+  padding: 0 14px;
   border-radius: 16px;
   display: inline-flex;
   align-items: center;
@@ -19,6 +19,8 @@
   cursor: pointer;
   user-select: none;
   transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .at-top-nav-item:hover {

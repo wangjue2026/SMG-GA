@@ -1,11 +1,22 @@
 /* SASE 全球加速 - Alpine.js 共享交互状态与逻辑 */
 
 window.globalAccelerationApp = function() {
-  return {
+  const baseApp = {
     topNav: '全球安全互联',
     expandedL2: 'm_1_2', 
     expandedL3: '',
     activeLeaf: 'm_1_2_1',
+    saseExpandedL1Keys: ['global-acceleration'],
+    toggleSaseL1(key) {
+      if (this.saseExpandedL1Keys.includes(key)) {
+        this.saseExpandedL1Keys = this.saseExpandedL1Keys.filter(k => k !== key);
+      } else {
+        this.saseExpandedL1Keys.push(key);
+      }
+    },
+    isSaseExpanded(key) {
+      return this.saseExpandedL1Keys.includes(key);
+    },
     navDefaults: {
       '监控中心': { l2: 'm_0_0', l3: '', leaf: 'm_0_0_0' },
       '全球安全互联': { l2: 'm_1_2', l3: '', leaf: 'm_1_2_1' },
@@ -365,5 +376,9 @@ window.globalAccelerationApp = function() {
       this.bandwidthConfig = 15;
       this.deploymentProgress = 0;
     }
-  }
+  };
+
+  return typeof window.createDemoShellStore === 'function' 
+    ? window.createDemoShellStore(baseApp) 
+    : baseApp;
 }
