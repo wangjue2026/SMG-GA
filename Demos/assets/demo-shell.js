@@ -22,7 +22,7 @@
 
   // 通用 Demo Shell Mixin 工厂函数
   window.createDemoShellStore = function (extraData = {}) {
-    return Object.assign({
+    const store = Object.assign({
       // 运行时外壳与语言状态
       shell: safeGet('demoShell', 'atrust'), // 'atrust' | 'sase'
       lang: safeGet('demoLang', 'zh'),       // 'zh' | 'en'
@@ -314,5 +314,18 @@
         return dict[key] || key;
       }
     }, extraData);
+
+    try {
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'demoShell' && e.newValue && store.shell !== e.newValue) {
+          store.shell = e.newValue;
+        }
+        if (e.key === 'demoLang' && e.newValue && store.lang !== e.newValue) {
+          store.lang = e.newValue;
+        }
+      });
+    } catch (e) {}
+
+    return store;
   };
 })(window);
