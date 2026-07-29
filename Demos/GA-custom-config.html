@@ -1640,6 +1640,11 @@
           editingName: '',
           editingDesc: '',
 
+          isTcpProtocol(row) {
+            if (!row || !row.ports || row.ports.length === 0) return true;
+            return row.ports.every(p => p.protocol === 'TCP-TCP');
+          },
+
           /* ---- 连通性检测弹窗状态 ---- */
           showHealthModal: false,
           healthModalRowId: null,
@@ -2543,6 +2548,10 @@
                               <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-brand/10 text-brand flex-shrink-0">
                                 <svg class="w-3 h-3 text-brand" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                                 自动解析
+                                <span class="relative group cursor-help inline-flex items-center ml-0.5">
+                                  <svg class="w-3 h-3 text-brand/70 hover:text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/></svg>
+                                  <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full left-1/2 -translate-x-1/2 mb-1.5 shadow-lg pointer-events-none w-56 leading-relaxed font-normal whitespace-normal text-left">仅用于首次填写域名时自动解析并填充IP以提升配置效率。若后续域名IP发生变更，系统不会自动更新。</span>
+                                </span>
                               </span>
                               <span class="text-slate-500 text-[11px] flex-shrink-0">DNS解析结果：</span>
                               <span class="font-mono text-slate-800 font-medium truncate" x-text="row.resolvedIp"></span>
@@ -2611,22 +2620,6 @@
                                       class="text-brand hover:underline cursor-pointer ml-1 text-xs select-none font-normal">
                                   配置
                                 </span>
-                              </div>
-                            </div>
-
-                            <!-- 客户端源IP透传 -->
-                            <div class="flex items-center gap-4 pr-8 text-xs">
-                              <div class="w-[110px] flex-shrink-0">
-                                <span class="text-[11px] text-slate-500 leading-tight">客户端源IP透传</span>
-                              </div>
-                              <div class="flex items-center gap-3">
-                                <button @click.stop="getPopConfig(row.id).sourceIpPassthrough = !getPopConfig(row.id).sourceIpPassthrough"
-                                  class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
-                                  :class="getPopConfig(row.id).sourceIpPassthrough ? 'bg-brand' : 'bg-slate-200'">
-                                  <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
-                                    :class="getPopConfig(row.id).sourceIpPassthrough ? 'left-4.5' : 'left-0.5'"></div>
-                                </button>
-                                <span class="text-slate-400 text-[12px]">基于 Proxy Protocol 协议透传终端真实 IP，支撑安全策略与访问审计溯源</span>
                               </div>
                             </div>
 
@@ -3036,6 +3029,24 @@
                                 :class="getPopConfig(row.id).transportOptimize ? 'left-4.5' : 'left-0.5'"></div>
                             </button>
                             <span class="text-slate-400">跨境弱网链路传输增强，降低延迟与丢包</span>
+                          </div>
+                          <!-- 客户端源IP透传 -->
+                          <div class="flex items-center gap-3">
+                            <span class="w-[110px] text-slate-500 flex-shrink-0">客户端源IP透传</span>
+                            <div class="relative flex items-center group">
+                              <button @click.stop="if (!isTcpProtocol(row)) return; getPopConfig(row.id).sourceIpPassthrough = !getPopConfig(row.id).sourceIpPassthrough"
+                                class="relative w-8 h-4 rounded-full transition-all flex-shrink-0"
+                                :class="!isTcpProtocol(row) ? 'opacity-50 cursor-not-allowed bg-slate-200' : (getPopConfig(row.id).sourceIpPassthrough ? 'bg-brand' : 'bg-slate-200')">
+                                <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                                  :class="getPopConfig(row.id).sourceIpPassthrough && isTcpProtocol(row) ? 'left-4.5' : 'left-0.5'"></div>
+                              </button>
+                              <template x-if="!isTcpProtocol(row)">
+                                <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded px-2.5 py-1.5 z-50 bottom-full left-1/2 -translate-x-1/2 mb-1.5 shadow-lg whitespace-nowrap pointer-events-none font-normal">
+                                  仅加速端口协议为 TCP-TCP 时支持启用客户端源IP透传
+                                </span>
+                              </template>
+                            </div>
+                            <span class="text-slate-400">基于 Proxy Protocol 协议透传终端真实 IP，支撑安全策略与访问审计溯源</span>
                           </div>
                         </div>
                       </div>

@@ -1748,6 +1748,33 @@
           showHealthModal: false,
           healthModalRowId: null,
           tempHealthConfig: { protocol: 'TCP', port: '', interval: 3, threshold: 3 },
+
+          /* ---- PP 协议确认弹窗状态 ---- */
+          showPpModal: false,
+          ppModalRowId: null,
+          ppChecked: false,
+          showPpGuideModal: false,
+          toggleSourceIpPassthrough(id) {
+            const cfg = this.getPopConfig(id);
+            if (!cfg.sourceIpPassthrough) {
+              this.ppModalRowId = id;
+              this.ppChecked = !!cfg.ppProtocolEnabled;
+              this.showPpModal = true;
+            } else {
+              cfg.sourceIpPassthrough = false;
+            }
+          },
+          confirmPpConfig() {
+            if (this.ppModalRowId !== null) {
+              const cfg = this.getPopConfig(this.ppModalRowId);
+              cfg.sourceIpPassthrough = true;
+              cfg.ppProtocolEnabled = this.ppChecked;
+            }
+            this.showPpModal = false;
+          },
+          cancelPpConfig() {
+            this.showPpModal = false;
+          },
           toggleHealthCheck(id) {
             const cfg = this.getPopConfig(id);
             if (!cfg.healthCheck) {
@@ -3217,6 +3244,10 @@
                               <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-brand/10 text-brand flex-shrink-0">
                                 <svg class="w-3 h-3 text-brand" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                                 自动解析
+                                <span class="relative group cursor-help inline-flex items-center ml-0.5">
+                                  <svg class="w-3 h-3 text-brand/70 hover:text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/></svg>
+                                  <span class="absolute hidden group-hover:block bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full left-1/2 -translate-x-1/2 mb-1.5 shadow-lg pointer-events-none w-56 leading-relaxed font-normal whitespace-normal text-left">仅用于首次填写域名时自动解析并填充IP以提升配置效率。若后续域名IP发生变更，系统不会自动更新。</span>
+                                </span>
                               </span>
                               <span class="text-slate-500 text-[11px] flex-shrink-0">DNS解析结果：</span>
                               <span class="font-mono text-slate-800 font-medium truncate" x-text="row.resolvedIp"></span>
@@ -3295,22 +3326,6 @@
                                       class="text-brand hover:underline cursor-pointer ml-1 text-xs select-none font-normal">
                                   配置
                                 </span>
-                              </div>
-                            </div>
-
-                            <!-- 客户端源IP透传 -->
-                            <div class="flex items-center gap-4 pr-8 text-xs">
-                              <div class="w-[110px] flex-shrink-0">
-                                <span class="text-[11px] text-slate-500 leading-tight">客户端源IP透传</span>
-                              </div>
-                              <div class="flex items-center gap-3">
-                                <button @click="getPopConfig(row.id).sourceIpPassthrough = !getPopConfig(row.id).sourceIpPassthrough"
-                                  class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
-                                  :class="getPopConfig(row.id).sourceIpPassthrough ? 'bg-brand' : 'bg-slate-200'">
-                                  <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
-                                    :class="getPopConfig(row.id).sourceIpPassthrough ? 'left-4.5' : 'left-0.5'"></div>
-                                </button>
-                                <span class="text-slate-400 text-[12px]">基于 Proxy Protocol 协议透传终端真实 IP，支撑安全策略与访问审计溯源</span>
                               </div>
                             </div>
 
@@ -3678,6 +3693,18 @@
                                 :class="getPopConfig(row.id).transportOptimize ? 'left-4.5' : 'left-0.5'"></div>
                             </button>
                             <span class="text-slate-400">跨境弱网链路传输增强，降低延迟与丢包</span>
+                          </div>
+
+                          <!-- 客户端源IP透传 -->
+                          <div class="flex items-center gap-3">
+                            <span class="w-[110px] text-slate-500 flex-shrink-0">客户端源IP透传</span>
+                            <button @click="toggleSourceIpPassthrough(row.id)"
+                              class="relative w-8 h-4 rounded-full transition-colors flex-shrink-0"
+                              :class="getPopConfig(row.id).sourceIpPassthrough ? 'bg-brand' : 'bg-slate-200'">
+                              <div class="absolute top-0.5 transition-all w-3 h-3 rounded-full bg-white shadow"
+                                :class="getPopConfig(row.id).sourceIpPassthrough ? 'left-4.5' : 'left-0.5'"></div>
+                            </button>
+                            <span class="text-slate-400">基于 Proxy Protocol 协议透传终端真实 IP，支撑安全策略与访问审计溯源</span>
                           </div>
                         </div>
                       </div>
@@ -4191,6 +4218,124 @@
               <button @click="cancelHealthConfig()" class="h-8 px-4 rounded-[2px] text-[14px] border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors font-medium">
                 取消
               </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PP 协议确认 Modal -->
+        <div x-show="showPpModal" class="fixed inset-0 z-50 flex items-center justify-center" x-cloak>
+          <!-- 背景遮罩 -->
+          <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="cancelPpConfig()"></div>
+          
+          <!-- 弹窗主体 -->
+          <div class="relative bg-white rounded-[4px] shadow-2xl border border-slate-200 w-[520px] max-w-full overflow-hidden flex flex-col"
+               x-show="showPpModal"
+               x-transition:enter="transition ease-out duration-200"
+               x-transition:enter-start="opacity-0 scale-95"
+               x-transition:enter-end="opacity-100 scale-100"
+               x-transition:leave="transition ease-in duration-150"
+               x-transition:leave-start="opacity-100 scale-100"
+               x-transition:leave-end="opacity-0 scale-95">
+            <!-- 头部 -->
+            <div class="h-12 px-6 border-b border-slate-100 flex items-center justify-between flex-shrink-0 select-none">
+              <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <h3 class="text-sm font-semibold text-slate-800">提示</h3>
+              </div>
+              <button @click="cancelPpConfig()" class="text-slate-400 hover:text-slate-600 text-lg font-medium p-1">×</button>
+            </div>
+            
+            <!-- 内容 -->
+            <div class="px-6 py-5 flex-1 overflow-y-auto text-xs text-slate-700 space-y-4">
+              <p class="text-slate-700 text-xs leading-relaxed font-normal">
+                当前没有开启Proxy Protocol协议，使用此功能需要同步开启
+              </p>
+              
+              <div class="pt-1 flex items-center gap-2 flex-wrap">
+                <label class="flex items-center gap-2 cursor-pointer select-none">
+                  <input type="checkbox" x-model="ppChecked" class="text-brand focus:ring-brand rounded border-slate-300 w-4 h-4 cursor-pointer" />
+                  <span class="text-xs text-slate-700 font-medium">启用Proxy Protocol协议读取客户端源IP（适用于CDN加速场景）</span>
+                </label>
+                <button type="button" @click="showPpGuideModal = true" class="text-brand hover:underline text-xs flex-shrink-0 ml-1 font-medium">
+                  配置指导图
+                </button>
+              </div>
+            </div>
+            
+            <!-- 底部按钮栏 -->
+            <div class="h-[52px] px-6 flex items-center justify-end gap-2 bg-slate-50/60 border-t border-slate-100 flex-shrink-0">
+              <button @click="confirmPpConfig()" 
+                      class="h-8 px-4 rounded-[2px] text-xs bg-brand text-white font-medium hover:bg-brand-hover transition-colors">
+                确定
+              </button>
+              <button @click="cancelPpConfig()" 
+                      class="h-8 px-4 rounded-[2px] text-xs border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors font-medium">
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 配置指导图 Preview Modal -->
+        <div x-show="showPpGuideModal" class="fixed inset-0 z-[60] flex items-center justify-center" x-cloak>
+          <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" @click="showPpGuideModal = false"></div>
+          <div class="relative bg-white rounded-lg shadow-2xl border border-slate-200 w-[640px] max-w-full overflow-hidden flex flex-col"
+               x-show="showPpGuideModal"
+               x-transition:enter="transition ease-out duration-200"
+               x-transition:enter-start="opacity-0 scale-95"
+               x-transition:enter-end="opacity-100 scale-100">
+            <div class="h-12 px-6 border-b border-slate-100 flex items-center justify-between flex-shrink-0 select-none">
+              <h3 class="text-sm font-semibold text-slate-800">Proxy Protocol 架构与配置指导</h3>
+              <button @click="showPpGuideModal = false" class="text-slate-400 hover:text-slate-600 text-lg font-medium">×</button>
+            </div>
+            <div class="p-6 text-xs text-slate-700 overflow-y-auto max-h-[75vh] space-y-4">
+              <div class="bg-blue-50/60 border border-blue-100 rounded p-3 leading-relaxed text-slate-600">
+                开启 Proxy Protocol（v1/v2）协议后，GA 节点在与真实源站建立 TCP 连接时，将在协议头部附带客户端真实 IP 信息，需源站服务（如 Nginx/Apache/Envoy）开启 Proxy Protocol 解析支持。
+              </div>
+              <div class="border border-slate-200 rounded-lg p-4 bg-slate-50 flex flex-col items-center">
+                <!-- SVG Diagram representing Proxy Protocol Flow -->
+                <svg class="w-full max-w-[540px] h-48" viewBox="0 0 540 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <!-- Client Node -->
+                  <rect x="20" y="55" width="100" height="70" rx="6" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5"/>
+                  <text x="70" y="88" font-size="12" font-weight="600" fill="#334155" text-anchor="middle">客户端终端</text>
+                  <text x="70" y="106" font-size="10" fill="#64748B" text-anchor="middle">IP: 203.0.113.5</text>
+
+                  <!-- Arrow 1 -->
+                  <path d="M125 90 H 200" stroke="#3B82F6" stroke-width="2" stroke-dasharray="4 2"/>
+                  <polygon points="200,90 192,85 192,95" fill="#3B82F6"/>
+                  <text x="162" y="80" font-size="10" fill="#3B82F6" text-anchor="middle">标准 TCP 请求</text>
+
+                  <!-- GA Node -->
+                  <rect x="205" y="55" width="120" height="70" rx="6" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1.5"/>
+                  <text x="265" y="85" font-size="12" font-weight="600" fill="#1E40AF" text-anchor="middle">GA 加速节点</text>
+                  <text x="265" y="105" font-size="10" fill="#3B82F6" text-anchor="middle">(封装 PP 报头)</text>
+
+                  <!-- Arrow 2 -->
+                  <path d="M330 90 H 405" stroke="#10B981" stroke-width="2"/>
+                  <polygon points="405,90 397,85 397,95" fill="#10B981"/>
+                  <text x="367" y="76" font-size="10" font-weight="600" fill="#059669" text-anchor="middle">Proxy Protocol</text>
+                  <text x="367" y="104" font-size="9" fill="#64748B" text-anchor="middle">传递真实 IP</text>
+
+                  <!-- Origin Node -->
+                  <rect x="410" y="55" width="110" height="70" rx="6" fill="#F0FDF4" stroke="#10B981" stroke-width="1.5"/>
+                  <text x="465" y="85" font-size="12" font-weight="600" fill="#065F46" text-anchor="middle">业务源站</text>
+                  <text x="465" y="105" font-size="10" fill="#047857" text-anchor="middle">(Nginx / Envoy)</text>
+                </svg>
+              </div>
+              <div class="space-y-1.5 text-xs">
+                <div class="font-semibold text-slate-800">Nginx 示例配置：</div>
+                <pre class="bg-slate-900 text-slate-100 p-3 rounded text-[11px] font-mono overflow-x-auto leading-relaxed">
+server {
+    listen 80 proxy_protocol;
+    set_real_ip_from 0.0.0.0/0;
+    real_ip_header proxy_protocol;
+}</pre>
+              </div>
+            </div>
+            <div class="h-12 px-6 border-t border-slate-100 flex items-center justify-end bg-slate-50/50">
+              <button @click="showPpGuideModal = false" class="h-8 px-4 rounded text-xs bg-brand text-white font-medium hover:bg-brand-hover">关闭</button>
             </div>
           </div>
         </div>
