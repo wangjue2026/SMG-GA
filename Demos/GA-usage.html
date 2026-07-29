@@ -91,7 +91,10 @@
         selectedNodes: [],        // 多选节点
         lineNodeDropOpen: false,  // 大区和节点选择下拉是否打开
         lineRuleDropOpen: false,  // 规则多选下拉是否打开
-        lineSortRule: 'peak_desc', // 排序逻辑：'peak_desc'（按峰值大小降序）, 'peak_asc'（按峰值大小升序）
+        ruleSearchQuery: '',      // 规则搜索关键字
+        ruleLimit: 6,             // 滚动加载初次展示条数
+        isRuleLoading: false,     // 滚动加载动画状态
+        lineSortRule: 'util_desc', // 排序逻辑：'util_desc'（按峰值利用率降序）, 'util_asc'（按峰值利用率升序）, 'peak_desc'（按峰值大小降序）, 'peak_asc'（按峰值大小升序）
         lineSortDropOpen: false,  // 排序下拉是否打开
         activeFilterRegionTab: '中国大陆',
         ruleSectionOpen: true,
@@ -324,6 +327,44 @@
           this.allLineData.forEach(l => l.rules.forEach(r => set.add(r)));
           return Array.from(set).sort();
         },
+        // 搜索过滤后的规则列表
+        get filteredRuleOptions() {
+          let list = this.allRuleOptions;
+          if (this.ruleSearchQuery && this.ruleSearchQuery.trim()) {
+            const q = this.ruleSearchQuery.trim().toLowerCase();
+            list = list.filter(r => r.toLowerCase().includes(q) || this.formatRuleName(r).toLowerCase().includes(q));
+          }
+          return list;
+        },
+        // 滚动加载当前显示的规则列表
+        get visibleRuleOptions() {
+          return this.filteredRuleOptions.slice(0, this.ruleLimit);
+        },
+        // 滚动到底部触发加载更多
+        handleRuleScroll(e) {
+          const el = e.target;
+          if (el.scrollTop + el.clientHeight >= el.scrollHeight - 15) {
+            if (this.ruleLimit < this.filteredRuleOptions.length && !this.isRuleLoading) {
+              this.isRuleLoading = true;
+              setTimeout(() => {
+                this.ruleLimit += 6;
+                this.isRuleLoading = false;
+              }, 250);
+            }
+          }
+        },
+        // 快捷全选/取消全选
+        toggleSelectAllRules() {
+          const filtered = this.filteredRuleOptions;
+          const allSelected = filtered.every(r => this.lineFilterRules.includes(r));
+          if (allSelected) {
+            this.lineFilterRules = this.lineFilterRules.filter(r => !filtered.includes(r));
+          } else {
+            const newSet = new Set([...this.lineFilterRules, ...filtered]);
+            this.lineFilterRules = Array.from(newSet);
+          }
+          this.linePage = 1;
+        },
         regionNodeList: {
           '中国大陆': ['北京', '上海', '深圳', '广州'],
           '亚太地区': ['吉隆坡', '东京', '香港', '新加坡', '悉尼', '首尔', '孟买', '雅加达', '曼谷', '马尼拉', '河内', '卡拉奇', '大阪', '奥克兰', '台北', '科伦坡'],
@@ -395,10 +436,17 @@
           lines.sort((a, b) => {
             const peakA = Math.max(Math.max(...a.upload), Math.max(...a.download));
             const peakB = Math.max(Math.max(...b.upload), Math.max(...b.download));
-            if (this.lineSortRule === 'peak_asc') {
+            const utilA = a.watermark ? (peakA / a.watermark) : 0;
+            const utilB = b.watermark ? (peakB / b.watermark) : 0;
+
+            if (this.lineSortRule === 'util_asc') {
+              return utilA - utilB;
+            } else if (this.lineSortRule === 'peak_desc') {
+              return peakB - peakA;
+            } else if (this.lineSortRule === 'peak_asc') {
               return peakA - peakB;
             } else {
-              return peakB - peakA; // peak_desc
+              return utilB - utilA; // util_desc
             }
           });
 
@@ -485,6 +533,25 @@
               lineCount: matchingLines.length
             };
           }).filter(Boolean);
+
+          cards.sort((a, b) => {
+            const peakA = Math.max(a.maxUp, a.maxDown);
+            const peakB = Math.max(b.maxUp, b.maxDown);
+            const utilA = a.watermark ? (peakA / a.watermark) : 0;
+            const utilB = b.watermark ? (peakB / b.watermark) : 0;
+
+            if (this.lineSortRule === 'util_asc') {
+              return utilA - utilB;
+            } else if (this.lineSortRule === 'peak_desc') {
+              return peakB - peakA;
+            } else if (this.lineSortRule === 'peak_asc') {
+              return peakA - peakB;
+            } else {
+              return utilB - utilA; // util_desc
+            }
+          });
+
+          return cards;
         },
         lineTotalPages() {
           return Math.max(1, Math.ceil(this.filteredLines().length / this.linePageSize));
@@ -507,7 +574,7 @@
           this.lineFilterRules = [];
           this.selectedRegions = [];
           this.selectedNodes = [];
-          this.lineSortRule = 'peak_desc';
+          this.lineSortRule = 'util_desc';
           this.linePage = 1;
         },
         formatRuleName(rule) {
@@ -878,14 +945,15 @@
         // 日期选择相关
         dateOpen: false,
         leftDropdownOpen: false,
-        dateType: 'today', // 'today', '24h', '7d', '30d', 'custom'
-        selectedLabel: '今日',
-        customStart: '2026-07-01 00:00:00',
-        customEnd: '2026-07-06 23:59:59',
-        tempCustomStart: '2026-07-01',
+        dateType: '12h', // '12h', '24h', '7d', '30d', 'custom'
+        selectedLabel: '12h',
+        customStart: '',
+        customEnd: '',
+        tempCustomStart: '',
         tempCustomStartTime: '00:00:00',
-        tempCustomEnd: '2026-07-06',
+        tempCustomEnd: '',
         tempCustomEndTime: '23:59:59',
+        customErrMsg: '',
         
         // 刷新组件相关
         refreshInterval: 300, // 默认5分钟 (300秒)
@@ -952,15 +1020,14 @@
         },
         
         getDisplayRange() {
+          const pad = (n) => String(n).padStart(2, '0');
           const format = (d) => {
-            const pad = (n) => String(n).padStart(2, '0');
             return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
           };
           const now = new Date();
-          if (this.dateType === 'today') {
-            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-            const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-            return format(start) + ' 至 ' + format(end);
+          if (this.dateType === '12h') {
+            const past = new Date(now.getTime() - 12 * 60 * 60 * 1000);
+            return format(past) + ' 至 ' + format(now);
           } else if (this.dateType === '24h') {
             const past = new Date(now.getTime() - 24 * 60 * 60 * 1000);
             return format(past) + ' 至 ' + format(now);
@@ -973,11 +1040,17 @@
             const past = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
             const start = new Date(past.getFullYear(), past.getMonth(), past.getDate(), 0, 0, 0);
             const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+            return format(start) + ' 至 ' + format(end);
           } else {
-            return this.customStart + ' 至 ' + this.customEnd;
+            if (this.customStart && this.customEnd) {
+              return this.customStart + ' 至 ' + this.customEnd;
+            }
+            const past = new Date(now.getTime() - 12 * 60 * 60 * 1000);
+            return format(past) + ' 至 ' + format(now);
           }
         },
         initCustomInputs() {
+          this.customErrMsg = '';
           const parseRange = this.getDisplayRange().split(' 至 ');
           if (parseRange.length === 2) {
             const startParts = parseRange[0].split(' ');
@@ -987,6 +1060,45 @@
             this.tempCustomEnd = endParts[0];
             this.tempCustomEndTime = endParts[1] || '23:59:59';
           }
+        },
+        applyCustomDateRange() {
+          if (!this.tempCustomStart || !this.tempCustomEnd) {
+            this.customErrMsg = '请完整选择开始日期和结束日期';
+            return;
+          }
+          const sTime = this.tempCustomStartTime || '00:00:00';
+          const eTime = this.tempCustomEndTime || '23:59:59';
+          const startStr = this.tempCustomStart + ' ' + sTime;
+          const endStr = this.tempCustomEnd + ' ' + eTime;
+
+          const startTs = new Date(startStr.replace(/-/g, '/')).getTime();
+          const endTs = new Date(endStr.replace(/-/g, '/')).getTime();
+          const nowTs = Date.now();
+          const sixMonthsAgoTs = nowTs - 180 * 24 * 60 * 60 * 1000;
+
+          if (isNaN(startTs) || isNaN(endTs)) {
+            this.customErrMsg = '请选择格式正确的日期和时间';
+            return;
+          }
+          if (endTs < startTs) {
+            this.customErrMsg = '结束时间不能早于开始时间';
+            return;
+          }
+          if (startTs < sixMonthsAgoTs) {
+            this.customErrMsg = '选择时间不能早于最近 6 个月';
+            return;
+          }
+          if ((endTs - startTs) > 30 * 24 * 60 * 60 * 1000) {
+            this.customErrMsg = '自定义时间跨度最多不能超过 30 天连续时间';
+            return;
+          }
+
+          this.customErrMsg = '';
+          this.customStart = startStr;
+          this.customEnd = endStr;
+          this.dateType = 'custom';
+          this.selectedLabel = 'custom';
+          this.dateOpen = false;
         }
       };
     };
@@ -2432,14 +2544,14 @@
                 </div>
 
                 <!-- 时间范围选择器 (复合日期筛选器) -->
-                <div class="flex items-center border rounded-[2px] bg-white h-8 overflow-hidden transition-all relative select-none duration-150"
+                <div class="flex items-center border rounded-[2px] bg-white h-8 transition-all relative select-none duration-150 z-30"
                      :class="(leftDropdownOpen || dateOpen) ? 'border-[#1C6EFF]' : 'border-slate-200'"
                      @click.outside="leftDropdownOpen = false; dateOpen = false;">
                   
                   <!-- 左侧快捷选择区 -->
-                  <div class="min-w-[88px] flex bg-slate-50 h-full items-center justify-between px-2 cursor-pointer text-[12px] text-slate-700 hover:bg-slate-100 transition-colors"
+                  <div class="min-w-[88px] flex bg-slate-50 h-full items-center justify-between px-2 cursor-pointer text-[12px] text-slate-700 hover:bg-slate-100 transition-colors rounded-l-[2px]"
                        @click="leftDropdownOpen = !leftDropdownOpen; dateOpen = false;">
-                    <span x-text="selectedLabel === 'today' ? '今日' : (selectedLabel === '24h' ? '最近24小时' : (selectedLabel === '7d' ? '近7天' : (selectedLabel === '30d' ? '近30天' : '自定义')))">今日</span>
+                    <span x-text="selectedLabel === '12h' ? '近12小时' : (selectedLabel === '24h' ? '近24小时' : (selectedLabel === '7d' ? '近7天' : (selectedLabel === '30d' ? '近30天' : '自定义')))">近12小时</span>
                     <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
@@ -2460,35 +2572,68 @@
                     </svg>
                   </div>
 
-                  <!-- 左侧快捷下拉列表 -->
+                  <!-- 左侧快捷下拉列表 (支持级联唤起右侧自定义面板) -->
                   <div class="absolute left-0 top-full mt-1 w-[120px] bg-white border border-slate-200 rounded shadow-lg z-50 py-1"
                        x-show="leftDropdownOpen" x-cloak>
-                    <div class="px-3 py-1.5 text-[12px] hover:bg-slate-50 cursor-pointer" :class="dateType === 'today' && 'bg-blue-50 text-blue-600 font-semibold'" @click="dateType = 'today'; selectedLabel = 'today'; leftDropdownOpen = false;">今日</div>
-                    <div class="px-3 py-1.5 text-[12px] hover:bg-slate-50 cursor-pointer" :class="dateType === '24h' && 'bg-blue-50 text-blue-600 font-semibold'" @click="dateType = '24h'; selectedLabel = '24h'; leftDropdownOpen = false;">最近24小时</div>
+                    <div class="px-3 py-1.5 text-[12px] hover:bg-slate-50 cursor-pointer" :class="dateType === '12h' && 'bg-blue-50 text-blue-600 font-semibold'" @click="dateType = '12h'; selectedLabel = '12h'; leftDropdownOpen = false;">近12小时</div>
+                    <div class="px-3 py-1.5 text-[12px] hover:bg-slate-50 cursor-pointer" :class="dateType === '24h' && 'bg-blue-50 text-blue-600 font-semibold'" @click="dateType = '24h'; selectedLabel = '24h'; leftDropdownOpen = false;">近24小时</div>
                     <div class="px-3 py-1.5 text-[12px] hover:bg-slate-50 cursor-pointer" :class="dateType === '7d' && 'bg-blue-50 text-blue-600 font-semibold'" @click="dateType = '7d'; selectedLabel = '7d'; leftDropdownOpen = false;">近7天</div>
                     <div class="px-3 py-1.5 text-[12px] hover:bg-slate-50 cursor-pointer" :class="dateType === '30d' && 'bg-blue-50 text-blue-600 font-semibold'" @click="dateType = '30d'; selectedLabel = '30d'; leftDropdownOpen = false;">近30天</div>
-                    <div class="px-3 py-1.5 text-[12px] hover:bg-slate-50 cursor-pointer border-t border-slate-100" :class="dateType === 'custom' && 'bg-blue-50 text-blue-600 font-semibold'" @click="dateType = 'custom'; selectedLabel = 'custom'; leftDropdownOpen = false; setTimeout(() => { dateOpen = true; initCustomInputs(); }, 50);">自定义</div>
+                    <div class="px-3 py-1.5 text-[12px] hover:bg-slate-50 cursor-pointer border-t border-slate-100 flex items-center justify-between"
+                         :class="dateType === 'custom' && 'bg-blue-50 text-blue-600 font-semibold'"
+                         @click="dateType = 'custom'; selectedLabel = 'custom'; leftDropdownOpen = false; setTimeout(() => { initCustomInputs(); dateOpen = true; }, 50);">
+                      <span>自定义</span>
+                      <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                    </div>
                   </div>
 
-                  <!-- 右侧自定义日期面板 -->
-                  <div class="absolute right-0 top-full mt-1 w-[320px] bg-white border border-slate-200 rounded shadow-lg z-50 p-3 space-y-3"
+                  <!-- 右侧自定义日期面板 (含强校验与时分秒默认值) -->
+                  <div class="absolute right-0 top-full mt-1 w-[340px] bg-white border border-slate-200 rounded shadow-lg z-50 p-3 space-y-3"
                        x-show="dateOpen" x-cloak>
-                    <div class="text-[12px] font-bold text-slate-700">自定义时间范围</div>
-                    <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                      <div class="text-[12px] font-bold text-slate-700">自定义时间范围</div>
+                      <span class="text-[10px] text-slate-400">可选 6 个月内任意 30 天</span>
+                    </div>
+                    <div class="space-y-2.5">
                       <div class="flex items-center gap-2">
-                        <span class="text-[10px] text-slate-400 w-12 flex-shrink-0">开始时间</span>
-                        <input type="date" class="flex-1 text-[12px] border border-slate-200 rounded p-1 focus:outline-none focus:border-blue-500" x-model="tempCustomStart">
-                        <input type="time" step="1" class="w-[85px] text-[12px] border border-slate-200 rounded p-1 focus:outline-none focus:border-blue-500" x-model="tempCustomStartTime">
+                        <span class="text-[11px] text-slate-500 w-14 flex-shrink-0">开始时间</span>
+                        <input type="date"
+                               class="flex-1 text-[11px] border border-slate-200 rounded p-1 focus:outline-none focus:border-blue-500 font-outfit"
+                               x-model="tempCustomStart"
+                               @change="if (!tempCustomStartTime) tempCustomStartTime = '00:00:00'; customErrMsg = '';">
+                        <input type="time" step="1"
+                               class="w-[90px] text-[11px] border border-slate-200 rounded p-1 focus:outline-none focus:border-blue-500 font-outfit"
+                               x-model="tempCustomStartTime"
+                               @change="customErrMsg = '';">
                       </div>
                       <div class="flex items-center gap-2">
-                        <span class="text-[10px] text-slate-400 w-12 flex-shrink-0">结束时间</span>
-                        <input type="date" class="flex-1 text-[12px] border border-slate-200 rounded p-1 focus:outline-none focus:border-blue-500" x-model="tempCustomEnd">
-                        <input type="time" step="1" class="w-[85px] text-[12px] border border-slate-200 rounded p-1 focus:outline-none focus:border-blue-500" x-model="tempCustomEndTime">
+                        <span class="text-[11px] text-slate-500 w-14 flex-shrink-0">结束时间</span>
+                        <input type="date"
+                               class="flex-1 text-[11px] border border-slate-200 rounded p-1 focus:outline-none focus:border-blue-500 font-outfit"
+                               x-model="tempCustomEnd"
+                               @change="if (!tempCustomEndTime) tempCustomEndTime = '23:59:59'; customErrMsg = '';">
+                        <input type="time" step="1"
+                               class="w-[90px] text-[11px] border border-slate-200 rounded p-1 focus:outline-none focus:border-blue-500 font-outfit"
+                               x-model="tempCustomEndTime"
+                               @change="customErrMsg = '';">
                       </div>
                     </div>
+
+                    <!-- 错误提示 -->
+                    <div x-show="customErrMsg" x-cloak class="p-2 bg-red-50 border border-red-200 rounded text-[11px] text-red-600 flex items-center gap-1">
+                      <svg class="w-3.5 h-3.5 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke-width="2"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12" stroke-width="2"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16" stroke-width="2"></line>
+                      </svg>
+                      <span x-text="customErrMsg"></span>
+                    </div>
+
                     <div class="flex justify-end gap-2 border-t border-slate-100 pt-2">
-                      <button class="px-3 py-1 border border-slate-200 text-slate-600 rounded text-xs hover:bg-slate-50 transition-colors" @click="dateOpen = false;">取消</button>
-                      <button class="px-3 py-1 bg-blue-600 text-white rounded text-xs font-semibold hover:bg-blue-700 transition-colors" @click="customStart = tempCustomStart + ' ' + tempCustomStartTime; customEnd = tempCustomEnd + ' ' + tempCustomEndTime; dateType = 'custom'; selectedLabel = 'custom'; dateOpen = false;">确定</button>
+                      <button class="px-3 py-1 border border-slate-200 text-slate-600 rounded text-xs hover:bg-slate-50 transition-colors"
+                              @click="dateOpen = false; customErrMsg = '';">取消</button>
+                      <button class="px-3 py-1 bg-blue-600 text-white rounded text-xs font-semibold hover:bg-blue-700 transition-colors"
+                              @click="applyCustomDateRange()">确定</button>
                     </div>
                   </div>
                 </div>
@@ -2556,11 +2701,11 @@
                     <div class="flex gap-4 text-[10px] text-text-mute">
                       <div class="flex items-center gap-1">
                         <span class="w-2.5 h-0.5 bg-blue-500 rounded-full"></span>
-                        <span>上行带宽 (Mbps)</span>
+                        <span>入口带宽 (Mbps)</span>
                       </div>
                       <div class="flex items-center gap-1">
                         <span class="w-2.5 h-0.5 bg-emerald-500 rounded-full"></span>
-                        <span>下行带宽 (Mbps)</span>
+                        <span>出口带宽 (Mbps)</span>
                       </div>
                     </div>
                   </div>
@@ -2586,11 +2731,11 @@
                         <div class="flex gap-3 text-[9px] text-text-mute mb-2">
                           <div class="flex items-center gap-0.5">
                             <svg class="w-2.5 h-2.5 text-blue-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
-                            上行带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + getData(region).minUp + ' Mbps / 最大 ' + getData(region).maxUp + ' Mbps'"></span>
+                            入口带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + getData(region).minUp + ' Mbps / 最大 ' + getData(region).maxUp + ' Mbps'"></span>
                           </div>
                           <div class="flex items-center gap-0.5">
                             <svg class="w-2.5 h-2.5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
-                            下行带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + getData(region).minDown + ' Mbps / 最大 ' + getData(region).maxDown + ' Mbps'"></span>
+                            出口带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + getData(region).minDown + ' Mbps / 最大 ' + getData(region).maxDown + ' Mbps'"></span>
                           </div>
                         </div>
 
@@ -2651,10 +2796,10 @@
                                    :style="hoverIndex[region] !== -1 ? ('left: ' + Math.min(160, Math.max(10, ((hoverIndex[region] / (timeline.length - 1)) * 280) - 50)) + 'px; top: 6px;') : 'display: none;'">
                                 <div class="font-bold text-slate-400 text-center" x-text="hoverIndex[region] !== -1 ? timeline[hoverIndex[region]] : ''">12:00</div>
                                 <div class="flex items-center gap-1.5">
-                                  <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> 上行: <span class="font-bold font-outfit" x-text="hoverIndex[region] !== -1 ? (getData(region).upload[hoverIndex[region]] + ' Mbps') : ''"></span>
+                                  <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> 入口: <span class="font-bold font-outfit" x-text="hoverIndex[region] !== -1 ? (getData(region).upload[hoverIndex[region]] + ' Mbps') : ''"></span>
                                 </div>
                                 <div class="flex items-center gap-1.5">
-                                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 下行: <span class="font-bold font-outfit" x-text="hoverIndex[region] !== -1 ? (getData(region).download[hoverIndex[region]] + ' Mbps') : ''"></span>
+                                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 出口: <span class="font-bold font-outfit" x-text="hoverIndex[region] !== -1 ? (getData(region).download[hoverIndex[region]] + ' Mbps') : ''"></span>
                                 </div>
                               </div>
                             </div>
@@ -2676,9 +2821,9 @@
                     <!-- 筛选栏 -->
                     <div class="flex flex-wrap items-center gap-2 mb-4 pb-1 flex-shrink-0">
 
-                      <!-- 加加速规则多选 (SeerDesign 规范) -->
-                      <div class="relative w-[220px]" @click.outside="lineRuleDropOpen = false">
-                        <div @click="lineRuleDropOpen = !lineRuleDropOpen"
+                      <!-- 加速规则多选 (SeerDesign 规范，支持搜索与滚动加载及悬浮一键清除) -->
+                      <div class="relative group w-[220px]" @click.outside="lineRuleDropOpen = false">
+                        <div @click="lineRuleDropOpen = !lineRuleDropOpen; if (lineRuleDropOpen) { ruleSearchQuery = ''; ruleLimit = 6; }"
                              class="flex items-center justify-between h-8 px-3 border border-border bg-white rounded-[2px] cursor-pointer hover:border-brand transition-colors select-none"
                              :class="lineRuleDropOpen ? 'border-brand' : ''">
                           
@@ -2707,39 +2852,96 @@
                             </template>
                           </div>
                           
-                          <!-- 右侧下拉箭头 -->
-                          <svg class="w-3 h-3 text-slate-400 flex-shrink-0 transition-transform duration-200" 
-                               :class="lineRuleDropOpen ? 'rotate-180 text-brand' : ''" 
-                               fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-                          </svg>
+                          <!-- 右侧下拉/悬浮一键清除按钮 -->
+                          <div class="flex items-center flex-shrink-0 ml-1">
+                            <button x-show="lineFilterRules.length > 0"
+                                    @click.stop="lineFilterRules = []; linePage = 1;"
+                                    class="hidden group-hover:flex w-4 h-4 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-500 items-center justify-center transition-colors focus:outline-none"
+                                    title="清除全部选项">
+                              <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                              </svg>
+                            </button>
+                            <svg class="w-3 h-3 text-slate-400 flex-shrink-0 transition-transform duration-200" 
+                                 :class="[
+                                   lineRuleDropOpen ? 'rotate-180 text-brand' : '',
+                                   lineFilterRules.length > 0 ? 'group-hover:hidden' : ''
+                                 ]" 
+                                 fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                          </div>
                         </div>
                         
                         <!-- 选项面板 -->
                         <div x-show="lineRuleDropOpen" x-cloak
-                             class="absolute left-0 top-full mt-1 w-full bg-white border border-border rounded-[2px] shadow-[0_4px_16px_0_rgba(30,35,43,0.14)] z-50 py-1 max-h-56 overflow-y-auto">
-                          <template x-for="rule in allRuleOptions" :key="rule">
-                            <div class="flex items-center h-8 px-3 hover:bg-bg-light cursor-pointer text-xs transition-colors"
-                                 :class="lineFilterRules.includes(rule) ? 'bg-brand-lightBg text-brand font-medium' : 'text-[#2F3540]'"
-                                 @click="toggleRuleFilter(rule)">
-                              <div class="flex items-center gap-2 overflow-hidden w-full">
-                                <!-- 复选框 -->
-                                <span class="w-3.5 h-3.5 flex-shrink-0 rounded-[2px] border flex items-center justify-center transition-colors"
-                                      :class="lineFilterRules.includes(rule) ? 'bg-brand border-brand' : 'border-slate-300'">
-                                  <svg x-show="lineFilterRules.includes(rule)" class="w-2 h-2 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                                  </svg>
-                                </span>
-                                <span class="truncate" x-text="formatRuleName(rule)"></span>
+                             class="absolute left-0 top-full mt-1 w-[240px] bg-white border border-border rounded-[2px] shadow-[0_4px_16px_0_rgba(30,35,43,0.14)] z-50 flex flex-col max-h-72 overflow-hidden">
+                          
+                          <!-- 搜索框 -->
+                          <div class="p-2 border-b border-slate-100 flex-shrink-0 relative bg-white">
+                            <input type="text"
+                                   x-model="ruleSearchQuery"
+                                   @input="ruleLimit = 6"
+                                   placeholder="搜索加速规则..."
+                                   class="w-full h-7 border border-slate-200 rounded pl-7 pr-2 text-xs focus:outline-none focus:border-brand text-slate-700 placeholder-slate-300">
+                            <svg class="w-3.5 h-3.5 text-slate-400 absolute left-4 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                          </div>
+
+                          <!-- 选项列表（支持滚动 + 滚动加载） -->
+                          <div class="flex-1 overflow-y-auto py-1" @scroll="handleRuleScroll($event)">
+                            <template x-for="rule in visibleRuleOptions" :key="rule">
+                              <div class="flex items-center h-8 px-3 hover:bg-bg-light cursor-pointer text-xs transition-colors"
+                                   :class="lineFilterRules.includes(rule) ? 'bg-brand-lightBg text-brand font-medium' : 'text-[#2F3540]'"
+                                   @click.stop="toggleRuleFilter(rule)">
+                                <div class="flex items-center gap-2 overflow-hidden w-full">
+                                  <!-- 复选框 -->
+                                  <span class="w-3.5 h-3.5 flex-shrink-0 rounded-[2px] border flex items-center justify-center transition-colors"
+                                        :class="lineFilterRules.includes(rule) ? 'bg-brand border-brand' : 'border-slate-300'">
+                                    <svg x-show="lineFilterRules.includes(rule)" class="w-2 h-2 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                  </span>
+                                  <span class="truncate" x-text="formatRuleName(rule)"></span>
+                                </div>
                               </div>
+                            </template>
+                            
+                            <!-- 滚动加载提示 -->
+                            <div x-show="isRuleLoading" class="py-2 text-center text-[10px] text-slate-400 flex items-center justify-center gap-1.5">
+                              <svg class="w-3.5 h-3.5 animate-spin text-brand" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              <span>加载中...</span>
                             </div>
-                          </template>
-                          <div x-show="allRuleOptions.length === 0" class="px-3 py-2 text-xs text-slate-400 text-center">暂无规则数据</div>
+
+                            <div x-show="filteredRuleOptions.length === 0" class="px-3 py-4 text-xs text-slate-400 text-center">暂无匹配规则数据</div>
+                          </div>
+
+                          <!-- 底部操作按钮 -->
+                          <div class="p-2 border-t border-slate-100 flex items-center justify-between bg-slate-50 flex-shrink-0 text-xs select-none">
+                            <button @click.stop="toggleSelectAllRules()"
+                                    class="text-[11px] text-brand hover:underline">
+                              <span x-text="filteredRuleOptions.every(r => lineFilterRules.includes(r)) && filteredRuleOptions.length > 0 ? '取消全选' : '全选'"></span>
+                            </button>
+                            <div class="flex items-center gap-1.5">
+                              <button @click.stop="lineFilterRules = []; linePage = 1;"
+                                      class="px-2 py-1 text-[10px] text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition-colors">
+                                清空
+                              </button>
+                              <button @click.stop="lineRuleDropOpen = false; linePage = 1;"
+                                      class="px-2.5 py-1 text-[10px] bg-brand text-white hover:bg-brand-hover rounded transition-colors">
+                                确定
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      <!-- 区域和节点分组多选 (SeerDesign 规范) -->
-                      <div class="relative w-[280px]" @click.outside="lineNodeDropOpen = false">
+                      <!-- 区域和节点分组多选 (SeerDesign 规范，支持悬浮一键清除) -->
+                      <div class="relative group w-[280px]" @click.outside="lineNodeDropOpen = false">
                         <div @click="lineNodeDropOpen = !lineNodeDropOpen"
                              class="flex items-center justify-between h-8 px-3 border border-border bg-white rounded-[2px] cursor-pointer hover:border-brand transition-colors select-none"
                              :class="lineNodeDropOpen ? 'border-brand' : ''">
@@ -2749,10 +2951,21 @@
                             <span class="text-xs truncate" :class="(selectedRegions.length > 0 || selectedNodes.length > 0) ? 'text-[#2F3540] font-medium' : 'text-text-mute'" x-text="getNodeFilterLabel()"></span>
                           </div>
                           
-                          <!-- 右侧下拉/清空按钮 -->
-                          <div class="flex items-center gap-1">
+                          <!-- 右侧下拉/悬浮一键清除按钮 -->
+                          <div class="flex items-center flex-shrink-0 ml-1">
+                            <button x-show="selectedRegions.length > 0 || selectedNodes.length > 0"
+                                    @click.stop="clearNodeFilters(); linePage = 1;"
+                                    class="hidden group-hover:flex w-4 h-4 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-500 items-center justify-center transition-colors focus:outline-none"
+                                    title="清除全部选项">
+                              <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                              </svg>
+                            </button>
                             <svg class="w-3 h-3 text-slate-400 flex-shrink-0 transition-transform duration-200" 
-                                 :class="lineNodeDropOpen ? 'rotate-180 text-brand' : ''" 
+                                 :class="[
+                                   lineNodeDropOpen ? 'rotate-180 text-brand' : '',
+                                   (selectedRegions.length > 0 || selectedNodes.length > 0) ? 'group-hover:hidden' : ''
+                                 ]" 
                                  fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                             </svg>
@@ -2823,11 +3036,12 @@
                       </div>
 
                       <!-- 排序逻辑下拉 (SeerDesign 规范) -->
-                      <div class="relative w-[160px]" @click.outside="lineSortDropOpen = false">
+                      <div class="relative w-[170px]" @click.outside="lineSortDropOpen = false">
                         <div @click="lineSortDropOpen = !lineSortDropOpen"
                              class="flex items-center justify-between h-8 px-3 border border-border bg-white rounded-[2px] cursor-pointer hover:border-brand transition-colors select-none"
                              :class="lineSortDropOpen ? 'border-brand' : ''">
-                          <span class="text-xs truncate font-normal text-[#2F3540]" x-text="lineSortRule === 'peak_desc' ? '按峰值大小降序' : '按峰值大小升序'"></span>
+                          <span class="text-xs truncate font-normal text-[#2F3540]" 
+                                x-text="lineSortRule === 'util_desc' ? '按峰值利用率降序' : (lineSortRule === 'util_asc' ? '按峰值利用率升序' : (lineSortRule === 'peak_desc' ? '按峰值大小降序' : '按峰值大小升序'))"></span>
                           <svg class="w-3 h-3 text-slate-400 flex-shrink-0 transition-transform duration-200" 
                                :class="lineSortDropOpen ? 'rotate-180 text-brand' : ''" 
                                fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -2836,6 +3050,16 @@
                         </div>
                         <div x-show="lineSortDropOpen" x-cloak
                              class="absolute left-0 top-full mt-1 w-full bg-white border border-border rounded-[2px] shadow-[0_4px_16px_0_rgba(30,35,43,0.14)] z-50 py-1">
+                          <div class="flex items-center h-8 px-3 hover:bg-bg-light cursor-pointer text-xs transition-colors text-[#2F3540]"
+                               :class="lineSortRule === 'util_desc' ? 'bg-brand-lightBg text-brand font-medium' : ''"
+                               @click="lineSortRule = 'util_desc'; linePage = 1; lineSortDropOpen = false;">
+                            按峰值利用率降序
+                          </div>
+                          <div class="flex items-center h-8 px-3 hover:bg-bg-light cursor-pointer text-xs transition-colors text-[#2F3540]"
+                               :class="lineSortRule === 'util_asc' ? 'bg-brand-lightBg text-brand font-medium' : ''"
+                               @click="lineSortRule = 'util_asc'; linePage = 1; lineSortDropOpen = false;">
+                            按峰值利用率升序
+                          </div>
                           <div class="flex items-center h-8 px-3 hover:bg-bg-light cursor-pointer text-xs transition-colors text-[#2F3540]"
                                :class="lineSortRule === 'peak_desc' ? 'bg-brand-lightBg text-brand font-medium' : ''"
                                @click="lineSortRule = 'peak_desc'; linePage = 1; lineSortDropOpen = false;">
@@ -2854,7 +3078,7 @@
                         <span class="text-[11px] text-slate-400">
                           共筛选到 <span class="font-outfit font-semibold text-slate-600" x-text="filteredLines().length"></span> 条结果
                         </span>
-                        <button x-show="lineFilterRules.length > 0 || selectedRegions.length > 0 || selectedNodes.length > 0 || lineSortRule !== 'peak_desc'"
+                        <button x-show="lineFilterRules.length > 0 || selectedRegions.length > 0 || selectedNodes.length > 0 || lineSortRule !== 'util_desc'"
                                 @click="clearLineFilters()"
                                 class="flex items-center gap-1 px-2 py-1 text-[10px] text-red-500 border border-red-200 rounded hover:bg-red-50 transition-colors">
                           <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -2902,11 +3126,11 @@
                             <div class="flex gap-3 text-[9px] text-text-mute mb-2">
                               <div class="flex items-center gap-0.5">
                                 <svg class="w-2.5 h-2.5 text-blue-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
-                                上行带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + ruleCard.minUp.toFixed(1) + ' / 最大 ' + ruleCard.maxUp.toFixed(1) + ' Mbps'"></span>
+                                入口带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + ruleCard.minUp.toFixed(1) + ' / 最大 ' + ruleCard.maxUp.toFixed(1) + ' Mbps'"></span>
                               </div>
                               <div class="flex items-center gap-0.5">
                                 <svg class="w-2.5 h-2.5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
-                                下行带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + ruleCard.minDown.toFixed(1) + ' / 最大 ' + ruleCard.maxDown.toFixed(1) + ' Mbps'"></span>
+                                出口带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + ruleCard.minDown.toFixed(1) + ' / 最大 ' + ruleCard.maxDown.toFixed(1) + ' Mbps'"></span>
                               </div>
                             </div>
 
@@ -2966,10 +3190,10 @@
                                        :style="isHovering(ruleCard.id) ? ('left: ' + Math.min(160, Math.max(10, ((lineHoverIndex[ruleCard.id] / (timeline.length - 1)) * 280) - 50)) + 'px; top: 6px;') : 'display: none;'">
                                     <div class="font-bold text-slate-400 text-center" x-text="isHovering(ruleCard.id) ? timeline[lineHoverIndex[ruleCard.id]] : ''">12:00</div>
                                     <div class="flex items-center gap-1.5">
-                                      <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> 上行: <span class="font-bold font-outfit" x-text="isHovering(ruleCard.id) ? ((ruleCard.upload[lineHoverIndex[ruleCard.id]] || 0).toFixed(1) + ' Mbps') : ''"></span>
+                                      <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> 入口: <span class="font-bold font-outfit" x-text="isHovering(ruleCard.id) ? ((ruleCard.upload[lineHoverIndex[ruleCard.id]] || 0).toFixed(1) + ' Mbps') : ''"></span>
                                     </div>
                                     <div class="flex items-center gap-1.5">
-                                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 下行: <span class="font-bold font-outfit" x-text="isHovering(ruleCard.id) ? ((ruleCard.download[lineHoverIndex[ruleCard.id]] || 0).toFixed(1) + ' Mbps') : ''"></span>
+                                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 出口: <span class="font-bold font-outfit" x-text="isHovering(ruleCard.id) ? ((ruleCard.download[lineHoverIndex[ruleCard.id]] || 0).toFixed(1) + ' Mbps') : ''"></span>
                                     </div>
                                   </div>
                                 </div>
@@ -3064,11 +3288,11 @@
                           <div class="flex gap-3 text-[9px] text-text-mute mb-2">
                             <div class="flex items-center gap-0.5">
                               <svg class="w-2.5 h-2.5 text-blue-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
-                              上行带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + Math.min(...line.upload).toFixed(1) + ' / 最大 ' + Math.max(...line.upload).toFixed(1) + ' Mbps'"></span>
+                              入口带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + Math.min(...line.upload).toFixed(1) + ' / 最大 ' + Math.max(...line.upload).toFixed(1) + ' Mbps'"></span>
                             </div>
                             <div class="flex items-center gap-0.5">
                               <svg class="w-2.5 h-2.5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
-                              下行带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + Math.min(...line.download).toFixed(1) + ' / 最大 ' + Math.max(...line.download).toFixed(1) + ' Mbps'"></span>
+                              出口带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + Math.min(...line.download).toFixed(1) + ' / 最大 ' + Math.max(...line.download).toFixed(1) + ' Mbps'"></span>
                             </div>
                           </div>
 
@@ -3121,10 +3345,10 @@
                                      :style="isHovering(line.id) ? ('left: ' + Math.min(160, Math.max(10, ((lineHoverIndex[line.id] / (timeline.length - 1)) * 280) - 50)) + 'px; top: 6px;') : 'display: none;'">
                                   <div class="font-bold text-slate-400 text-center" x-text="timeline[lineHoverIndex[line.id]]">12:00</div>
                                   <div class="flex items-center gap-1.5">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> 上行: <span class="font-bold font-outfit" x-text="line.upload[lineHoverIndex[line.id]] + ' Mbps'"></span>
+                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> 入口: <span class="font-bold font-outfit" x-text="line.upload[lineHoverIndex[line.id]] + ' Mbps'"></span>
                                   </div>
                                   <div class="flex items-center gap-1.5">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 下行: <span class="font-bold font-outfit" x-text="line.download[lineHoverIndex[line.id]] + ' Mbps'"></span>
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 出口: <span class="font-bold font-outfit" x-text="line.download[lineHoverIndex[line.id]] + ' Mbps'"></span>
                                   </div>
                                 </div>
                               </div>
