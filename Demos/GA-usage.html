@@ -322,14 +322,14 @@
           return typeof this.lineHoverIndex[id] === 'number' && this.lineHoverIndex[id] >= 0;
         },
         // 返回所有规则（去重排序）
-        get allRuleOptions() {
+        allRuleOptions() {
           const set = new Set();
           this.allLineData.forEach(l => l.rules.forEach(r => set.add(r)));
           return Array.from(set).sort();
         },
         // 搜索过滤后的规则列表
-        get filteredRuleOptions() {
-          let list = this.allRuleOptions;
+        filteredRuleOptions() {
+          let list = this.allRuleOptions();
           if (this.ruleSearchQuery && this.ruleSearchQuery.trim()) {
             const q = this.ruleSearchQuery.trim().toLowerCase();
             list = list.filter(r => r.toLowerCase().includes(q) || this.formatRuleName(r).toLowerCase().includes(q));
@@ -337,14 +337,14 @@
           return list;
         },
         // 滚动加载当前显示的规则列表
-        get visibleRuleOptions() {
-          return this.filteredRuleOptions.slice(0, this.ruleLimit);
+        visibleRuleOptions() {
+          return this.filteredRuleOptions().slice(0, this.ruleLimit);
         },
         // 滚动到底部触发加载更多
         handleRuleScroll(e) {
           const el = e.target;
           if (el.scrollTop + el.clientHeight >= el.scrollHeight - 15) {
-            if (this.ruleLimit < this.filteredRuleOptions.length && !this.isRuleLoading) {
+            if (this.ruleLimit < this.filteredRuleOptions().length && !this.isRuleLoading) {
               this.isRuleLoading = true;
               setTimeout(() => {
                 this.ruleLimit += 6;
@@ -355,7 +355,7 @@
         },
         // 快捷全选/取消全选
         toggleSelectAllRules() {
-          const filtered = this.filteredRuleOptions;
+          const filtered = this.filteredRuleOptions();
           const allSelected = filtered.every(r => this.lineFilterRules.includes(r));
           if (allSelected) {
             this.lineFilterRules = this.lineFilterRules.filter(r => !filtered.includes(r));
@@ -2882,6 +2882,7 @@
                             <input type="text"
                                    x-model="ruleSearchQuery"
                                    @input="ruleLimit = 6"
+                                   @click.stop
                                    placeholder="搜索加速规则..."
                                    class="w-full h-7 border border-slate-200 rounded pl-7 pr-2 text-xs focus:outline-none focus:border-brand text-slate-700 placeholder-slate-300">
                             <svg class="w-3.5 h-3.5 text-slate-400 absolute left-4 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2891,7 +2892,7 @@
 
                           <!-- 选项列表（支持滚动 + 滚动加载） -->
                           <div class="flex-1 overflow-y-auto py-1" @scroll="handleRuleScroll($event)">
-                            <template x-for="rule in visibleRuleOptions" :key="rule">
+                            <template x-for="rule in visibleRuleOptions()" :key="rule">
                               <div class="flex items-center h-8 px-3 hover:bg-bg-light cursor-pointer text-xs transition-colors"
                                    :class="lineFilterRules.includes(rule) ? 'bg-brand-lightBg text-brand font-medium' : 'text-[#2F3540]'"
                                    @click.stop="toggleRuleFilter(rule)">
@@ -2917,14 +2918,14 @@
                               <span>加载中...</span>
                             </div>
 
-                            <div x-show="filteredRuleOptions.length === 0" class="px-3 py-4 text-xs text-slate-400 text-center">暂无匹配规则数据</div>
+                            <div x-show="filteredRuleOptions().length === 0" class="px-3 py-4 text-xs text-slate-400 text-center">暂无匹配规则数据</div>
                           </div>
 
                           <!-- 底部操作按钮 -->
                           <div class="p-2 border-t border-slate-100 flex items-center justify-between bg-slate-50 flex-shrink-0 text-xs select-none">
                             <button @click.stop="toggleSelectAllRules()"
                                     class="text-[11px] text-brand hover:underline">
-                              <span x-text="filteredRuleOptions.every(r => lineFilterRules.includes(r)) && filteredRuleOptions.length > 0 ? '取消全选' : '全选'"></span>
+                              <span x-text="filteredRuleOptions().every(r => lineFilterRules.includes(r)) && filteredRuleOptions().length > 0 ? '取消全选' : '全选'"></span>
                             </button>
                             <div class="flex items-center gap-1.5">
                               <button @click.stop="lineFilterRules = []; linePage = 1;"
