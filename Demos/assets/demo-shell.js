@@ -136,7 +136,7 @@
 
           sectionSelectBusiness: '选择需要加速的业务',
           subtextSelectBusiness: '请选择代理网关区域，系统会自动关联该区域的代理网关，并加速其发布的全部隧道应用。',
-          labelSourceObj: '需要加速的业务对象 (源站对象)',
+          labelSourceObj: '需要加速的业务对象',
           holderSourceObj: '请选择隧道应用所在的代理网关区域地址',
           labelGeoLocation: '业务所在地理区域 (源站区域/下车点)',
           holderGeoLocation: '请选择',

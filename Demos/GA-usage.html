@@ -92,10 +92,10 @@
         lineNodeDropOpen: false,  // 大区和节点选择下拉是否打开
         lineRuleDropOpen: false,  // 规则多选下拉是否打开
         ruleSearchQuery: '',      // 规则搜索关键字
-        ruleLimit: 6,             // 滚动加载初次展示条数
-        isRuleLoading: false,     // 滚动加载动画状态
-        lineSortRule: 'util_desc', // 排序逻辑：'util_desc'（按峰值利用率降序）, 'util_asc'（按峰值利用率升序）, 'peak_desc'（按峰值大小降序）, 'peak_asc'（按峰值大小升序）
-        lineSortDropOpen: false,  // 排序下拉是否打开
+        rulePage: 1,              // 规则趋势当前页
+        rulePageSize: 10,         // 规则趋势每页条数
+        linePage: 1,              // 线路趋势当前页
+        linePageSize: 10,         // 线路趋势每页条数
         activeFilterRegionTab: '中国大陆',
         ruleSectionOpen: true,
         lineSectionOpen: true,
@@ -450,7 +450,45 @@
             }
           });
 
+          // 如果筛选了单个规则，对其关联线路的下车点进行统一化 (满足下车点统一需求)
+          if (this.isSingleRuleFilter()) {
+            const rule = this.lineFilterRules[0];
+            let destNode = '曼谷';
+            if (rule.startsWith('POL-002')) destNode = '法兰克福';
+            else if (rule.startsWith('POL-003')) destNode = '中国香港';
+            else if (rule.startsWith('POL-004')) destNode = '新加坡';
+            else if (rule.startsWith('POL-005')) destNode = '东京';
+            else if (rule.startsWith('POL-006')) destNode = '硅谷';
+
+            const originNodes = ['上海', '北京', '广州', '深圳', '成都', '武汉', '杭州', '南京', '西安', '青岛'];
+            lines = lines.map((l, i) => {
+              const srcNode = originNodes[i % originNodes.length];
+              return {
+                ...l,
+                name: `${srcNode} → ${destNode}`
+              };
+            });
+          }
+
           return lines;
+        },
+        // 获取规则对应的紧张线路条数 (统一 Mock 逻辑)
+        getRuleTightCount(rule) {
+          if (!rule) return 0;
+          if (rule.startsWith('POL-001')) return 2;
+          if (rule.startsWith('POL-002')) return 1;
+          if (rule.startsWith('POL-003')) return 1;
+          if (rule.startsWith('POL-004')) return 2;
+          if (rule.startsWith('POL-005')) return 4;
+          if (rule.startsWith('POL-006')) return 3;
+
+          const matchingLines = this.allLineData.filter(l => l.rules.includes(rule));
+          let count = 0;
+          matchingLines.forEach(l => {
+            const peakL = Math.max(Math.max(...l.upload), Math.max(...l.download));
+            if (l.watermark && (peakL / l.watermark) >= 0.65) count++;
+          });
+          return Math.max(1, count);
         },
         // 返回规则的汇总数据趋势
         ruleTrends() {
@@ -464,9 +502,9 @@
             targetRules = Array.from(set).sort();
           }
 
-          return targetRules.map(rule => {
+          const cards = targetRules.map(rule => {
             const matchingLines = this.filteredLines().filter(l => l.rules.includes(rule));
-            if (matchingLines.length < 3) return null;
+            if (matchingLines.length === 0) return null;
 
             const uploadSum = Array(this.timeline.length).fill(0);
             const downloadSum = Array(this.timeline.length).fill(0);
@@ -480,6 +518,9 @@
               }
             });
 
+            // 获取统一且准确的紧张线路条数
+            const tightLineCount = this.getRuleTightCount(rule);
+
             let maxUp = Math.max(...uploadSum);
             let minUp = Math.min(...uploadSum);
             let maxDown = Math.max(...downloadSum);
@@ -488,7 +529,6 @@
             // 模拟带宽紧张下的特定规则异常趋势 (刚好2个规则异常)
             if (this.bandwidthStatus === 'tight') {
               if (rule.startsWith('POL-001')) {
-                // 模拟利用率达 96%
                 const targetPeak = watermarkSum * 0.96;
                 const currentMax = Math.max(maxUp, maxDown);
                 const multiplier = targetPeak / currentMax;
@@ -501,7 +541,6 @@
                 maxDown = Math.max(...downloadSum);
                 minDown = Math.min(...downloadSum);
               } else if (rule.startsWith('POL-002')) {
-                // 模拟利用率达 85%
                 const targetPeak = watermarkSum * 0.85;
                 const currentMax = Math.max(maxUp, maxDown);
                 const multiplier = targetPeak / currentMax;
@@ -530,28 +569,22 @@
               maxDown: parseFloat(maxDown.toFixed(1)),
               minDown: parseFloat(minDown.toFixed(1)),
               peak: parseFloat(peak.toFixed(1)),
-              lineCount: matchingLines.length
+              lineCount: matchingLines.length,
+              tightLineCount: tightLineCount
             };
           }).filter(Boolean);
 
-          cards.sort((a, b) => {
-            const peakA = Math.max(a.maxUp, a.maxDown);
-            const peakB = Math.max(b.maxUp, b.maxDown);
-            const utilA = a.watermark ? (peakA / a.watermark) : 0;
-            const utilB = b.watermark ? (peakB / b.watermark) : 0;
-
-            if (this.lineSortRule === 'util_asc') {
-              return utilA - utilB;
-            } else if (this.lineSortRule === 'peak_desc') {
-              return peakB - peakA;
-            } else if (this.lineSortRule === 'peak_asc') {
-              return peakA - peakB;
-            } else {
-              return utilB - utilA; // util_desc
-            }
-          });
+          // 默认按照规则的紧张线路个数降序
+          cards.sort((a, b) => b.tightLineCount - a.tightLineCount);
 
           return cards;
+        },
+        ruleTotalPages() {
+          return Math.max(1, Math.ceil(this.ruleTrends().length / this.rulePageSize));
+        },
+        getPagedRuleTrends() {
+          const start = (this.rulePage - 1) * this.rulePageSize;
+          return this.ruleTrends().slice(start, start + this.rulePageSize);
         },
         lineTotalPages() {
           return Math.max(1, Math.ceil(this.filteredLines().length / this.linePageSize));
@@ -559,6 +592,51 @@
         getPagedLines() {
           const start = (this.linePage - 1) * this.linePageSize;
           return this.filteredLines().slice(start, start + this.linePageSize);
+        },
+        isSingleRuleFilter() {
+          return this.lineFilterRules.length === 1;
+        },
+        singleRuleName() {
+          return this.lineFilterRules.length === 1 ? this.formatRuleName(this.lineFilterRules[0]) : '';
+        },
+        getLineAllocatedLimit(line) {
+          if (!this.isSingleRuleFilter()) return line.watermark;
+          return 20;
+        },
+        getLineIndex(line) {
+          const lines = this.filteredLines();
+          return lines.findIndex(l => l.id === line.id);
+        },
+        getLinePeakUtil(line) {
+          if (!this.isSingleRuleFilter()) {
+            const peak = Math.max(Math.max(...line.upload), Math.max(...line.download));
+            return line.watermark ? Math.round((peak / line.watermark) * 100) : 0;
+          } else {
+            const idx = this.getLineIndex(line);
+            const rule = this.lineFilterRules[0];
+            const tightCount = this.getRuleTightCount(rule);
+
+            if (idx >= 0 && idx < tightCount) {
+              const peaks = [94, 91, 86, 83, 88, 85];
+              return peaks[idx % peaks.length];
+            } else {
+              return 52 - ((idx % 4) * 4);
+            }
+          }
+        },
+        getLineSplitData(line, type) {
+          if (!this.isSingleRuleFilter()) {
+            return line[type];
+          }
+          const util = this.getLinePeakUtil(line);
+          const limit = this.getLineAllocatedLimit(line);
+          const targetPeak = limit * (util / 100);
+
+          const raw = line[type];
+          const maxRaw = Math.max(...line.upload, ...line.download);
+          const mult = maxRaw > 0 ? (targetPeak / maxRaw) : 1;
+
+          return raw.map(v => parseFloat((v * mult).toFixed(1)));
         },
         // 切换规则选中状态
         toggleRuleFilter(rule) {
@@ -569,13 +647,20 @@
             this.lineFilterRules = this.lineFilterRules.filter(r => r !== rule);
           }
           this.linePage = 1;
+          this.rulePage = 1;
+        },
+        // 点击 Tag 直接单选覆盖当前加速规则筛选
+        selectSingleRuleFilter(rule) {
+          this.lineFilterRules = [rule];
+          this.linePage = 1;
+          this.rulePage = 1;
         },
         clearLineFilters() {
           this.lineFilterRules = [];
           this.selectedRegions = [];
           this.selectedNodes = [];
-          this.lineSortRule = 'util_desc';
           this.linePage = 1;
+          this.rulePage = 1;
         },
         formatRuleName(rule) {
           if (!rule) return '';
@@ -3036,50 +3121,12 @@
                         </div>
                       </div>
 
-                      <!-- 排序逻辑下拉 (SeerDesign 规范) -->
-                      <div class="relative w-[170px]" @click.outside="lineSortDropOpen = false">
-                        <div @click="lineSortDropOpen = !lineSortDropOpen"
-                             class="flex items-center justify-between h-8 px-3 border border-border bg-white rounded-[2px] cursor-pointer hover:border-brand transition-colors select-none"
-                             :class="lineSortDropOpen ? 'border-brand' : ''">
-                          <span class="text-xs truncate font-normal text-[#2F3540]" 
-                                x-text="lineSortRule === 'util_desc' ? '按峰值利用率降序' : (lineSortRule === 'util_asc' ? '按峰值利用率升序' : (lineSortRule === 'peak_desc' ? '按峰值大小降序' : '按峰值大小升序'))"></span>
-                          <svg class="w-3 h-3 text-slate-400 flex-shrink-0 transition-transform duration-200" 
-                               :class="lineSortDropOpen ? 'rotate-180 text-brand' : ''" 
-                               fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
-                          </svg>
-                        </div>
-                        <div x-show="lineSortDropOpen" x-cloak
-                             class="absolute left-0 top-full mt-1 w-full bg-white border border-border rounded-[2px] shadow-[0_4px_16px_0_rgba(30,35,43,0.14)] z-50 py-1">
-                          <div class="flex items-center h-8 px-3 hover:bg-bg-light cursor-pointer text-xs transition-colors text-[#2F3540]"
-                               :class="lineSortRule === 'util_desc' ? 'bg-brand-lightBg text-brand font-medium' : ''"
-                               @click="lineSortRule = 'util_desc'; linePage = 1; lineSortDropOpen = false;">
-                            按峰值利用率降序
-                          </div>
-                          <div class="flex items-center h-8 px-3 hover:bg-bg-light cursor-pointer text-xs transition-colors text-[#2F3540]"
-                               :class="lineSortRule === 'util_asc' ? 'bg-brand-lightBg text-brand font-medium' : ''"
-                               @click="lineSortRule = 'util_asc'; linePage = 1; lineSortDropOpen = false;">
-                            按峰值利用率升序
-                          </div>
-                          <div class="flex items-center h-8 px-3 hover:bg-bg-light cursor-pointer text-xs transition-colors text-[#2F3540]"
-                               :class="lineSortRule === 'peak_desc' ? 'bg-brand-lightBg text-brand font-medium' : ''"
-                               @click="lineSortRule = 'peak_desc'; linePage = 1; lineSortDropOpen = false;">
-                            按峰值大小降序
-                          </div>
-                          <div class="flex items-center h-8 px-3 hover:bg-bg-light cursor-pointer text-xs transition-colors text-[#2F3540]"
-                               :class="lineSortRule === 'peak_asc' ? 'bg-brand-lightBg text-brand font-medium' : ''"
-                               @click="lineSortRule = 'peak_asc'; linePage = 1; lineSortDropOpen = false;">
-                            按峰值大小升序
-                          </div>
-                        </div>
-                      </div>
-
                       <!-- 筛选结果数 + 清除按钮 -->
                       <div class="flex items-center gap-2 ml-auto">
                         <span class="text-[11px] text-slate-400">
                           共筛选到 <span class="font-outfit font-semibold text-slate-600" x-text="filteredLines().length"></span> 条结果
                         </span>
-                        <button x-show="lineFilterRules.length > 0 || selectedRegions.length > 0 || selectedNodes.length > 0 || lineSortRule !== 'util_desc'"
+                        <button x-show="lineFilterRules.length > 0 || selectedRegions.length > 0 || selectedNodes.length > 0"
                                 @click="clearLineFilters()"
                                 class="flex items-center gap-1 px-2 py-1 text-[10px] text-red-500 border border-red-200 rounded hover:bg-red-50 transition-colors">
                           <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -3103,111 +3150,128 @@
                           <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
                         </svg>
                       </div>
-                      <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6"
-                           x-show="ruleSectionOpen" x-collapse x-cloak>
-                        <template x-for="ruleCard in ruleTrends()" :key="ruleCard.id">
-                          <div class="border border-blue-100 rounded-lg p-3 bg-blue-50/15 flex flex-col justify-between relative group hover:bg-white transition-all duration-300 flex-1"
-                               @mousemove="lineHoverIndex[ruleCard.id] = (function(e){ const r=e.currentTarget.getBoundingClientRect(); const p=(e.clientX-r.left)/r.width; const l=timeline.length; return Math.max(0,Math.min(l-1,Math.round(p*(l-1)))); })($event)"
-                               @mouseleave="lineHoverIndex[ruleCard.id] = -1">
-                            
-                            <div class="flex justify-between items-start mb-1 text-[11px]">
-                              <div class="flex flex-col min-w-0 flex-1 mr-2">
-                                <div class="flex items-center gap-2 flex-wrap">
-                                  <span class="font-bold text-brand text-xs truncate cursor-pointer hover:underline" @click="openDetailDrawer(ruleCard.name)" x-text="'规则：' + formatRuleName(ruleCard.name)" title="点击查看与编辑规则"></span>
-                                  <span class="px-1.5 py-0.5 rounded-[3px] text-[9px] border font-sans font-medium select-none"
-                                        :class="getUtilStatus(getPeakUtil(ruleCard.upload, ruleCard.download, ruleCard.watermark)).bg"
-                                        x-text="'峰值利用率 ' + getPeakUtil(ruleCard.upload, ruleCard.download, ruleCard.watermark) + '%'">
-                                  </span>
-                                </div>
-                                <span class="text-[9px] text-slate-400 mt-0.5" x-text="'包含线路数：' + ruleCard.lineCount + ' 条'"></span>
-                              </div>
-                              <span class="text-[10px] text-text-mute">授权带宽: <span class="font-bold font-outfit" x-text="ruleCard.watermark + ' Mbps'"></span></span>
-                            </div>
-                            
-                            <div class="flex gap-3 text-[9px] text-text-mute mb-2">
-                              <div class="flex items-center gap-0.5">
-                                <svg class="w-2.5 h-2.5 text-blue-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
-                                入口带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + ruleCard.minUp.toFixed(1) + ' / 最大 ' + ruleCard.maxUp.toFixed(1) + ' Mbps'"></span>
-                              </div>
-                              <div class="flex items-center gap-0.5">
-                                <svg class="w-2.5 h-2.5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
-                                出口带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + ruleCard.minDown.toFixed(1) + ' / 最大 ' + ruleCard.maxDown.toFixed(1) + ' Mbps'"></span>
-                              </div>
-                            </div>
-
-                            <!-- 带坐标轴的图表容器 -->
-                            <div class="h-36 w-full relative select-none flex">
-                              <!-- 纵坐标 -->
-                              <div class="flex flex-col justify-between text-right pr-1 flex-shrink-0" style="width:28px;padding-top:2px;padding-bottom:14px;">
-                                <span class="text-[8px] text-slate-400 font-outfit leading-none" x-text="ruleCard.watermark + 'M'"></span>
-                                <span class="text-[8px] text-slate-400 font-outfit leading-none" x-text="Math.round(ruleCard.watermark * 0.75) + 'M'"></span>
-                                <span class="text-[8px] text-slate-400 font-outfit leading-none" x-text="Math.round(ruleCard.watermark * 0.5) + 'M'"></span>
-                                <span class="text-[8px] text-slate-400 font-outfit leading-none" x-text="Math.round(ruleCard.watermark * 0.25) + 'M'"></span>
-                                <span class="text-[8px] text-slate-400 font-outfit leading-none">0</span>
-                              </div>
-                              <!-- 图表主体 -->
-                              <div class="flex-1 flex flex-col" style="min-width:0;">
-                                <div class="flex-1 relative bg-white rounded border border-slate-100 p-1 overflow-hidden"
-                                     @mousemove="lineHoverIndex[ruleCard.id] = (function(e){ const r=e.currentTarget.getBoundingClientRect(); const p=(e.clientX-r.left)/r.width; const l=timeline.length; return Math.max(0,Math.min(l-1,Math.round(p*(l-1)))); })($event)"
-                                     @mouseleave="lineHoverIndex[ruleCard.id] = -1">
-                                  <div class="absolute inset-0 flex flex-col justify-between py-2 px-1 pointer-events-none opacity-25">
-                                    <div class="border-b border-dashed border-slate-300 w-full"></div>
-                                    <div class="border-b border-dashed border-slate-300 w-full"></div>
-                                    <div class="border-b border-dashed border-slate-300 w-full"></div>
+                      <div x-show="ruleSectionOpen" x-collapse x-cloak>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                          <template x-for="ruleCard in getPagedRuleTrends()" :key="ruleCard.id">
+                            <div class="border border-blue-100 rounded-lg p-3 bg-blue-50/15 flex flex-col justify-between relative group hover:bg-white transition-all duration-300 flex-1"
+                                 @mousemove="lineHoverIndex[ruleCard.id] = (function(e){ const r=e.currentTarget.getBoundingClientRect(); const p=(e.clientX-r.left)/r.width; const l=timeline.length; return Math.max(0,Math.min(l-1,Math.round(p*(l-1)))); })($event)"
+                                 @mouseleave="lineHoverIndex[ruleCard.id] = -1">
+                              
+                              <div class="flex justify-between items-start mb-1 text-[11px]">
+                                <div class="flex flex-col min-w-0 flex-1">
+                                  <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="font-bold text-brand text-xs truncate cursor-pointer hover:underline" @click="openDetailDrawer(ruleCard.name)" x-text="'规则：' + formatRuleName(ruleCard.name)" title="点击查看与编辑规则"></span>
+                                    <span class="px-1.5 py-0.5 rounded-[3px] text-[9px] border font-sans font-medium select-none cursor-pointer transition-all hover:scale-105 active:scale-95"
+                                          :class="ruleCard.tightLineCount > 0 ? 'bg-rose-50 text-rose-600 border-rose-200 font-bold hover:bg-rose-100 hover:border-rose-300 shadow-xs' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'"
+                                          @click.stop="selectSingleRuleFilter(ruleCard.name)"
+                                          :title="'点击将此规则选择选中（覆盖现有筛选），快速联动查看线路详情'">
+                                      <span x-text="'存在紧张线路 ' + ruleCard.tightLineCount + ' 条'"></span>
+                                    </span>
                                   </div>
+                                  <span class="text-[9px] text-slate-400 mt-0.5" x-text="'包含线路数：' + ruleCard.lineCount + ' 条'"></span>
+                                </div>
+                              </div>
+                              
+                              <div class="flex gap-3 text-[9px] text-text-mute mb-2">
+                                <div class="flex items-center gap-0.5">
+                                  <svg class="w-2.5 h-2.5 text-blue-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                                  入口带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + ruleCard.minUp.toFixed(1) + ' / 最大 ' + ruleCard.maxUp.toFixed(1) + ' Mbps'"></span>
+                                </div>
+                                <div class="flex items-center gap-0.5">
+                                  <svg class="w-2.5 h-2.5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+                                  出口带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + ruleCard.minDown.toFixed(1) + ' / 最大 ' + ruleCard.maxDown.toFixed(1) + ' Mbps'"></span>
+                                </div>
+                              </div>
 
-                                  <template x-if="isHovering(ruleCard.id)">
-                                    <div class="absolute top-0 bottom-0 border-l border-dashed border-blue-400 pointer-events-none z-10"
-                                         :style="'left: ' + ((lineHoverIndex[ruleCard.id] / (timeline.length - 1)) * 100) + '%;'"></div>
-                                  </template>
-
-                                  <svg class="w-full h-full" viewBox="0 0 280 80" preserveAspectRatio="none">
-                                    <rect x-show="getPeakUtil(ruleCard.upload, ruleCard.download, ruleCard.watermark) >= 80"
-                                          x="0" y="0" width="280" :height="80 - (ruleCard.watermark * 0.8 / (ruleCard.watermark * 1.25)) * 80" 
-                                          :fill="getUtilStatus(getPeakUtil(ruleCard.upload, ruleCard.download, ruleCard.watermark)).zoneFill" />
-
-                                    <path :d="getAreaPath(ruleCard.upload, ruleCard.watermark, 280, 80)" fill="url(#up-area-grad)" />
-                                    <path :d="getAreaPath(ruleCard.download, ruleCard.watermark, 280, 80)" fill="url(#down-area-grad)" />
-                                    <!-- 水位基准线 (汇总趋势卡片显示水位线) -->
-                                    <line x1="0" :y1="80 - (ruleCard.watermark / (ruleCard.watermark * 1.25)) * 80"
-                                          x2="280" :y2="80 - (ruleCard.watermark / (ruleCard.watermark * 1.25)) * 80"
-                                          :stroke="getUtilStatus(getPeakUtil(ruleCard.upload, ruleCard.download, ruleCard.watermark)).line"
-                                          :stroke-width="getPeakUtil(ruleCard.upload, ruleCard.download, ruleCard.watermark) >= 95 ? 1.5 : 1"
-                                          stroke-dasharray="3 3" />
-                                    <path :d="getPath(ruleCard.upload, ruleCard.watermark, 280, 80)" stroke="#3B82F6" stroke-width="1.0" fill="none" />
-                                    <path :d="getPath(ruleCard.download, ruleCard.watermark, 280, 80)" stroke="#10B981" stroke-width="1.0" fill="none" />
-                                    <g x-show="isHovering(ruleCard.id)">
-                                      <circle :cx="(lineHoverIndex[ruleCard.id] / (timeline.length - 1)) * 280"
-                                              :cy="80 - ((ruleCard.upload[isHovering(ruleCard.id) ? lineHoverIndex[ruleCard.id] : 0] || 0) / (ruleCard.watermark * 1.25)) * 80"
-                                              r="3" fill="#3B82F6" stroke="#FFFFFF" stroke-width="1" />
-                                      <circle :cx="(lineHoverIndex[ruleCard.id] / (timeline.length - 1)) * 280"
-                                              :cy="80 - ((ruleCard.download[isHovering(ruleCard.id) ? lineHoverIndex[ruleCard.id] : 0] || 0) / (ruleCard.watermark * 1.25)) * 80"
-                                              r="3" fill="#10B981" stroke="#FFFFFF" stroke-width="1" />
-                                    </g>
-                                  </svg>
-
-                                  <div x-show="isHovering(ruleCard.id)"
-                                       class="absolute bg-slate-900/95 text-white rounded px-2.5 py-1 shadow-lg text-[9px] pointer-events-none z-20 space-y-0.5"
-                                       :style="isHovering(ruleCard.id) ? ('left: ' + Math.min(160, Math.max(10, ((lineHoverIndex[ruleCard.id] / (timeline.length - 1)) * 280) - 50)) + 'px; top: 6px;') : 'display: none;'">
-                                    <div class="font-bold text-slate-400 text-center" x-text="isHovering(ruleCard.id) ? timeline[lineHoverIndex[ruleCard.id]] : ''">12:00</div>
-                                    <div class="flex items-center gap-1.5">
-                                      <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> 入口: <span class="font-bold font-outfit" x-text="isHovering(ruleCard.id) ? ((ruleCard.upload[lineHoverIndex[ruleCard.id]] || 0).toFixed(1) + ' Mbps') : ''"></span>
+                              <!-- 带坐标轴的图表容器 -->
+                              <div class="h-36 w-full relative select-none flex">
+                                <!-- 纵坐标 -->
+                                <div class="flex flex-col justify-between text-right pr-1 flex-shrink-0" style="width:28px;padding-top:2px;padding-bottom:14px;">
+                                  <span class="text-[8px] text-slate-400 font-outfit leading-none" x-text="ruleCard.watermark + 'M'"></span>
+                                  <span class="text-[8px] text-slate-400 font-outfit leading-none" x-text="Math.round(ruleCard.watermark * 0.75) + 'M'"></span>
+                                  <span class="text-[8px] text-slate-400 font-outfit leading-none" x-text="Math.round(ruleCard.watermark * 0.5) + 'M'"></span>
+                                  <span class="text-[8px] text-slate-400 font-outfit leading-none" x-text="Math.round(ruleCard.watermark * 0.25) + 'M'"></span>
+                                  <span class="text-[8px] text-slate-400 font-outfit leading-none">0</span>
+                                </div>
+                                <!-- 图表主体 -->
+                                <div class="flex-1 flex flex-col" style="min-width:0;">
+                                  <div class="flex-1 relative bg-white rounded border border-slate-100 p-1 overflow-hidden"
+                                       @mousemove="lineHoverIndex[ruleCard.id] = (function(e){ const r=e.currentTarget.getBoundingClientRect(); const p=(e.clientX-r.left)/r.width; const l=timeline.length; return Math.max(0,Math.min(l-1,Math.round(p*(l-1)))); })($event)"
+                                       @mouseleave="lineHoverIndex[ruleCard.id] = -1">
+                                    <div class="absolute inset-0 flex flex-col justify-between py-2 px-1 pointer-events-none opacity-25">
+                                      <div class="border-b border-dashed border-slate-300 w-full"></div>
+                                      <div class="border-b border-dashed border-slate-300 w-full"></div>
+                                      <div class="border-b border-dashed border-slate-300 w-full"></div>
                                     </div>
-                                    <div class="flex items-center gap-1.5">
-                                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 出口: <span class="font-bold font-outfit" x-text="isHovering(ruleCard.id) ? ((ruleCard.download[lineHoverIndex[ruleCard.id]] || 0).toFixed(1) + ' Mbps') : ''"></span>
+
+                                    <template x-if="isHovering(ruleCard.id)">
+                                      <div class="absolute top-0 bottom-0 border-l border-dashed border-blue-400 pointer-events-none z-10"
+                                           :style="'left: ' + ((lineHoverIndex[ruleCard.id] / (timeline.length - 1)) * 100) + '%;'"></div>
+                                    </template>
+
+                                    <svg class="w-full h-full" viewBox="0 0 280 80" preserveAspectRatio="none">
+                                      <path :d="getAreaPath(ruleCard.upload, ruleCard.watermark, 280, 80)" fill="url(#up-area-grad)" />
+                                      <path :d="getAreaPath(ruleCard.download, ruleCard.watermark, 280, 80)" fill="url(#down-area-grad)" />
+                                      <path :d="getPath(ruleCard.upload, ruleCard.watermark, 280, 80)" stroke="#3B82F6" stroke-width="1.0" fill="none" />
+                                      <path :d="getPath(ruleCard.download, ruleCard.watermark, 280, 80)" stroke="#10B981" stroke-width="1.0" fill="none" />
+                                      <g x-show="isHovering(ruleCard.id)">
+                                        <circle :cx="(lineHoverIndex[ruleCard.id] / (timeline.length - 1)) * 280"
+                                                :cy="80 - ((ruleCard.upload[isHovering(ruleCard.id) ? lineHoverIndex[ruleCard.id] : 0] || 0) / (ruleCard.watermark * 1.25)) * 80"
+                                                r="3" fill="#3B82F6" stroke="#FFFFFF" stroke-width="1" />
+                                        <circle :cx="(lineHoverIndex[ruleCard.id] / (timeline.length - 1)) * 280"
+                                                :cy="80 - ((ruleCard.download[isHovering(ruleCard.id) ? lineHoverIndex[ruleCard.id] : 0] || 0) / (ruleCard.watermark * 1.25)) * 80"
+                                                r="3" fill="#10B981" stroke="#FFFFFF" stroke-width="1" />
+                                      </g>
+                                    </svg>
+
+                                    <div x-show="isHovering(ruleCard.id)"
+                                         class="absolute bg-slate-900/95 text-white rounded px-2.5 py-1 shadow-lg text-[9px] pointer-events-none z-20 space-y-0.5"
+                                         :style="isHovering(ruleCard.id) ? ('left: ' + Math.min(160, Math.max(10, ((lineHoverIndex[ruleCard.id] / (timeline.length - 1)) * 280) - 50)) + 'px; top: 6px;') : 'display: none;'">
+                                      <div class="font-bold text-slate-400 text-center" x-text="isHovering(ruleCard.id) ? timeline[lineHoverIndex[ruleCard.id]] : ''">12:00</div>
+                                      <div class="flex items-center gap-1.5">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> 入口: <span class="font-bold font-outfit" x-text="isHovering(ruleCard.id) ? ((ruleCard.upload[lineHoverIndex[ruleCard.id]] || 0).toFixed(1) + ' Mbps') : ''"></span>
+                                      </div>
+                                      <div class="flex items-center gap-1.5">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 出口: <span class="font-bold font-outfit" x-text="isHovering(ruleCard.id) ? ((ruleCard.download[lineHoverIndex[ruleCard.id]] || 0).toFixed(1) + ' Mbps') : ''"></span>
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                                <!-- 横坐标 -->
-                                <div class="flex justify-between mt-0.5 px-0.5">
-                                  <template x-for="(t, i) in timeline.filter((_, i) => i % 2 === 0)" :key="i">
-                                    <span class="text-[7px] text-slate-400 font-outfit" x-text="t"></span>
-                                  </template>
+                                  <!-- 横坐标 -->
+                                  <div class="flex justify-between mt-0.5 px-0.5">
+                                    <template x-for="(t, i) in timeline.filter((_, i) => i % 2 === 0)" :key="i">
+                                      <span class="text-[7px] text-slate-400 font-outfit" x-text="t"></span>
+                                    </template>
+                                  </div>
                                 </div>
                               </div>
                             </div>
+                          </template>
+                        </div>
+
+                        <!-- 规则趋势独立分页控制栏 -->
+                        <div class="flex items-center justify-between mt-3 pt-3 border-t border-slate-200/60 flex-shrink-0 select-none">
+                          <span class="text-[11px] text-slate-400">
+                            规则趋势共 <span class="font-outfit font-semibold text-slate-600" x-text="ruleTrends().length"></span> 条，第 <span class="font-outfit font-semibold text-slate-600" x-text="rulePage"></span> / <span class="font-outfit font-semibold text-slate-600" x-text="ruleTotalPages()"></span> 页
+                          </span>
+                          <div class="flex items-center gap-1">
+                            <button class="px-2.5 py-1 text-[11px] border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                    :disabled="rulePage <= 1"
+                                    @click="rulePage = Math.max(1, rulePage - 1)">
+                              <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                            </button>
+                            <template x-for="p in Array.from({length: ruleTotalPages()}, (_, i) => i + 1)" :key="'rp-'+p">
+                              <button class="w-7 h-7 text-[11px] rounded border transition-colors"
+                                      :class="p === rulePage ? 'bg-blue-500 text-white border-blue-500 font-semibold' : 'border-slate-200 hover:bg-slate-50 text-slate-600'"
+                                      @click="rulePage = p" x-text="p">
+                              </button>
+                            </template>
+                            <button class="px-2.5 py-1 text-[11px] border border-slate-200 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                    :disabled="rulePage >= ruleTotalPages()"
+                                    @click="rulePage = Math.min(ruleTotalPages(), rulePage + 1)">
+                              <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                            </button>
                           </div>
-                        </template>
+                        </div>
                       </div>
                     </div>
 
@@ -3215,10 +3279,10 @@
                     <div class="flex-1 flex flex-col bg-slate-50/50 border border-slate-200/50 rounded-xl p-4">
                       <div class="text-xs font-bold text-slate-500 mb-3 flex items-center justify-between select-none cursor-pointer group"
                            @click="lineSectionOpen = !lineSectionOpen">
-                        <div class="flex items-center gap-1.5">
+                        <div class="flex items-center gap-2">
                           <span class="w-1.5 h-3 bg-slate-400 rounded-sm"></span>
                           <span>具体线路带宽详情</span>
-                          <span class="text-[10px] text-slate-400 font-normal ml-1" x-text="lineSectionOpen ? '（点击折叠）' : '（点击展开）'"></span>
+                          <span class="text-[10px] text-slate-400 font-normal" x-text="lineSectionOpen ? '（点击折叠）' : '（点击展开）'"></span>
                         </div>
                         <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200"
                              :class="!lineSectionOpen && '-rotate-90'"
@@ -3235,65 +3299,101 @@
                           
                           <div class="flex justify-between items-start mb-1 text-[11px]">
                             <div class="flex flex-col min-w-0 flex-1 mr-2">
-                              <span class="font-bold text-slate-700 text-xs truncate" x-text="line.name">吉隆坡 → 北京</span>
-                              <!-- 关联加速规则悬浮提示 -->
-                              <div class="relative inline-flex items-center gap-1 mt-0.5" @mouseenter="lineTooltipId = line.id" @mouseleave="lineTooltipId = null">
-                                <span class="text-[9px] text-slate-500 cursor-default">
-                                  关联加速规则：
-                                  <template x-if="line.rules.length <= 2">
-                                    <span class="inline-flex items-center">
-                                      <template x-for="(rule, index) in line.rules" :key="index">
-                                        <span>
-                                          <span class="font-medium text-slate-600 hover:underline cursor-pointer transition-colors" 
-                                                @click.stop="openDetailDrawer(rule)" 
-                                                x-text="formatRuleName(rule)"
-                                                title="点击查看规则详情"></span>
-                                          <span class="text-slate-400" x-show="index < line.rules.length - 1">，</span>
-                                        </span>
-                                      </template>
-                                    </span>
-                                  </template>
-                                  <template x-if="line.rules.length > 2">
-                                    <span class="inline-flex items-center">
-                                      <template x-for="(rule, index) in line.rules.slice(0, 2)" :key="index">
-                                        <span>
-                                          <span class="font-medium text-slate-600 hover:underline cursor-pointer transition-colors" 
-                                                @click.stop="openDetailDrawer(rule)" 
-                                                x-text="formatRuleName(rule)"
-                                                title="点击查看规则详情"></span>
-                                          <span class="text-slate-400" x-show="index < 1">，</span>
-                                        </span>
-                                      </template>
-                                      <span class="text-slate-400 ml-0.5">等<span class="font-outfit font-semibold text-blue-500" x-text="line.rules.length"></span>个</span>
-                                    </span>
-                                  </template>
-                                </span>
-                                <!-- 悬浮规则列表 -->
-                                <div x-show="lineTooltipId === line.id"
-                                     class="absolute left-0 top-full mt-1 bg-slate-900/95 text-white rounded px-2.5 py-1.5 shadow-xl text-[9px] z-50 whitespace-nowrap min-w-max">
-                                  <div class="font-semibold text-slate-300 mb-1">全部关联规则</div>
-                                  <template x-for="(r, ri) in line.rules" :key="ri">
-                                    <div class="flex items-center gap-1.5 py-0.5">
-                                      <span class="w-1 h-1 rounded-full bg-blue-400 flex-shrink-0"></span>
-                                      <span class="hover:text-blue-300 hover:underline cursor-pointer transition-colors"
-                                            @click.stop="openDetailDrawer(r)"
-                                            x-text="formatRuleName(r)"
-                                            title="点击查看规则详情"></span>
-                                    </div>
-                                  </template>
-                                </div>
+                              <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-bold text-slate-700 text-xs truncate" x-text="line.name"></span>
+                                <!-- 模式 Tag -->
+                                <template x-if="!isSingleRuleFilter()">
+                                  <span class="px-1.5 py-0.5 rounded text-[9px] bg-slate-100 text-slate-500 border border-slate-200 select-none">
+                                    全网共享
+                                  </span>
+                                </template>
+                                <template x-if="isSingleRuleFilter()">
+                                  <span class="px-1.5 py-0.5 rounded text-[9px] bg-blue-50 text-brand border border-blue-200 font-semibold select-none"
+                                        x-text="singleRuleName() + ' 拆分线路'">
+                                  </span>
+                                </template>
                               </div>
+                              
+                              <!-- 聚合模式下的关联规则（拆分模式下隐藏） -->
+                              <template x-if="!isSingleRuleFilter()">
+                                <div class="relative inline-flex items-center gap-1 mt-0.5" @mouseenter="lineTooltipId = line.id" @mouseleave="lineTooltipId = null">
+                                  <span class="text-[9px] text-slate-500 cursor-default">
+                                    关联规则：
+                                    <template x-if="line.rules.length <= 2">
+                                      <span class="inline-flex items-center">
+                                        <template x-for="(rule, index) in line.rules" :key="index">
+                                          <span>
+                                            <span class="font-medium text-slate-600 hover:underline cursor-pointer transition-colors" 
+                                                  @click.stop="openDetailDrawer(rule)" 
+                                                  x-text="formatRuleName(rule)"
+                                                  title="点击查看规则详情"></span>
+                                            <span class="text-slate-400" x-show="index < line.rules.length - 1">，</span>
+                                          </span>
+                                        </template>
+                                      </span>
+                                    </template>
+                                    <template x-if="line.rules.length > 2">
+                                      <span class="inline-flex items-center">
+                                        <template x-for="(rule, index) in line.rules.slice(0, 2)" :key="index">
+                                          <span>
+                                            <span class="font-medium text-slate-600 hover:underline cursor-pointer transition-colors" 
+                                                  @click.stop="openDetailDrawer(rule)" 
+                                                  x-text="formatRuleName(rule)"
+                                                  title="点击查看规则详情"></span>
+                                            <span class="text-slate-400" x-show="index < 1">，</span>
+                                          </span>
+                                        </template>
+                                        <span class="text-slate-400 ml-0.5">等<span class="font-outfit font-semibold text-blue-500" x-text="line.rules.length"></span>个</span>
+                                      </span>
+                                    </template>
+                                  </span>
+                                  <!-- 悬浮规则列表 -->
+                                  <div x-show="lineTooltipId === line.id"
+                                       class="absolute left-0 top-full mt-1 bg-slate-900/95 text-white rounded px-2.5 py-1.5 shadow-xl text-[9px] z-50 whitespace-nowrap min-w-max">
+                                    <div class="font-semibold text-slate-300 mb-1">关联加速规则</div>
+                                    <template x-for="(r, ri) in line.rules" :key="ri">
+                                      <div class="flex items-center gap-1.5 py-0.5">
+                                        <span class="w-1 h-1 rounded-full bg-blue-400 flex-shrink-0"></span>
+                                        <span class="hover:text-blue-300 hover:underline cursor-pointer transition-colors"
+                                              @click.stop="openDetailDrawer(r)"
+                                              x-text="formatRuleName(r)"
+                                              title="点击查看规则详情"></span>
+                                      </div>
+                                    </template>
+                                  </div>
+                                </div>
+                              </template>
+                            </div>
+
+                            <!-- 右上角指标：拆分模式下显示分配上限和利用率（>80%标红），聚合模式下显示全网水位 -->
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                              <template x-if="isSingleRuleFilter()">
+                                <div class="flex items-center gap-2">
+                                  <span class="text-[10px] text-slate-500">
+                                    分配上限: <span class="font-bold font-outfit text-slate-700" x-text="getLineAllocatedLimit(line) + ' Mbps'"></span>
+                                  </span>
+                                  <span class="px-1.5 py-0.5 rounded text-[9px] border font-sans select-none"
+                                        :class="getLinePeakUtil(line) >= 80 ? 'bg-rose-50 border-rose-200 text-rose-600 font-bold' : 'bg-slate-50 border-slate-200 text-slate-600'"
+                                        x-text="'利用率 ' + getLinePeakUtil(line) + '%'">
+                                  </span>
+                                </div>
+                              </template>
+                              <template x-if="!isSingleRuleFilter()">
+                                <span class="text-[10px] text-text-mute">
+                                  水位: <span class="font-bold font-outfit" x-text="line.watermark + ' Mbps'"></span>
+                                </span>
+                              </template>
                             </div>
                           </div>
                           
                           <div class="flex gap-3 text-[9px] text-text-mute mb-2">
                             <div class="flex items-center gap-0.5">
                               <svg class="w-2.5 h-2.5 text-blue-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
-                              入口带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + Math.min(...line.upload).toFixed(1) + ' / 最大 ' + Math.max(...line.upload).toFixed(1) + ' Mbps'"></span>
+                              入口带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + Math.min(...getLineSplitData(line, 'upload')).toFixed(1) + ' / 最大 ' + Math.max(...getLineSplitData(line, 'upload')).toFixed(1) + ' Mbps'"></span>
                             </div>
                             <div class="flex items-center gap-0.5">
                               <svg class="w-2.5 h-2.5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
-                              出口带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + Math.min(...line.download).toFixed(1) + ' / 最大 ' + Math.max(...line.download).toFixed(1) + ' Mbps'"></span>
+                              出口带宽: <span class="font-semibold text-slate-600 font-outfit" x-text="'最小 ' + Math.min(...getLineSplitData(line, 'download')).toFixed(1) + ' / 最大 ' + Math.max(...getLineSplitData(line, 'download')).toFixed(1) + ' Mbps'"></span>
                             </div>
                           </div>
 
@@ -3301,10 +3401,10 @@
                           <div class="h-36 w-full relative select-none flex">
                             <!-- 纵坐标 -->
                             <div class="flex flex-col justify-between text-right pr-1 flex-shrink-0" style="width:28px;padding-top:2px;padding-bottom:14px;">
-                              <span class="text-[8px] text-slate-400 font-outfit leading-none" x-text="line.watermark + 'M'"></span>
-                              <span class="text-[8px] text-slate-400 font-outfit leading-none" x-text="Math.round(line.watermark * 0.75) + 'M'"></span>
-                              <span class="text-[8px] text-slate-400 font-outfit leading-none" x-text="Math.round(line.watermark * 0.5) + 'M'"></span>
-                              <span class="text-[8px] text-slate-400 font-outfit leading-none" x-text="Math.round(line.watermark * 0.25) + 'M'"></span>
+                              <span class="text-[8px] text-slate-400 font-outfit leading-none" x-text="getLineAllocatedLimit(line) + 'M'"></span>
+                              <span class="text-[8px] text-slate-400 font-outfit leading-none" x-text="Math.round(getLineAllocatedLimit(line) * 0.75) + 'M'"></span>
+                              <span class="text-[8px] text-slate-400 font-outfit leading-none" x-text="Math.round(getLineAllocatedLimit(line) * 0.5) + 'M'"></span>
+                              <span class="text-[8px] text-slate-400 font-outfit leading-none" x-text="Math.round(getLineAllocatedLimit(line) * 0.25) + 'M'"></span>
                               <span class="text-[8px] text-slate-400 font-outfit leading-none">0</span>
                             </div>
                             <!-- 图表主体 -->
@@ -3324,18 +3424,24 @@
                                 </template>
 
                                 <svg class="w-full h-full" viewBox="0 0 280 80" preserveAspectRatio="none">
-                                  <path :d="getAreaPath(line.upload, line.watermark, 280, 80)" fill="url(#up-area-grad)" />
-                                  <path :d="getAreaPath(line.download, line.watermark, 280, 80)" fill="url(#down-area-grad)" />
+                                  <!-- 仅在拆分单条规则且利用率 >= 80% 时展示异常背景色与红色基准虚线 (参考大区带宽使用详情) -->
+                                  <g x-show="isSingleRuleFilter() && getLinePeakUtil(line) >= 80">
+                                    <rect x="0" y="0" width="280" height="28" fill="url(#red-warning-zone-grad)" />
+                                    <line x1="0" y1="16" x2="280" y2="16" stroke="#F43F5E" stroke-width="1.5" stroke-dasharray="3 3" />
+                                  </g>
 
-                                  <path :d="getPath(line.upload, line.watermark, 280, 80)" stroke="#3B82F6" stroke-width="1.0" fill="none" />
-                                  <path :d="getPath(line.download, line.watermark, 280, 80)" stroke="#10B981" stroke-width="1.0" fill="none" />
+                                  <path :d="getAreaPath(getLineSplitData(line, 'upload'), getLineAllocatedLimit(line), 280, 80)" fill="url(#up-area-grad)" />
+                                  <path :d="getAreaPath(getLineSplitData(line, 'download'), getLineAllocatedLimit(line), 280, 80)" fill="url(#down-area-grad)" />
+
+                                  <path :d="getPath(getLineSplitData(line, 'upload'), getLineAllocatedLimit(line), 280, 80)" stroke="#3B82F6" stroke-width="1.0" fill="none" />
+                                  <path :d="getPath(getLineSplitData(line, 'download'), getLineAllocatedLimit(line), 280, 80)" stroke="#10B981" stroke-width="1.0" fill="none" />
                                   <template x-if="isHovering(line.id)">
                                     <g>
                                       <circle :cx="(lineHoverIndex[line.id] / (timeline.length - 1)) * 280"
-                                              :cy="80 - (line.upload[lineHoverIndex[line.id]] / (line.watermark * 1.25)) * 80"
+                                              :cy="80 - ((getLineSplitData(line, 'upload')[lineHoverIndex[line.id]] || 0) / (getLineAllocatedLimit(line) * 1.25)) * 80"
                                               r="3" fill="#3B82F6" stroke="#FFFFFF" stroke-width="1" />
                                       <circle :cx="(lineHoverIndex[line.id] / (timeline.length - 1)) * 280"
-                                              :cy="80 - (line.download[lineHoverIndex[line.id]] / (line.watermark * 1.25)) * 80"
+                                              :cy="80 - ((getLineSplitData(line, 'download')[lineHoverIndex[line.id]] || 0) / (getLineAllocatedLimit(line) * 1.25)) * 80"
                                               r="3" fill="#10B981" stroke="#FFFFFF" stroke-width="1" />
                                     </g>
                                   </template>
@@ -3346,10 +3452,10 @@
                                      :style="isHovering(line.id) ? ('left: ' + Math.min(160, Math.max(10, ((lineHoverIndex[line.id] / (timeline.length - 1)) * 280) - 50)) + 'px; top: 6px;') : 'display: none;'">
                                   <div class="font-bold text-slate-400 text-center" x-text="timeline[lineHoverIndex[line.id]]">12:00</div>
                                   <div class="flex items-center gap-1.5">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> 入口: <span class="font-bold font-outfit" x-text="line.upload[lineHoverIndex[line.id]] + ' Mbps'"></span>
+                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span> 入口: <span class="font-bold font-outfit" x-text="(getLineSplitData(line, 'upload')[lineHoverIndex[line.id]] || 0) + ' Mbps'"></span>
                                   </div>
                                   <div class="flex items-center gap-1.5">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 出口: <span class="font-bold font-outfit" x-text="line.download[lineHoverIndex[line.id]] + ' Mbps'"></span>
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 出口: <span class="font-bold font-outfit" x-text="(getLineSplitData(line, 'download')[lineHoverIndex[line.id]] || 0) + ' Mbps'"></span>
                                   </div>
                                 </div>
                               </div>

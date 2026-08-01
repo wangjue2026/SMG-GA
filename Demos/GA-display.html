@@ -209,8 +209,8 @@
           { key: 'name', label: '规则名称', type: 'input', default: true },
           { key: 'scenario', label: '加速类型', type: 'select', options: ['零信任业务加速', '自定义IP/域名加速', '分支组网加速', 'SaaS应用加速'] },
           { key: 'status', label: '状态', type: 'select', options: ['加速中', '未生效', '未启用', '异常'] },
-          { key: 'accDomain', label: '加速域名', type: 'input' },
-          { key: 'exclusiveIp', label: '独享IP', type: 'input' }
+          { key: 'accDomain', label: 'CNAME', type: 'input' },
+          { key: 'originAddr', label: '源站地址', type: 'input' }
         ],
 
         // Table states
@@ -226,9 +226,9 @@
           { key: 'status', title: '状态', visible: true, cannotHide: false },
           { key: 'accRegion', title: '加速区域（上车点）', visible: true, cannotHide: false },
           { key: 'srcRegion', title: '源站区域（下车点）', visible: true, cannotHide: false },
-          { key: 'srcObject', title: '源站对象', visible: true, cannotHide: false },
-          { key: 'accDomain', title: '加速域名', visible: true, cannotHide: false },
-          { key: 'exclusiveIp', title: '独享IP', visible: true, cannotHide: false }
+          { key: 'originAddr', title: '源站地址', visible: true, cannotHide: false },
+          { key: 'srcObject', title: '加速对象', visible: true, cannotHide: false },
+          { key: 'accDomain', title: 'CNAME', visible: true, cannotHide: false }
         ],
 
         // Pagination states
@@ -533,11 +533,11 @@
           { id: 'POL-005', name: '10.23.1.23', desc: '分支机构本地ERP及业务数据汇聚通道', scenario: '分支组网加速', status: '加速中', accRegion: '武汉、深圳、上海', srcRegion: '巴黎', srcObject: '主节点：10.23.1.23', originAddr: '-', accDomain: '-', exclusiveIp: '-' },
           { id: 'POL-006', name: '10.50.2.11', desc: '海外办公访问公共服务加速优化', scenario: 'SaaS应用加速', status: '未启用', accRegion: '东京、首尔等3个', srcRegion: '北京', srcObject: '10.50.2.11', originAddr: '-', accDomain: 'https://github.com', exclusiveIp: '-' },
           { id: 'POL-007', name: '10.23.22.7', desc: '零信任-安全客户端接入网关链路增强', scenario: '零信任业务加速', subType: '隧道应用', status: '未启用', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: '10.23.22.7（上海办公网关）', originAddr: '-', accDomain: '-', exclusiveIp: '10.24.53.33:4883' },
-          { id: 'POL-008', name: 'office.com', desc: '微软Office云办公服务跨境快速通道', scenario: '零信任业务加速', subType: 'web应用', status: '运行异常', accRegion: '香港、新加坡等4个', srcRegion: '深圳', srcObject: 'office.com', originAddr: '104.215.148.63', accDomain: 'https://office.com', exclusiveIp: '10.23.45.24:443' },
+          { id: 'POL-008', name: 'office.com', desc: '微软Office云办公服务跨境快速通道', scenario: '零信任业务加速', subType: 'web应用', status: '异常', accRegion: '香港、新加坡等4个', srcRegion: '深圳', srcObject: 'office.com', originAddr: '104.215.148.63', accDomain: 'https://office.com', exclusiveIp: '10.23.45.24:443' },
           { id: 'POL-009', name: '10.88.9.12', desc: '自定义远程财务系统访问优化加速', scenario: '自定义IP/域名加速', status: '加速中', accRegion: '伦敦、法兰克福等5个', srcRegion: '上海', srcObject: '10.88.9.12:80', originAddr: '-', accDomain: '-', exclusiveIp: '-' },
           { id: 'POL-010', name: '10.1.44.89', desc: '西雅图分支机构跨大西洋网络加速', scenario: '分支组网加速', status: '加速中', accRegion: '纽约、旧金山', srcRegion: '西雅图', srcObject: '主节点：10.1.44.89', originAddr: '-', accDomain: '-', exclusiveIp: '10.23.45.28' },
           { id: 'POL-011', name: '10.2.2.2', desc: 'Salesforce销售管理系统访问优化', scenario: 'SaaS应用加速', status: '加速中', accRegion: '悉尼、墨尔本', srcRegion: '广州', srcObject: '10.2.2.2', originAddr: '-', accDomain: 'https://salesforce.com', exclusiveIp: '-' },
-          { id: 'POL-012', name: '10.200.1.1', desc: '零信任接入中心认证及数据安全链路', scenario: '零信任业务加速', subType: '接入&认证', status: '运行异常', accRegion: '香港、吉隆坡等6个', srcRegion: '成都', srcObject: '10.200.1.1', originAddr: '-', accDomain: 'https://login.partner.microsoftonline...', exclusiveIp: '-' }
+          { id: 'POL-012', name: '10.200.1.1', desc: '零信任接入中心认证及数据安全链路', scenario: '零信任业务加速', subType: '接入&认证', status: '异常', accRegion: '香港、吉隆坡等6个', srcRegion: '成都', srcObject: '10.200.1.1', originAddr: '-', accDomain: 'https://login.partner.microsoftonline...', exclusiveIp: '-' }
         ],
         originalRules: null,
         showSdwanPublishModal: false,
@@ -619,6 +619,16 @@
           } else {
             return rule.name;
           }
+        },
+
+        getSrcAddress(rule) {
+          if (!rule) return '-';
+          const raw = (rule.originAddr && rule.originAddr !== '-') ? rule.originAddr : (rule.name || '');
+          const ipMatch = raw.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
+          if (ipMatch) {
+            return ipMatch[0];
+          }
+          return raw || '-';
         },
 
         filterRules() {
@@ -2287,7 +2297,7 @@
                   <div class="flex flex-col justify-center border-l border-border/50">
                     <div class="flex items-center gap-1.5 text-[11px] text-[#FA721B] mb-1 pl-3">
                       <svg class="w-3.5 h-3.5 text-warning shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                      <span>运行异常</span>
+                      <span>异常</span>
                     </div>
                     <div class="font-outfit font-bold text-xl text-text-title pl-6">15</div>
                   </div>
@@ -2367,7 +2377,7 @@
                                   @click="startEditingSelectTag(tag)"></span>
                             <!-- Option dropdown -->
                             <div class="absolute top-full left-0 mt-1.5 bg-white border border-[#D3D7DE] shadow-[0_4px_16px_rgba(30,35,43,0.14)] rounded-[2px] p-2 z-[110] min-w-[160px]">
-                              <template x-for="opt in (tag.fieldKey === 'status' ? ['加速中', '未生效', '未启用', '运行异常'] : ['零信任-隧道应用访问加速', '零信任-web应用访问加速', '零信任-接入与认证加速', '分支组网加速', 'SaaS应用加速', '自定义IP/域名加速'])">
+                              <template x-for="opt in (tag.fieldKey === 'status' ? ['加速中', '未生效', '未启用', '异常'] : ['零信任-隧道应用访问加速', '零信任-web应用访问加速', '零信任-接入与认证加速', '分支组网加速', 'SaaS应用加速', '自定义IP/域名加速'])">
                                 <label class="flex items-center gap-2 py-1 px-1.5 hover:bg-bg-light cursor-pointer text-xs select-none">
                                   <input type="checkbox" :value="opt" x-model="searchSelectedOptions" class="rounded-[2px] border-border text-brand focus:ring-brand">
                                   <span x-text="opt"></span>
@@ -2463,12 +2473,10 @@
                     </th>
                     <th class="font-normal text-text-title py-3 px-4 border-r border-border/50 bg-[#FAFAFA] text-left text-xs">加速区域<span class="text-text-mute font-normal">（上车点）</span></th>
                     <th class="font-normal text-text-title py-3 px-4 border-r border-border/50 bg-[#FAFAFA] text-left text-xs">源站区域<span class="text-text-mute font-normal">（下车点）</span></th>
-                    <th class="font-normal text-text-title py-3 px-4 border-r border-border/50 bg-[#FAFAFA] text-left text-xs">源站对象</th>
+                    <th class="font-normal text-text-title py-3 px-4 border-r border-border/50 bg-[#FAFAFA] text-left text-xs">源站地址</th>
+                    <th class="font-normal text-text-title py-3 px-4 border-r border-border/50 bg-[#FAFAFA] text-left text-xs">加速对象</th>
                     <th class="font-normal text-text-title py-3 px-4 border-r border-border/50 bg-[#FAFAFA] text-xs">
-                      <div class="flex items-center gap-1">加速域名 <svg class="w-3.5 h-3.5 text-brand cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
-                    </th>
-                    <th class="font-normal text-text-title py-3 px-4 border-r border-border/50 bg-[#FAFAFA] text-xs">
-                      <div class="flex items-center gap-1">独享IP <svg class="w-3.5 h-3.5 text-brand cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+                      <div class="flex items-center gap-1">CNAME <svg class="w-3.5 h-3.5 text-brand cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
                     </th>
                     <th class="sticky-op-col">操作</th>
                     <th class="sticky-more-col text-center">
@@ -2494,43 +2502,84 @@
                         </template>
                       </td>
                       <td class="px-4">
-                        <div class="inline-flex items-center gap-1 cursor-pointer hover:bg-bg-base rounded px-1 -ml-1 py-0.5">
-                          <!-- 加速中 (绿色闪电) -->
-                          <template x-if="rule.status === '加速中'">
-                            <span class="inline-flex items-center gap-1 text-success">
-                              <svg class="w-3.5 h-3.5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        <!-- 1. 加速中 (绿色闪电, 绿色字体, 鼠标无悬浮/无点击交互) -->
+                        <template x-if="rule.status === '加速中'">
+                          <div class="inline-flex items-center gap-1 text-success cursor-default select-none">
+                            <svg class="w-3.5 h-3.5 text-success shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                            <span class="text-xs font-medium text-success-hover">加速中</span>
+                          </div>
+                        </template>
+
+                        <!-- 2. 未生效 (微型按钮样式: 未生效 · 去配置 ›，带悬浮光泽与手形引导，点击触发配置弹窗) -->
+                        <template x-if="rule.status === '未生效'">
+                          <div class="relative group/status inline-block">
+                            <div @click.stop="openTodoConfig(rule.id)"
+                                 class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200/80 text-amber-700 hover:bg-amber-100 hover:border-amber-300 hover:shadow-xs cursor-pointer transition-all duration-150 select-none group/btn">
+                              <span class="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 animate-pulse"></span>
+                              <span class="text-xs font-semibold text-amber-800">未生效</span>
+                              <span class="text-[11px] text-amber-600 font-normal border-l border-amber-200 pl-1.5 ml-0.5 group-hover/btn:text-amber-800 group-hover/btn:underline">去配置</span>
+                              <svg class="w-3 h-3 text-amber-600 group-hover/btn:text-amber-800 transition-transform group-hover/btn:translate-x-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
                               </svg>
-                              <span class="text-xs font-medium text-success-hover">加速中</span>
-                            </span>
-                          </template>
-                          
-                          <!-- 未生效 (灰色圆点) -->
-                          <template x-if="rule.status === '未生效'">
-                            <span class="inline-flex items-center gap-1.5 text-text-mute">
-                              <span class="w-1.5 h-1.5 rounded-full bg-text-mute/80"></span>
-                              <span class="text-xs font-medium">未生效</span>
-                            </span>
-                          </template>
-                          
-                          <!-- 未启用 (灰色点状) -->
-                          <template x-if="rule.status === '未启用'">
-                            <span class="inline-flex items-center gap-1.5 text-text-mute">
-                              <span class="w-1.5 h-1.5 rounded-full bg-text-mute/80"></span>
-                              <span class="text-xs">未启用</span>
-                            </span>
-                          </template>
-                          
-                          <!-- 运行异常 (橙红色三角感叹号) -->
-                          <template x-if="rule.status === '运行异常' || rule.status === '异常'">
-                            <span class="inline-flex items-center gap-1 text-[#FA721B]">
+                            </div>
+                            <!-- Hover Tooltip -->
+                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/status:flex flex-col items-center z-50 whitespace-nowrap pointer-events-none">
+                              <div class="bg-slate-800 text-white text-[11px] px-2.5 py-1 rounded shadow-lg flex items-center gap-1">
+                                <span>CNAME 或加速 IP 未完成确认，点击前往配置</span>
+                                <span class="text-amber-300">➔</span>
+                              </div>
+                              <div class="w-2 h-2 bg-slate-800 rotate-45 -mt-1"></div>
+                            </div>
+                          </div>
+                        </template>
+
+                        <!-- 3. 未启用 (灰色图标/字体, 悬浮告知当前被禁用, 点击展示确认启用) -->
+                        <template x-if="rule.status === '未启用'">
+                          <div class="relative group/status inline-block">
+                            <div @click.stop="
+                                  confirmModal.title = '确认启用';
+                                  confirmModal.message = '确认启用该条全球加速规则吗？';
+                                  confirmModal.onConfirm = () => {
+                                    rule.status = '加速中';
+                                    $dispatch('show-toast', { message: '启用成功' });
+                                  };
+                                  confirmModal.show = true;
+                                 "
+                                 class="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-slate-400 hover:bg-slate-100 cursor-pointer transition-colors select-none">
+                              <span class="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0"></span>
+                              <span class="text-xs font-medium text-slate-400">未启用</span>
+                            </div>
+                            <!-- Hover Tooltip -->
+                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/status:flex flex-col items-center z-50 whitespace-nowrap pointer-events-none">
+                              <div class="bg-slate-800 text-white text-[11px] px-2.5 py-1 rounded shadow-lg">
+                                当前规则已被禁用
+                              </div>
+                              <div class="w-2 h-2 bg-slate-800 rotate-45 -mt-1"></div>
+                            </div>
+                          </div>
+                        </template>
+
+                        <!-- 4. 异常 (橙红/红色图标与字体, 悬浮告知原因, 点击展示详情/探测信息) -->
+                        <template x-if="rule.status === '异常' || rule.status === '运行异常'">
+                          <div class="relative group/status inline-block">
+                            <div @click.stop="openDetailDrawer(rule); detailDrawerTab = 'usage';"
+                                 class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[#FA721B] hover:bg-amber-50 cursor-pointer transition-colors select-none">
                               <svg class="w-3.5 h-3.5 text-[#FA721B] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                               </svg>
-                              <span class="text-xs font-semibold text-[#FA721B]">运行异常</span>
-                            </span>
-                          </template>
-                        </div>
+                              <span class="text-xs font-semibold text-[#FA721B]">异常</span>
+                            </div>
+                            <!-- Hover Tooltip -->
+                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/status:flex flex-col items-center z-50 whitespace-nowrap pointer-events-none">
+                              <div class="bg-slate-800 text-white text-[11px] px-2.5 py-1 rounded shadow-lg">
+                                <span x-text="rule.id === 'POL-008' ? '微软 Office 云服务 DNS 解析失败' : (rule.id === 'POL-012' ? '认证中心节点建立 TLS 握手超时' : '源站连接超时，探测异常')"></span>
+                              </div>
+                              <div class="w-2 h-2 bg-slate-800 rotate-45 -mt-1"></div>
+                            </div>
+                          </div>
+                        </template>
                       </td>
                       
                       <!-- Visual Route Columns (accRegion -> srcRegion -> srcObject) -->
@@ -2604,13 +2653,14 @@
                       <td class="px-4 relative text-left">
                         <!-- Horizontal Connecting Line Half (Only goes to the left) -->
                         <div class="absolute top-1/2 left-0 w-[100px] h-[2px] bg-[#1C6EFF]/50 -translate-y-1/2 z-0 opacity-80"></div>
-                        <span class="inline-flex items-center justify-center gap-1.5 w-[168px] bg-[#E8F4FF] text-[#0237B3] px-3 py-1 rounded-[2px] text-[11px] shadow-sm relative z-10" :title="getSrcObject(rule)">
+                        <span class="inline-flex items-center justify-center gap-1.5 w-[168px] bg-[#E8F4FF] text-[#0237B3] px-3 py-1 rounded-[2px] text-[11px] shadow-sm relative z-10" :title="getSrcAddress(rule)">
                           <svg class="w-3.5 h-3.5 text-[#0237B3]/70 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
                           </svg>
-                          <span class="truncate" x-text="getSrcObject(rule)"></span>
+                          <span class="truncate" x-text="getSrcAddress(rule)"></span>
                         </span>
                       </td>
+                      <td class="px-4 text-text-title font-outfit" x-text="getSrcObject(rule)"></td>
                       <td class="px-4 text-text-mute max-w-[220px] relative group/copy">
                         <div class="flex flex-col gap-1 py-1">
                           <div class="flex items-center justify-between">
@@ -2618,7 +2668,7 @@
                             <template x-if="rule.accDomain !== '-'">
                               <button @click.stop="navigator.clipboard.writeText(rule.accDomain).then(() => { $dispatch('show-toast', { message: '复制成功' }) })" 
                                       class="opacity-0 group-hover/copy:opacity-100 transition-opacity ml-1.5 p-0.5 text-text-mute hover:text-brand cursor-pointer focus:outline-none"
-                                      title="复制域名">
+                                      title="复制 CNAME 域名">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                                 </svg>
@@ -2633,7 +2683,6 @@
                           </template>
                         </div>
                       </td>
-                      <td class="px-4 font-outfit text-text-title" x-text="rule.exclusiveIp"></td>
                       
                       <td class="sticky-op-col">
                         <div class="flex items-center gap-3">
@@ -2863,10 +2912,20 @@
 
                   <!-- 第二部分：辅助信息与描述/源站地址的修改 -->
                   <div class="grid grid-cols-2 gap-y-3.5 gap-x-8 pt-3 border-t border-slate-100/60 text-xs text-slate-500">
-                    <!-- 源站对象 -->
+                    <!-- 加速对象 -->
                     <div class="flex items-center gap-2 min-w-0">
-                      <span class="text-slate-400 w-16 flex-shrink-0">源站对象</span>
-                      <span class="text-slate-700 truncate font-outfit" x-text="detailDrawerRule ? (detailDrawerRule.srcObject || '-') : ''"></span>
+                      <span class="text-slate-400 w-16 flex-shrink-0">加速对象</span>
+                      <span class="text-slate-700 truncate font-outfit" x-text="detailDrawerRule ? (getSrcObject(detailDrawerRule) || '-') : ''"></span>
+                    </div>
+
+                    <!-- 源站地址 (位于加速对象右侧，可编辑) -->
+                    <div class="flex items-center gap-2 min-w-0">
+                      <span class="text-slate-400 w-16 flex-shrink-0">源站地址</span>
+                      <div class="flex-1 min-w-0 text-slate-700">
+                        <span x-show="!drawerEditing" x-text="detailDrawerRule ? (getSrcAddress(detailDrawerRule) || '-') : '-'" class="font-outfit truncate block"></span>
+                        <input x-show="drawerEditing" type="text" x-model="detailDrawerRule.originAddr" placeholder="请输入源站地址"
+                               class="w-full h-7 border border-slate-200 rounded px-2 text-xs font-outfit text-slate-800 focus:border-brand focus:ring-1 focus:ring-brand/20 outline-none transition-all" x-cloak>
+                      </div>
                     </div>
 
                     <!-- 加速类型 -->
@@ -2882,16 +2941,6 @@
                         <span x-show="!drawerEditing" x-text="detailDrawerRule && detailDrawerRule.desc && detailDrawerRule.desc !== '-' ? detailDrawerRule.desc : '-'" class="truncate block"></span>
                         <input x-show="drawerEditing" type="text" x-model="detailDrawerRule.desc"
                                class="w-full h-7 border border-slate-200 rounded px-2 text-xs text-slate-800 focus:border-brand focus:ring-1 focus:ring-brand/20 outline-none transition-all" x-cloak>
-                      </div>
-                    </div>
-
-                    <!-- 源站地址 (可编辑) -->
-                    <div class="flex items-center gap-2 min-w-0">
-                      <span class="text-slate-400 w-16 flex-shrink-0">源站地址</span>
-                      <div class="flex-1 min-w-0 text-slate-700">
-                        <span x-show="!drawerEditing" x-text="detailDrawerRule ? (detailDrawerRule.originAddr || '-') : '-'" class="font-outfit truncate block"></span>
-                        <input x-show="drawerEditing" type="text" x-model="detailDrawerRule.originAddr" placeholder="请输入源站地址"
-                               class="w-full h-7 border border-slate-200 rounded px-2 text-xs font-outfit text-slate-800 focus:border-brand focus:ring-1 focus:ring-brand/20 outline-none transition-all" x-cloak>
                       </div>
                     </div>
                   </div>
@@ -3524,7 +3573,7 @@
             <table class="w-full text-left text-xs border-collapse">
               <thead>
                 <tr class="bg-slate-50 text-slate-400 font-semibold border-b border-slate-100">
-                  <th class="py-2.5 px-4 font-normal">源站对象</th>
+                  <th class="py-2.5 px-4 font-normal">加速对象</th>
                   <th class="py-2.5 px-4 font-normal">加速域名</th>
                 </tr>
               </thead>

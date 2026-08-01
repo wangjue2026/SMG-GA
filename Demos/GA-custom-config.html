@@ -1690,8 +1690,9 @@
             this.showHealthModal = false;
           },
 
-          /* ---- CNAME 引导弹窗状态 ---- */
+          /* ---- CNAME 引导弹窗与独享IP引导弹窗状态 ---- */
           showCnameModal: false,
+          showExclusiveIpModal: false,
           copiedRowId: null,
           searchQueries: {},
 
@@ -2073,7 +2074,7 @@
             }
           },
 
-          saveConfig() {
+          saveConfig(status = '加速中') {
             const firstRow = this.sourceRows.find(r => r.target) || this.sourceRows[0] || { target: '', location: '', ports: [] };
             let targetObj = firstRow.target || '';
             let targetLoc = firstRow.location || '';
@@ -2150,7 +2151,7 @@
               name: targetObj,
               desc: '自定义IP/域名加速',
               scenario: '自定义IP/域名加速',
-              status: '加速中',
+              status: status || '加速中',
               accRegion: accRegionStr,
               srcRegion: targetLoc || '深圳',
               srcObject: targetObj + (portStr || ':443'),
@@ -2168,28 +2169,74 @@
             if (newPolicyStr) {
               try {
                 const policy = JSON.parse(newPolicyStr);
-                if (this.customType === 'domain') {
-                  policy.status = '未生效';
-                  localStorage.setItem('ga_new_policy', JSON.stringify(policy));
-                  const savedTodos = localStorage.getItem('ga_todo_items');
-                  let todos = savedTodos ? JSON.parse(savedTodos) : [];
-                  if (!todos.some(t => t.id === policy.id)) {
-                    todos.unshift({
-                      id: policy.id,
-                      name: policy.name,
-                      scenario: policy.scenario,
-                      srcObject: policy.srcObject,
-                      accDomain: policy.accDomain,
-                      cname: policy.accDomain,
-                      time: new Date().toISOString().replace('T', ' ').substring(0, 16)
-                    });
-                    localStorage.setItem('ga_todo_items', JSON.stringify(todos));
-                  }
+                policy.status = '未生效';
+                localStorage.setItem('ga_new_policy', JSON.stringify(policy));
+                const savedTodos = localStorage.getItem('ga_todo_items');
+                let todos = savedTodos ? JSON.parse(savedTodos) : [];
+                if (!todos.some(t => t.id === policy.id)) {
+                  todos.unshift({
+                    id: policy.id,
+                    name: policy.name,
+                    scenario: policy.scenario,
+                    srcObject: policy.srcObject,
+                    accDomain: policy.accDomain || '-',
+                    cname: policy.accDomain || '-',
+                    exclusiveIp: policy.exclusiveIp || '-',
+                    type: this.customType,
+                    time: new Date().toISOString().replace('T', ' ').substring(0, 16)
+                  });
+                  localStorage.setItem('ga_todo_items', JSON.stringify(todos));
                 }
               } catch (e) {
                 console.error(e);
               }
             }
+          },
+
+          handleStep3Save() {
+            if (this.customType === 'domain') {
+              this.showCnameModal = true;
+            } else if (this.customType === 'ip') {
+              const hasExclusive = this.sourceRows.some(r => {
+                const cfg = this.getPopConfig(r.id);
+                return cfg && cfg.exclusiveIp;
+              });
+              if (hasExclusive) {
+                this.showExclusiveIpModal = true;
+              } else {
+                this.saveConfig();
+                location.href = 'GA-display.html';
+              }
+            } else {
+              this.saveConfig();
+              location.href = 'GA-display.html';
+            }
+          },
+
+          getExclusivePopBadges(rowId) {
+            const cfg = this.getPopConfig(rowId);
+            let selected = (cfg && cfg.selectedPops && cfg.selectedPops.length > 0) ? cfg.selectedPops : ['gz', 'hk', 'sg', 'sz', 'sh', 'bj'];
+            const labels = selected.map(k => this.popLabel(k));
+            if (labels.length > 3) {
+              return {
+                pops: labels.slice(0, 3),
+                extraCount: labels.length - 3
+              };
+            }
+            return {
+              pops: labels,
+              extraCount: 0
+            };
+          },
+
+          getExclusiveIps(row) {
+            if (!row) return [];
+            const ports = (row.ports && row.ports.length > 0) ? row.ports.filter(p => p.originPort).map(p => p.originPort) : ['4883'];
+            const primaryPort = ports[0] || '4883';
+            return [
+              { ip: `10.24.53.33:${primaryPort}`, tag: '' },
+              { ip: `10.24.53.33:${primaryPort}`, tag: '+10' }
+            ];
           },
 
           getWebTargetUrl(target) {
@@ -2415,7 +2462,7 @@
                           <!-- 源站对象 -->
                           <div class="flex-1 min-w-0">
                             <div class="text-[12px] text-[#454C59] mb-1">
-                              <span class="text-red-500">*</span>需要加速的业务对象<span class="text-[#A1A7B3]">（源站对象）</span>
+                              <span class="text-red-500">*</span>需要加速的业务对象
                             </div>
                             <input type="text"
                               :placeholder="customType === 'ip' ? '请输入IP' : '请输入域名'"
@@ -3249,7 +3296,7 @@
               <!-- 第三步 -->
               <template x-if="step === 3">
                 <div class="flex items-center gap-3">
-                  <button @click="if (customType === 'domain') { showCnameModal = true; } else { saveConfig(); location.href='GA-display.html'; }"
+                  <button @click="handleStep3Save()"
                     class="h-8 px-5 rounded text-sm font-medium text-white bg-brand hover:bg-brand-hover transition-colors">
                     保存
                   </button>
@@ -3660,11 +3707,227 @@
             </div>
             <!-- 底部按钮 -->
             <div class="px-5 py-3 border-t border-slate-100 bg-slate-50 flex justify-end gap-2.5 flex-shrink-0 select-none">
-              <button @click="saveConfig(); location.href='GA-display.html'" class="h-8 px-4 rounded text-xs bg-brand text-white font-medium hover:bg-brand-hover transition-colors shadow-sm">
+              <button @click="saveConfig('加速中'); location.href='GA-display.html'" class="h-8 px-4 rounded text-xs bg-brand text-white font-medium hover:bg-brand-hover transition-colors shadow-sm">
                 已发布，测试加速
               </button>
-              <button @click="showCnameModal = false; saveConfig(); addToTodoList(); location.href='GA-display.html'" class="h-8 px-4 rounded text-xs border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors focus:outline-none">
+              <button @click="showCnameModal = false; saveConfig('未生效'); addToTodoList(); location.href='GA-display.html'" class="h-8 px-4 rounded text-xs border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors focus:outline-none">
                 稍后在列表发布
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 发布加速配置 (独享加速 IP 引导 Modal) -->
+        <div x-show="showExclusiveIpModal" class="fixed inset-0 z-50 flex items-center justify-center" x-cloak>
+          <!-- 背景遮罩 -->
+          <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="showExclusiveIpModal = false"></div>
+          
+          <!-- 弹窗主体 -->
+          <div class="relative bg-white rounded-xl shadow-2xl border border-slate-200 w-[720px] max-w-full overflow-hidden flex flex-col"
+               x-show="showExclusiveIpModal"
+               x-transition:enter="transition ease-out duration-200"
+               x-transition:enter-start="opacity-0 scale-95"
+               x-transition:enter-end="opacity-100 scale-100"
+               x-transition:leave="transition ease-in duration-150"
+               x-transition:leave-start="opacity-100 scale-100"
+               x-transition:leave-end="opacity-0 scale-95">
+            
+            <!-- 头部 Header -->
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+              <h3 class="text-base font-semibold text-slate-800 tracking-tight">
+                发布加速配置
+              </h3>
+              <button @click="showExclusiveIpModal = false" class="text-slate-400 hover:text-slate-600 text-xl font-normal leading-none p-1 transition-colors">×</button>
+            </div>
+
+            <!-- 内容 Body -->
+            <div class="p-6 space-y-5 overflow-y-auto max-h-[calc(85vh-110px)] custom-scrollbar">
+              
+              <!-- 绿标提示 (加速配置已保存，仅差最后一步配置生效) -->
+              <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full bg-[#10B981] text-white flex items-center justify-center text-sm font-bold flex-shrink-0 shadow-sm">✓</div>
+                <div class="text-base font-semibold text-slate-800 tracking-tight">加速配置已保存，仅差最后一步配置生效</div>
+              </div>
+              
+              <!-- 原理介绍图视觉区域 (精美 visual architecture topology) -->
+              <div class="p-4 bg-slate-50/80 border border-slate-200/80 rounded-xl space-y-3">
+                <div class="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                  <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <span>独享 IP 加速原理与流量转发示意图</span>
+                </div>
+
+                <!-- 拓扑流程图 -->
+                <div class="bg-white border border-slate-100 rounded-lg p-3 shadow-sm select-none">
+                  <div class="grid grid-cols-12 items-center gap-1.5 text-xs">
+                    
+                    <!-- 节点 1: 终端/分支上车 -->
+                    <div class="col-span-3 bg-slate-50 border border-slate-200 rounded-lg p-2.5 flex flex-col items-center justify-center text-center">
+                      <div class="w-8 h-8 rounded-full bg-blue-50 text-brand flex items-center justify-center mb-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                      </div>
+                      <span class="font-semibold text-slate-700 text-xs">终端 / 分支</span>
+                      <span class="text-[10px] text-slate-400 mt-0.5">员工访问端点</span>
+                    </div>
+
+                    <!-- 箭头 1 -->
+                    <div class="col-span-1 flex flex-col items-center justify-center">
+                      <span class="text-[9px] text-brand font-medium mb-0.5">① 请求</span>
+                      <div class="w-full h-0.5 bg-brand/40 relative">
+                        <div class="absolute right-0 -top-1 w-2 h-2 border-t-2 border-r-2 border-brand rotate-45"></div>
+                      </div>
+                    </div>
+
+                    <!-- 节点 2: SASE 独享加速 IP -->
+                    <div class="col-span-4 bg-emerald-50/70 border border-emerald-200 rounded-lg p-2.5 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                      <div class="absolute top-0 right-0 bg-emerald-500 text-white text-[9px] px-1.5 py-0.5 rounded-bl font-semibold">⚡️ 独享加速</div>
+                      <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mb-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                      <span class="font-bold text-emerald-900 text-xs">SASE 骨干 POP</span>
+                      <span class="text-[10px] font-mono text-emerald-700 mt-0.5 font-medium">已分配独享加速IP</span>
+                    </div>
+
+                    <!-- 箭头 2 -->
+                    <div class="col-span-1 flex flex-col items-center justify-center">
+                      <span class="text-[9px] text-emerald-600 font-medium mb-0.5">② 填入线路</span>
+                      <div class="w-full h-0.5 bg-emerald-400 relative">
+                        <div class="absolute right-0 -top-1 w-2 h-2 border-t-2 border-r-2 border-emerald-500 rotate-45"></div>
+                      </div>
+                    </div>
+
+                    <!-- 节点 3: 转发位置 (零信任 / AF) -->
+                    <div class="col-span-3 bg-amber-50/70 border border-amber-200 rounded-lg p-2.5 flex flex-col items-center justify-center text-center">
+                      <div class="w-8 h-8 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center mb-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                      </div>
+                      <span class="font-semibold text-amber-900 text-xs">代理网关 / AF</span>
+                      <span class="text-[10px] text-amber-700 mt-0.5">转发至源站IP</span>
+                    </div>
+
+                  </div>
+                </div>
+
+                <!-- 场景原理说明（简明解释） -->
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  为使自定义 IP 业务通过 SASE 骨干网获得独享加速，需将下方分配的独享加速 IP 填入对应业务的接入网关或防火墙中，以完成流量接管与选路引流。
+                </p>
+              </div>
+
+              <!-- 步骤 1：复制以下源站对应分配的独享加速IP -->
+              <div class="space-y-2.5">
+                <div class="flex items-center gap-2 text-xs font-semibold text-slate-800">
+                  <span class="w-4.5 h-4.5 bg-[#1C6EFF] text-white flex items-center justify-center rounded text-[11px] font-bold font-outfit">1</span>
+                  <span>复制以下源站对应分配的独享加速IP</span>
+                </div>
+
+                <!-- 表格 -->
+                <div class="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                  <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr class="bg-[#F8FAFC] text-slate-500 font-medium border-b border-slate-200 select-none">
+                        <th class="py-3 px-4 w-1/3 border-r border-slate-100">加速的业务对象</th>
+                        <th class="py-3 px-4 w-1/3 border-r border-slate-100">加速的员工区域（上车点）</th>
+                        <th class="py-3 px-4 w-1/3">独享加速IP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template x-for="row in sourceRows.filter(r => r.target)" :key="'exip-'+row.id">
+                        <tr class="border-b border-slate-100 last:border-0 hover:bg-slate-50/60 transition-colors">
+                          <!-- 业务对象 -->
+                          <td class="py-3 px-4 text-slate-800 font-medium font-mono border-r border-slate-100" x-text="row.target || '22.56.25.2'"></td>
+                          
+                          <!-- 员工区域 -->
+                          <td class="py-3 px-4 border-r border-slate-100">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                              <template x-for="pop in getExclusivePopBadges(row.id).pops" :key="pop">
+                                <span class="px-2 py-0.5 bg-slate-100 border border-slate-200 text-slate-600 rounded text-[11px] font-medium" x-text="pop"></span>
+                              </template>
+                              <template x-if="getExclusivePopBadges(row.id).extraCount > 0">
+                                <span class="px-1.5 py-0.5 bg-slate-100 border border-slate-200 text-slate-500 rounded text-[11px] font-mono font-medium" x-text="'+' + getExclusivePopBadges(row.id).extraCount"></span>
+                              </template>
+                            </div>
+                          </td>
+                          
+                          <!-- 独享加速IP -->
+                          <td class="py-3 px-4">
+                            <div class="space-y-1.5">
+                              <template x-for="(ipItem, idx) in getExclusiveIps(row)" :key="idx">
+                                <div class="flex items-center justify-between gap-2 bg-[#ECFDF5] border border-[#A7F3D0] rounded px-2.5 py-1 text-[#047857] font-mono text-[11px]">
+                                  <div class="flex items-center gap-1 min-w-0">
+                                    <span class="text-[#059669] text-xs flex-shrink-0">⚡</span>
+                                    <span class="font-semibold" x-text="ipItem.ip"></span>
+                                    <template x-if="ipItem.tag">
+                                      <span class="ml-1 px-1 bg-[#D1FAE5] text-[#065F46] rounded text-[9px] font-sans" x-text="ipItem.tag"></span>
+                                    </template>
+                                  </div>
+                                  <button @click.stop="copyText(ipItem.ip, 'ex-' + row.id + '-' + idx)" class="text-[#059669] hover:text-[#047857] flex-shrink-0 relative group p-0.5">
+                                    <template x-if="copiedRowId === ('ex-' + row.id + '-' + idx)">
+                                      <span class="text-[10px] font-sans font-bold text-emerald-700 flex items-center gap-0.5">
+                                        <span>✓</span>已复制
+                                      </span>
+                                    </template>
+                                    <template x-if="copiedRowId !== ('ex-' + row.id + '-' + idx)">
+                                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                                      </svg>
+                                    </template>
+                                  </button>
+                                </div>
+                              </template>
+                            </div>
+                          </td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- 步骤 2：基于您的使用场景，将以上复制的加速IP填写到对应的位置 -->
+              <div class="space-y-2.5">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2 text-xs font-semibold text-slate-800">
+                    <span class="w-4.5 h-4.5 bg-[#1C6EFF] text-white flex items-center justify-center rounded text-[11px] font-bold font-outfit">2</span>
+                    <span>基于您的使用场景，将以上复制的加速IP填写到对应的位置</span>
+                  </div>
+                  <button @click="showExampleModal = true" class="text-xs text-brand hover:underline font-medium cursor-pointer flex items-center gap-0.5">
+                    如何配置？
+                  </button>
+                </div>
+
+                <div class="bg-slate-50 border border-slate-200/80 p-3.5 rounded-lg text-xs text-slate-600 leading-relaxed space-y-2 select-none">
+                  <div class="flex items-start gap-2">
+                    <span class="w-4 h-4 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">1</span>
+                    <div>
+                      如果加速的是零信任业务则前往 <span class="font-semibold text-slate-800">【系统管理/代理网关管理】</span> 在左树找到本次加速源站对象所在的代理区域，将地址复制到代理区域的线路中。
+                    </div>
+                  </div>
+                  <div class="flex items-start gap-2">
+                    <span class="w-4 h-4 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">2</span>
+                    <div>
+                      如果加速的分支业务则前往 <span class="font-semibold text-slate-800">AF</span> 中完成添加
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- 底部 Bottom Actions -->
+            <div class="px-6 py-3.5 border-t border-slate-100 bg-[#F8FAFC] flex justify-end gap-3 flex-shrink-0 select-none">
+              <button @click="saveConfig('加速中'); location.href='GA-display.html'" class="h-9 px-6 rounded text-xs bg-[#1C6EFF] text-white font-medium hover:bg-blue-600 transition-colors shadow-sm cursor-pointer">
+                我已完成配置
+              </button>
+              <button @click="showExclusiveIpModal = false; saveConfig('未生效'); addToTodoList(); location.href='GA-display.html'" class="h-9 px-5 rounded text-xs border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 transition-colors focus:outline-none cursor-pointer">
+                稍后配置
               </button>
             </div>
           </div>
