@@ -2062,7 +2062,6 @@
                     const cfg = this.getPopConfig(row.id);
                     cfg.exclusiveIp = true;
                     if (!row._wasDomain) {
-                      cfg.advancedOpen = true;
                       row._wasDomain = true;
                     }
                   } else {
@@ -2418,7 +2417,7 @@
             if (!this.popConfigs[id]) {
               this.popConfigs[id] = {
                 selectedPops: [],
-                advancedOpen: isDomain ? true : false,
+                advancedOpen: false,
                 exclusiveIp: isDomain ? true : false,
                 sourceIpPassthrough: false,
                 transportOptimize: true,
@@ -3289,7 +3288,7 @@
                               <div class="flex items-start gap-2 min-w-0">
                                 <svg class="w-4 h-4 flex-shrink-0 text-[#6F7785] mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/></svg>
                                 <div class="text-xs text-[#6F7785] leading-relaxed font-normal space-y-0.5">
-                                  <div>1. 当源站对象为域名时，系统将自动进行 DNS 解析并填写真实 IP；若有多个真实 IP，可以英文逗号分隔。</div>
+                                  <div>1. 当加速对象为域名时，系统将自动进行 DNS 解析并填写真实 IP；若有多个真实 IP，可以英文逗号分隔。</div>
                                   <div>2. 同一区域内的多个域名对象共享相同的源站通道，仅需配置一个回源 IP 即可。</div>
                                 </div>
                               </div>
@@ -3304,7 +3303,7 @@
                         <div x-show="subtype === 'auth' && row.target && (row.target.includes('10.') || row.target.includes('172.16.'))" x-cloak
                           class="mt-1.5 mr-8 flex items-center gap-1.5 text-[11px] text-orange-500 bg-orange-50 border border-orange-200 rounded px-2.5 py-1.5">
                           <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01"/></svg>
-                          <span>源站对象中客户端接入地址为IP格式，规则生效后会需要员工手动更新客户端接入地址</span>
+                          <span>加速对象中客户端接入地址为IP格式，规则生效后会需要员工手动更新客户端接入地址</span>
                           <button @click="row.target = ''" class="ml-auto text-orange-400 hover:text-orange-600 flex-shrink-0">×</button>
                       </div>
                     </template>
@@ -3846,7 +3845,7 @@
 
                       <!-- 5. 源站对象 -->
                       <div class="flex-1 min-w-[110px] max-w-[150px] space-y-1">
-                        <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400">源站对象</div>
+                        <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400">加速对象</div>
                         <div class="flex items-center gap-2.5">
                           <div class="w-9 h-9 rounded-xl border border-slate-200 bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center flex-shrink-0 shadow-sm">
                             <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -4056,7 +4055,7 @@
 
                 <!-- 3. 源站 -->
                 <div class="flex-1 bg-slate-50/50 p-2.5 border border-slate-200 rounded-lg relative min-w-0">
-                  <div class="text-slate-400 mb-1">源站对象</div>
+                  <div class="text-slate-400 mb-1">加速对象</div>
                   <div x-show="getPreviewRow() && getPreviewRow().target" x-cloak>
                     <div class="font-medium text-brand truncate" x-text="getPreviewRow().target"></div>
                   </div>
@@ -4445,7 +4444,7 @@ server {
                   <table class="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr class="bg-slate-50 text-slate-400 font-semibold border-b border-slate-100">
-                        <th class="py-2.5 px-4 font-normal">源站对象</th>
+                        <th class="py-2.5 px-4 font-normal">加速对象</th>
                         <th class="py-2.5 px-4 font-normal">加速域名</th>
                       </tr>
                     </thead>
@@ -4891,7 +4890,7 @@ server {
 
       // 计算源站对象的动态经纬度及名称
       let hubNode = null;
-      const targetText = (activeRow && activeRow.target) ? activeRow.target : '源站对象';
+      const targetText = (activeRow && activeRow.target) ? activeRow.target : '加速对象';
       
       if (lowerNode) {
         // 在源站区域附近：偏移约 5°纬度 和 8°经度

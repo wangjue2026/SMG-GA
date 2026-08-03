@@ -208,7 +208,7 @@
         searchFields: [
           { key: 'name', label: '规则名称', type: 'input', default: true },
           { key: 'scenario', label: '加速类型', type: 'select', options: ['零信任业务加速', '自定义IP/域名加速', '分支组网加速', 'SaaS应用加速'] },
-          { key: 'status', label: '状态', type: 'select', options: ['加速中', '未生效', '未启用', '异常'] },
+          { key: 'status', label: '状态', type: 'select', options: ['加速中', '待生效', '未启用', '异常'] },
           { key: 'accDomain', label: 'CNAME', type: 'input' },
           { key: 'originAddr', label: '源站地址', type: 'input' }
         ],
@@ -241,6 +241,60 @@
 
         // Log Drawer state
         logDrawerOpen: false,
+
+        // Modal & Popover States
+        showTodoIpModal: false,
+        showChangeOriginModal: false,
+        showAddAccNodeModal: false,
+
+        // Change Origin Node States
+        changeOriginTargetNodeId: null,
+        changeOriginSelectedNode: '',
+        changeOriginDropdownOpen: false,
+        changeOriginActiveRegion: '中国大陆',
+        changeOriginSearchQuery: '',
+
+        // Add Acceleration Node States
+        selectedAccPops: [],
+        addAccDropdownOpen: false,
+        addAccActiveRegion: '中国大陆',
+        addAccSearchQuery: '',
+
+        mockPops: {
+          '中国大陆': [
+            { key: 'gz', name: '广州', cities: ['深圳', '东莞', '佛山', '中山', '珠海', '江门', '肇庆', '清远'], ip: '183.60.21.10' },
+            { key: 'sz', name: '深圳', cities: ['广州', '东莞', '惠州', '汕头', '潮州', '揭阳', '汕尾', '河源'], ip: '119.29.50.88' },
+            { key: 'bj', name: '北京', cities: ['天津', '廊坊', '唐山', '保定', '石家庄', '沧州', '承德', '张家口'], ip: '123.125.115.10' },
+            { key: 'tj', name: '天津', cities: ['北京', '廊坊', '沧州', '唐山', '秦皇岛', '德州', '滨州', '东营'], ip: '110.64.12.89' },
+            { key: 'wh', name: '武汉', cities: ['黄冈', '鄂州', '孝感', '咸宁', '仙桃', '天门', '潜江', '随州'], ip: '111.175.22.45' },
+            { key: 'sh', name: '上海', cities: ['苏州', '无锡', '常州', '嘉兴', '宁波', '杭州', '南通', '湖州'], ip: '101.227.12.5' },
+            { key: 'cd', name: '成都', cities: ['绵阳', '德阳', '乐山', '眉山', '资阳', '自贡', '宜宾', '遂宁'], ip: '182.140.133.9' }
+          ],
+          '亚太地区': [
+            { key: 'sg', name: '新加坡', cities: ['吉隆坡', '雅加达', '曼谷', '西贡', '马尼拉', '文莱'], ip: '47.74.12.5' },
+            { key: 'hk', name: '中国香港', cities: ['九龙', '新界', '中环', '湾仔'], ip: '203.186.20.1' },
+            { key: 'macau', name: '中国澳门', cities: ['氹仔', '路环'], ip: '202.175.3.88' },
+            { key: 'kl', name: '吉隆坡', cities: ['新加坡', '槟城', '新山', '怡保', '马六甲'], ip: '175.139.2.14' },
+            { key: 'to', name: '东京', cities: ['横滨', '大阪', '京都', '名古屋', '神户', '福冈'], ip: '118.27.3.15' },
+            { key: 'seoul', name: '首尔', cities: ['釜山', '仁川', '大邱', '大田', '光州', '蔚山', '水原', '济州'], ip: '211.233.7.89' },
+            { key: 'sydney', name: '悉尼', cities: ['墨尔本', '布里斯班', '阿德莱德', '珀斯', '堪培拉', '霍巴特', '达尔文', '黄金海岸'], ip: '139.130.4.5' },
+            { key: 'bangkok', name: '曼谷', cities: ['清迈', '芭提雅', '普吉', '甲米', '大城', '华欣', '清莱', '万象'], ip: '118.174.2.11' },
+            { key: 'manila', name: '马尼拉', cities: ['宿务', '达沃', '奎松', '卡洛奥坎', '达斯马里尼亚斯', '八打雁', '伊洛伊洛', '巴科洛德'], ip: '121.54.4.2' },
+            { key: 'mumbai', name: '孟买', cities: ['新德里', '班加罗尔', '海得拉巴', '浦那', '金奈', '加尔各答', '艾哈迈达巴德', '苏拉特'], ip: '115.248.3.1' }
+          ],
+          '欧美地区': [
+            { key: 'la', name: '洛杉矶', cities: ['旧金山', '圣迭戈', '拉斯维加斯', '凤凰城', '西雅图', '波特兰', '盐湖城', '萨克拉门托'], ip: '198.51.100.4' },
+            { key: 'se', name: '西雅图', cities: ['温哥华', '波特兰', '斯波坎', '塔科马', '贝尔维尤', '奥林匹亚', '维多利亚', '卡尔加里'], ip: '198.51.100.89' },
+            { key: 'ca', name: '加利福尼亚', cities: ['圣何塞', '奥克兰', '萨克拉门托', '弗雷斯诺', '贝克斯菲尔德', '安纳海姆', '长滩', '河滨'], ip: '198.51.100.12' },
+            { key: 'lo', name: '伦敦', cities: ['伯明翰', '曼彻斯特', '利兹', '利物浦', '格拉斯哥', '爱丁堡', '布里斯托', '贝尔法斯特'], ip: '185.60.216.35' },
+            { key: 'pa', name: '巴黎', cities: ['马赛', '里昂', '图卢兹', '尼斯', '南特', '斯特拉斯堡', '蒙彼利埃', '波尔多'], ip: '185.60.217.10' },
+            { key: 'be', name: '柏林', cities: ['汉堡', '慕尼黑', '科隆', '法兰克福', '斯图加特', '杜塞尔多夫', '多特蒙德', '埃森'], ip: '185.60.218.4' },
+            { key: 'frankfurt', name: '法兰克福', cities: ['柏林', '汉堡', '慕尼黑'], ip: '185.60.218.88' }
+          ],
+          '其他地区': [
+            { key: 'du', name: '迪拜', cities: ['阿布扎比', '沙迦', '艾因', '阿治曼'], ip: '185.60.219.1' }
+          ]
+        },
 
         // Details Configuration Drawer States
         detailDrawerOpen: false,
@@ -324,14 +378,144 @@
         getRegionByNode(nodeName) {
           if (!nodeName) return '其他地区';
           const name = String(nodeName).trim();
-          const mainland = ['广州', '北京', '深圳', '上海', '成都', '武汉', '杭州', '南京', '西安'];
-          const apac = ['香港', '澳门', '台湾', '新加坡', '曼谷', '东京', '吉隆坡', '首尔', '悉尼', '墨尔本'];
-          const western = ['巴黎', '西雅图', '洛杉矶', '法兰克福', '纽约', '旧金山', '伦敦', '加利福尼亚'];
+          for (const region in this.mockPops) {
+            if (this.mockPops[region].some(p => p.name === name || name.includes(p.name))) {
+              return region;
+            }
+          }
+          const mainland = ['广州', '北京', '深圳', '上海', '成都', '武汉', '天津', '杭州', '南京', '西安'];
+          const apac = ['香港', '澳门', '台湾', '新加坡', '曼谷', '东京', '吉隆坡', '首尔', '悉尼', '墨尔本', '马尼拉', '孟买'];
+          const western = ['巴黎', '西雅图', '洛杉矶', '法兰克福', '纽约', '旧金山', '伦敦', '加利福尼亚', '柏林'];
           
           if (mainland.some(c => name.includes(c))) return '中国大陆';
           if (apac.some(c => name.includes(c))) return '亚太地区';
           if (western.some(c => name.includes(c))) return '欧美地区';
           return '其他地区';
+        },
+        getIpByNode(nodeName) {
+          if (!nodeName) return '183.60.21.10';
+          const name = String(nodeName).trim();
+          for (const region in this.mockPops) {
+            const found = this.mockPops[region].find(p => p.name === name || name.includes(p.name));
+            if (found && found.ip) return found.ip;
+          }
+          return '183.60.21.10';
+        },
+        filterPops(query) {
+          if (!query || !query.trim()) return [];
+          const q = query.trim().toLowerCase();
+          const results = [];
+          for (const region in this.mockPops) {
+            this.mockPops[region].forEach(pop => {
+              if (pop.name.toLowerCase().includes(q) || pop.cities.some(c => c.toLowerCase().includes(q))) {
+                results.push(pop);
+              }
+            });
+          }
+          return results;
+        },
+        markRuleAsAccelerating(rule) {
+          if (!rule) return;
+          rule.status = '加速中';
+          if (rule.accDomain === '-') {
+            rule.accDomain = rule.name + '.cname.sangfor.com';
+          }
+          this.todoItems = this.todoItems.filter(item => item.id !== rule.id);
+          localStorage.setItem('ga_todo_items', JSON.stringify(this.todoItems));
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: '校验成功，加速已生效', type: 'success' } }));
+        },
+        openRuleConfigModal(rule) {
+          if (!rule) return;
+          this.openTodoConfig(rule.id);
+          if (!this.isDomain(rule.srcObject)) {
+            this.showTodoCnameModal = false;
+            this.showTodoIpModal = true;
+          }
+        },
+        openChangeOriginModal(node) {
+          if (node) {
+            this.changeOriginTargetNodeId = node.id;
+            this.changeOriginSelectedNode = node.node;
+          } else if (this.detailDrawerOriginNodes[0]) {
+            this.changeOriginTargetNodeId = this.detailDrawerOriginNodes[0].id;
+            this.changeOriginSelectedNode = this.detailDrawerOriginNodes[0].node;
+          }
+          this.changeOriginActiveRegion = this.getRegionByNode(this.changeOriginSelectedNode);
+          this.changeOriginDropdownOpen = false;
+          this.changeOriginSearchQuery = '';
+          this.showChangeOriginModal = true;
+        },
+        confirmChangeOriginNode() {
+          if (!this.changeOriginSelectedNode) return;
+          const newNode = this.changeOriginSelectedNode;
+          const newIp = this.getIpByNode(newNode);
+          const newRegion = this.getRegionByNode(newNode);
+
+          if (this.detailDrawerOriginNodes.length > 0) {
+            this.detailDrawerOriginNodes[0].node = newNode;
+            this.detailDrawerOriginNodes[0].region = newRegion;
+            this.detailDrawerOriginNodes[0].ip = newIp;
+          }
+          if (this.detailDrawerRule) {
+            this.detailDrawerRule.srcRegion = newNode;
+          }
+          this.showChangeOriginModal = false;
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: `源站节点已更新为【${newNode}】，IP地址自动替换为 ${newIp}`, type: 'success' } }));
+        },
+        openAddAccNodeModal() {
+          this.selectedAccPops = this.detailDrawerAccRanges.map(n => n.node);
+          this.addAccActiveRegion = '中国大陆';
+          this.addAccDropdownOpen = false;
+          this.addAccSearchQuery = '';
+          this.showAddAccNodeModal = true;
+        },
+        toggleAccPop(popName) {
+          if (this.selectedAccPops.includes(popName)) {
+            this.selectedAccPops = this.selectedAccPops.filter(p => p !== popName);
+          } else {
+            this.selectedAccPops.push(popName);
+          }
+        },
+        confirmAddAccNodes() {
+          const currentNodesMap = {};
+          this.detailDrawerAccRanges.forEach(n => {
+            currentNodesMap[n.node] = n;
+          });
+
+          const newRanges = [];
+          this.selectedAccPops.forEach((nodeName, idx) => {
+            if (currentNodesMap[nodeName]) {
+              newRanges.push(currentNodesMap[nodeName]);
+            } else {
+              const region = this.getRegionByNode(nodeName);
+              const baseIp = this.getIpByNode(nodeName);
+              const parts = baseIp.split('.');
+              const ip1 = baseIp;
+              const ip2 = parts.length === 4 ? `${parts[0]}.${parts[1]}.${parts[2]}.${parseInt(parts[3]) + 10}` : '15.4.156.24';
+              newRanges.push({
+                id: Date.now() + idx,
+                node: nodeName,
+                region: region,
+                ip1: ip1,
+                ip2: ip2,
+                limit: '100Mbps',
+                port1: 6745,
+                port2: 6745
+              });
+            }
+          });
+
+          this.detailDrawerAccRanges = newRanges;
+          if (this.detailDrawerRule) {
+            if (newRanges.length > 0) {
+              const firstTwo = newRanges.slice(0, 2).map(n => n.node).join('、');
+              this.detailDrawerRule.accRegion = newRanges.length > 2 ? `${firstTwo}等${newRanges.length}个` : newRanges.map(n => n.node).join('、');
+            } else {
+              this.detailDrawerRule.accRegion = '-';
+            }
+          }
+          this.showAddAccNodeModal = false;
+          window.dispatchEvent(new CustomEvent('show-toast', { detail: { message: '加速节点配置保存成功', type: 'success' } }));
         },
 
         openDetailDrawer(rule) {
@@ -527,7 +711,7 @@
         // Rule list: 12 mock items
         rules: [
           { id: 'POL-001', name: 'oa.sangfor.com', desc: '欧洲访问国内集团办公OA系统加速', scenario: '零信任业务加速', subType: 'web应用', status: '加速中', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: 'oa.sangfor.com（上海办公网关）', originAddr: '34.234.22.1', accDomain: '-', exclusiveIp: '-' },
-          { id: 'POL-002', name: 'saauth.sangfor.com.cn', desc: '海外研发中心安全认证中心链路优化', scenario: '零信任业务加速', subType: 'web应用', status: '未生效', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: 'saauth.sangfor.com.cn', originAddr: '52.76.18.90', accDomain: 'https://saauth.sangfor.com.cn/sa/auth...', exclusiveIp: '-' },
+          { id: 'POL-002', name: 'saauth.sangfor.com.cn', desc: '海外研发中心安全认证中心链路优化', scenario: '零信任业务加速', subType: 'web应用', status: '待生效', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: 'saauth.sangfor.com.cn', originAddr: '52.76.18.90', accDomain: 'https://saauth.sangfor.com.cn/sa/auth...', exclusiveIp: '-' },
           { id: 'POL-003', name: '10.23.22.3', desc: '零信任核心接入网关跨境传输加速', scenario: '零信任业务加速', subType: '接入&认证', status: '加速中', accRegion: '吉隆坡、加利福尼亚等5个', srcRegion: '广州', srcObject: '10.23.22.3', originAddr: '-', accDomain: 'https://saauth.sangfor.com.cn/sa/auth...', exclusiveIp: '-' },
           { id: 'POL-004', name: '10.23.12.1', desc: '自定义大文件传输与SSH控制隧道加速', scenario: '自定义IP/域名加速', status: '加速中', accRegion: '吉隆坡、首尔等7个', srcRegion: '广州', srcObject: '10.23.12.1:443/441/4433...', originAddr: '-', accDomain: '-', exclusiveIp: '10.23.45.23:441' },
           { id: 'POL-005', name: '10.23.1.23', desc: '分支机构本地ERP及业务数据汇聚通道', scenario: '分支组网加速', status: '加速中', accRegion: '武汉、深圳、上海', srcRegion: '巴黎', srcObject: '主节点：10.23.1.23', originAddr: '-', accDomain: '-', exclusiveIp: '-' },
@@ -2377,7 +2561,7 @@
                                   @click="startEditingSelectTag(tag)"></span>
                             <!-- Option dropdown -->
                             <div class="absolute top-full left-0 mt-1.5 bg-white border border-[#D3D7DE] shadow-[0_4px_16px_rgba(30,35,43,0.14)] rounded-[2px] p-2 z-[110] min-w-[160px]">
-                              <template x-for="opt in (tag.fieldKey === 'status' ? ['加速中', '未生效', '未启用', '异常'] : ['零信任-隧道应用访问加速', '零信任-web应用访问加速', '零信任-接入与认证加速', '分支组网加速', 'SaaS应用加速', '自定义IP/域名加速'])">
+                              <template x-for="opt in (tag.fieldKey === 'status' ? ['加速中', '待生效', '未启用', '异常'] : ['零信任-隧道应用访问加速', '零信任-web应用访问加速', '零信任-接入与认证加速', '分支组网加速', 'SaaS应用加速', '自定义IP/域名加速'])">
                                 <label class="flex items-center gap-2 py-1 px-1.5 hover:bg-bg-light cursor-pointer text-xs select-none">
                                   <input type="checkbox" :value="opt" x-model="searchSelectedOptions" class="rounded-[2px] border-border text-brand focus:ring-brand">
                                   <span x-text="opt"></span>
@@ -2512,25 +2696,44 @@
                           </div>
                         </template>
 
-                        <!-- 2. 未生效 (微型按钮样式: 未生效 · 去配置 ›，带悬浮光泽与手形引导，点击触发配置弹窗) -->
-                        <template x-if="rule.status === '未生效'">
-                          <div class="relative group/status inline-block">
-                            <div @click.stop="openTodoConfig(rule.id)"
-                                 class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200/80 text-amber-700 hover:bg-amber-100 hover:border-amber-300 hover:shadow-xs cursor-pointer transition-all duration-150 select-none group/btn">
-                              <span class="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 animate-pulse"></span>
-                              <span class="text-xs font-semibold text-amber-800">未生效</span>
-                              <span class="text-[11px] text-amber-600 font-normal border-l border-amber-200 pl-1.5 ml-0.5 group-hover/btn:text-amber-800 group-hover/btn:underline">去配置</span>
-                              <svg class="w-3 h-3 text-amber-600 group-hover/btn:text-amber-800 transition-transform group-hover/btn:translate-x-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        <!-- 2. 待生效 (警告图标 + 橙黄色文本，点击/过键展开交互气泡框，防移出丢失桥接) -->
+                        <template x-if="rule.status === '待生效' || rule.status === '未生效'">
+                          <div class="relative group/status inline-block"
+                               x-data="{ popoverHovered: false, hoverTimer: null }"
+                               @mouseenter="clearTimeout(hoverTimer); popoverHovered = true"
+                               @mouseleave="hoverTimer = setTimeout(() => { popoverHovered = false }, 250)"
+                               @click.away="popoverHovered = false">
+                            <div @click.stop="popoverHovered = !popoverHovered"
+                                 class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[#FA721B] hover:bg-amber-50 cursor-pointer transition-colors select-none">
+                              <svg class="w-3.5 h-3.5 text-[#FA721B] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                               </svg>
+                              <span class="text-xs font-semibold text-[#FA721B]">待生效</span>
                             </div>
-                            <!-- Hover Tooltip -->
-                            <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/status:flex flex-col items-center z-50 whitespace-nowrap pointer-events-none">
-                              <div class="bg-slate-800 text-white text-[11px] px-2.5 py-1 rounded shadow-lg flex items-center gap-1">
-                                <span>CNAME 或加速 IP 未完成确认，点击前往配置</span>
-                                <span class="text-amber-300">➔</span>
+                            
+                            <!-- 悬浮 Popover 气泡框卡片 (参考截图 1 - 含无缝桥接 pseudo-element) -->
+                            <div x-show="popoverHovered"
+                                 x-transition:enter="transition ease-out duration-150"
+                                 x-transition:enter-start="opacity-0 translate-y-1"
+                                 x-transition:enter-end="opacity-100 translate-y-0"
+                                 @mouseenter="clearTimeout(hoverTimer); popoverHovered = true"
+                                 @mouseleave="hoverTimer = setTimeout(() => { popoverHovered = false }, 250)"
+                                 @click.stop
+                                 class="absolute top-full left-0 mt-2 z-50 w-[300px] bg-white border border-slate-200 shadow-xl rounded-lg p-3.5 text-left text-xs pointer-events-auto before:content-[''] before:absolute before:-top-3 before:left-0 before:right-0 before:h-3">
+                              <div class="text-slate-700 font-normal leading-relaxed mb-3.5 select-text">
+                                请确认是否已完成CNAME发布或加速IP配置。
                               </div>
-                              <div class="w-2 h-2 bg-slate-800 rotate-45 -mt-1"></div>
+                              <div class="flex items-center justify-end gap-2">
+                                <button @click.stop="popoverHovered = false; markRuleAsAccelerating(rule)"
+                                        class="px-3 py-1 rounded bg-brand text-white font-medium hover:bg-brand-hover active:bg-brand-active transition-colors shadow-xs cursor-pointer">
+                                  我已完成
+                                </button>
+                                <button @click.stop="popoverHovered = false; openRuleConfigModal(rule)"
+                                        class="px-3 py-1 rounded border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors font-medium cursor-pointer">
+                                  查看
+                                </button>
+                              </div>
+                              <div class="absolute -top-1.5 left-5 w-3 h-3 bg-white border-t border-l border-slate-200 rotate-45"></div>
                             </div>
                           </div>
                         </template>
@@ -2985,7 +3188,7 @@
                               </div>
                             </td>
                             <td class="px-3 text-center">
-                              <a @click.prevent="deleteOriginNode(node.id)" class="text-brand hover:text-brand-hover cursor-pointer font-medium">更换</a>
+                              <a @click.prevent="openChangeOriginModal(node)" class="text-brand hover:text-brand-hover cursor-pointer font-medium">更换</a>
                             </td>
                           </tr>
                         </template>
@@ -3121,7 +3324,7 @@
 
                     <!-- 新增节点和复制操作行 -->
                     <div class="flex items-center justify-between py-1 select-none">
-                      <button @click="addAccRange()" class="sd-btn sd-btn-default px-3 h-7 text-xs border border-border bg-white hover:text-brand hover:border-brand">新增节点</button>
+                      <button @click="openAddAccNodeModal()" class="sd-btn sd-btn-default px-3 h-7 text-xs border border-border bg-white hover:text-brand hover:border-brand">新增节点</button>
                       <button @click="copyAccRanges()" class="flex items-center gap-1 text-xs text-text-mute hover:text-brand focus:outline-none" title="复制加速区域信息">
                         <svg class="w-3.5 h-3.5 text-text-mute hover:text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                         <span>复制</span>
@@ -3616,10 +3819,324 @@
         </div>
       </div>
       <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 flex-shrink-0">
-        <button @click="completeTodoConfig(selectedTodoItem.id)" class="h-8 px-4 rounded text-xs bg-brand text-white font-medium hover:bg-brand-hover active:bg-brand-active transition-colors shadow-sm focus:outline-none">
+        <button @click="completeTodoConfig(selectedTodoItem ? selectedTodoItem.id : null)" class="h-8 px-4 rounded text-xs bg-brand text-white font-medium hover:bg-brand-hover active:bg-brand-active transition-colors shadow-sm focus:outline-none">
           我已完成配置
         </button>
         <button @click="showTodoCnameModal = false" class="h-8 px-4 rounded text-xs border border-slate-200 bg-white text-slate-600 font-medium hover:bg-slate-50 transition-colors focus:outline-none">
+          取消
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 发布加速配置 IP Modal (针对待办项二次查看与配置 - 加速IP配置) -->
+  <div x-show="showTodoIpModal" class="fixed inset-0 z-[990] flex items-center justify-center" x-cloak>
+    <!-- 背景遮罩 -->
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="showTodoIpModal = false"></div>
+    
+    <!-- 弹窗主体 -->
+    <div class="relative bg-white rounded-xl shadow-2xl border border-slate-200 w-[680px] max-w-full overflow-hidden flex flex-col transition-all duration-300"
+         @click.away="showTodoIpModal = false">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+        <h3 class="text-sm font-semibold text-slate-800">
+          加速IP配置
+        </h3>
+        <button @click="showTodoIpModal = false" class="text-slate-400 hover:text-slate-600 text-lg font-medium p-1">×</button>
+      </div>
+      <div class="p-6 space-y-4 overflow-y-auto max-h-[calc(80vh-100px)] custom-scrollbar">
+        <div class="flex items-center gap-3">
+          <div class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm font-bold flex-shrink-0">✓</div>
+          <div class="text-sm font-semibold text-slate-800">请在您的防火墙/路由设备中完成加速 IP 配置</div>
+        </div>
+        <div class="p-4 bg-blue-50/40 border border-blue-100 rounded-lg flex flex-col gap-3">
+          <div class="flex items-center gap-2 text-xs font-semibold text-brand">
+            <svg class="w-3.5 h-3.5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+            </svg>
+            <span>如何配置加速 IP？</span>
+          </div>
+          <div class="text-[11px] text-slate-500 leading-normal space-y-1">
+            <div>您配置的源站地址为 IP 类型，需要将流量牵引至 SASE 节点分配的专有加速 IP。</div>
+            <div>请将终端用户或局域网路由的访问目标地址配置为以下<span class="text-brand font-semibold">加速 IP</span>，即可使加速策略生效。</div>
+          </div>
+        </div>
+        <div class="space-y-2" x-show="selectedTodoItem">
+          <div class="flex items-center gap-2 text-xs font-semibold text-slate-800">
+            <span class="w-4 h-4 rounded-full bg-brand text-white flex items-center justify-center text-[10px]">1</span>
+            <span>为加速节点配置专有 IP</span>
+          </div>
+          <div class="border border-slate-100 rounded-lg overflow-hidden bg-white">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-50 text-slate-400 font-semibold border-b border-slate-100">
+                  <th class="py-2.5 px-4 font-normal">加速对象</th>
+                  <th class="py-2.5 px-4 font-normal">分配的加速 IP</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="border-b border-slate-100 last:border-0">
+                  <td class="py-2.5 px-4 text-slate-700 font-medium font-mono" x-text="selectedTodoItem ? selectedTodoItem.srcObject : ''"></td>
+                  <td class="py-2.5 px-4">
+                    <div class="flex items-center justify-between gap-3 bg-emerald-50/40 border border-emerald-100 rounded px-2.5 py-1 text-emerald-800 font-mono text-[11px] max-w-[360px]" x-data="{ copied: false }">
+                      <span class="flex items-center gap-1 min-w-0 flex-1">
+                        <span class="text-emerald-600 text-xs flex-shrink-0">⚡</span>
+                        <span class="truncate" x-text="selectedTodoItem ? (selectedTodoItem.exclusiveIp || '10.23.45.23:441') : '10.23.45.23:441'"></span>
+                      </span>
+                      <button @click.stop="navigator.clipboard.writeText(selectedTodoItem ? (selectedTodoItem.exclusiveIp || '10.23.45.23:441') : '10.23.45.23:441').then(() => { copied = true; setTimeout(() => copied = false, 1500); })" class="text-emerald-600 hover:text-emerald-800 flex-shrink-0 relative group p-0.5 ml-2">
+                        <span x-show="copied" class="text-[10px] text-emerald-600 font-sans font-bold flex items-center gap-0.5" x-cloak>
+                          <span>✓</span>已复制
+                        </span>
+                        <svg x-show="!copied" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 flex-shrink-0">
+        <button @click="completeTodoConfig(selectedTodoItem ? selectedTodoItem.id : null); showTodoIpModal = false;" class="h-8 px-4 rounded text-xs bg-brand text-white font-medium hover:bg-brand-hover active:bg-brand-active transition-colors shadow-sm focus:outline-none">
+          我已完成
+        </button>
+        <button @click="showTodoIpModal = false" class="h-8 px-4 rounded text-xs border border-slate-200 bg-white text-slate-600 font-medium hover:bg-slate-50 transition-colors focus:outline-none">
+          取消
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 更换节点 Modal (详情抽屉 - 源站区域) -->
+  <div x-show="showChangeOriginModal" class="fixed inset-0 z-[1010] flex items-center justify-center" x-cloak>
+    <!-- 背景遮罩 -->
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="showChangeOriginModal = false"></div>
+    
+    <!-- 弹窗主体 -->
+    <div class="relative bg-white rounded-xl shadow-2xl border border-slate-200 w-[520px] max-w-full overflow-visible flex flex-col transition-all duration-300"
+         @click.away="showChangeOriginModal = false">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+        <h3 class="text-sm font-semibold text-slate-800">
+          更换节点
+        </h3>
+        <button @click="showChangeOriginModal = false" class="text-slate-400 hover:text-slate-600 text-lg font-medium p-1 cursor-pointer">×</button>
+      </div>
+      
+      <div class="p-5 space-y-4 relative overflow-visible">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-2">
+            选择源站区域
+          </label>
+          
+          <!-- 单选 Dropdown Box (复用 GA-custom-config 逻辑) -->
+          <div class="relative">
+            <div @click="changeOriginDropdownOpen = !changeOriginDropdownOpen; changeOriginSearchQuery = '';"
+                 class="h-9 border border-slate-200 rounded-lg px-3 bg-white flex items-center justify-between cursor-pointer hover:border-brand/60 transition-colors text-xs select-none">
+              <span class="flex items-center gap-2">
+                <span class="text-brand">🌐</span>
+                <span class="font-medium text-slate-800" x-text="changeOriginSelectedNode || '请选择'"></span>
+              </span>
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </div>
+            
+            <!-- 下拉菜单容器 (设置高 z-index z-[200] 避免被底栏截断) -->
+            <div x-show="changeOriginDropdownOpen" @click.away="changeOriginDropdownOpen = false" x-cloak
+                 class="absolute z-[200] left-0 right-0 top-10 bg-white border border-slate-200 rounded-lg shadow-xl text-xs flex flex-col max-h-72 overflow-hidden">
+              <!-- 搜索框 -->
+              <div class="p-2 border-b border-slate-100 flex-shrink-0 relative">
+                <input type="text" x-model="changeOriginSearchQuery" placeholder="搜索地理位置，不存在则选择位置距离最近的选项"
+                       class="w-full h-8 border border-slate-200 rounded-md pl-8 pr-3 text-xs focus:outline-none focus:border-brand text-slate-700">
+                <svg class="w-4 h-4 text-slate-400 absolute left-4 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+              </div>
+              
+              <!-- 未搜索时：双列大区-PoP 选框 -->
+              <template x-if="!changeOriginSearchQuery">
+                <div class="flex flex-1 max-h-56 overflow-hidden">
+                  <!-- 左侧大区列表 -->
+                  <div class="w-28 border-r border-slate-100 bg-slate-50/50 flex-shrink-0 overflow-y-auto">
+                    <template x-for="region in Object.keys(mockPops)" :key="region">
+                      <div @mouseenter="changeOriginActiveRegion = region"
+                           class="px-3 py-2 cursor-pointer flex items-center justify-between transition-colors select-none"
+                           :class="changeOriginActiveRegion === region ? 'text-brand font-semibold bg-white border-l-2 border-brand' : 'text-slate-600 hover:bg-slate-100/60'">
+                        <span x-text="region"></span>
+                        <svg class="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                      </div>
+                    </template>
+                  </div>
+                  <!-- 右侧 PoP 城市单选 -->
+                  <div class="flex-1 overflow-y-auto p-1">
+                    <template x-for="pop in (mockPops[changeOriginActiveRegion] || [])" :key="pop.key">
+                      <div @click="changeOriginSelectedNode = pop.name; changeOriginDropdownOpen = false;"
+                           class="px-3 py-2 rounded hover:bg-blue-50 cursor-pointer flex items-center justify-between select-none"
+                           :class="changeOriginSelectedNode === pop.name ? 'text-brand font-semibold bg-blue-50/60' : 'text-slate-700'">
+                        <span class="flex items-center gap-2">
+                          <span class="text-brand">🌐</span>
+                          <span x-text="pop.name"></span>
+                        </span>
+                        <svg x-show="changeOriginSelectedNode === pop.name" class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </template>
+              
+              <!-- 搜索时平铺匹配 PoP 列表 -->
+              <template x-if="changeOriginSearchQuery">
+                <div class="flex-1 overflow-y-auto max-h-56 p-1">
+                  <template x-for="pop in filterPops(changeOriginSearchQuery)" :key="pop.key">
+                    <div @click="changeOriginSelectedNode = pop.name; changeOriginDropdownOpen = false; changeOriginSearchQuery = '';"
+                         class="px-3 py-2 rounded hover:bg-blue-50 cursor-pointer flex items-center justify-between text-slate-700 select-none">
+                      <span class="flex items-center gap-2">
+                        <span class="text-brand">🌐</span>
+                        <span x-text="pop.name"></span>
+                      </span>
+                      <svg x-show="changeOriginSelectedNode === pop.name" class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 flex-shrink-0 rounded-b-xl">
+        <button @click="confirmChangeOriginNode()" class="h-8 px-4 rounded text-xs bg-brand text-white font-medium hover:bg-brand-hover active:bg-brand-active transition-colors shadow-sm focus:outline-none cursor-pointer">
+          确定
+        </button>
+        <button @click="showChangeOriginModal = false" class="h-8 px-4 rounded text-xs border border-slate-200 bg-white text-slate-600 font-medium hover:bg-slate-50 transition-colors focus:outline-none cursor-pointer">
+          取消
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增节点 Modal (详情抽屉 - 加速区域 - 多选节点) -->
+  <div x-show="showAddAccNodeModal" class="fixed inset-0 z-[1010] flex items-center justify-center" x-cloak>
+    <!-- 背景遮罩 -->
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="showAddAccNodeModal = false"></div>
+    
+    <!-- 弹窗主体 -->
+    <div class="relative bg-white rounded-xl shadow-2xl border border-slate-200 w-[560px] max-w-full overflow-visible flex flex-col transition-all duration-300"
+         @click.away="showAddAccNodeModal = false">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+        <h3 class="text-sm font-semibold text-slate-800">
+          新增节点
+        </h3>
+        <button @click="showAddAccNodeModal = false" class="text-slate-400 hover:text-slate-600 text-lg font-medium p-1 cursor-pointer">×</button>
+      </div>
+      
+      <div class="p-5 space-y-4 relative overflow-visible">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-2">
+            选择加速区域
+          </label>
+          
+          <!-- 多选 Tag 输入框 (复用 GA-custom-config 逻辑与 +N 折叠) -->
+          <div class="relative">
+            <div @click="addAccDropdownOpen = !addAccDropdownOpen; addAccSearchQuery = '';"
+                 class="min-h-9 border border-slate-200 rounded-lg p-1.5 bg-white flex items-center justify-between cursor-pointer hover:border-brand/60 transition-colors text-xs flex-wrap gap-1.5 select-none">
+              <div class="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+                <template x-if="selectedAccPops.length === 0">
+                  <span class="text-slate-400 px-1.5 py-0.5">请选择加速区域节点</span>
+                </template>
+                
+                <!-- 前 3 个 Tag 展示 (文字使用正常黑色 text-slate-800) -->
+                <template x-for="(popName, idx) in selectedAccPops.slice(0, 3)" :key="popName">
+                  <span class="bg-slate-100 border border-slate-200/80 text-slate-800 rounded px-2 py-0.5 text-xs font-medium flex items-center gap-1.5">
+                    <span x-text="popName"></span>
+                    <span @click.stop="toggleAccPop(popName)" class="text-slate-400 hover:text-slate-600 font-bold cursor-pointer">×</span>
+                  </span>
+                </template>
+
+                <!-- 超过 3 个显示 +N Tag -->
+                <template x-if="selectedAccPops.length > 3">
+                  <span class="bg-slate-100 text-slate-600 rounded px-2 py-0.5 text-xs font-medium" x-text="'+' + (selectedAccPops.length - 3)"></span>
+                </template>
+              </div>
+
+              <div class="flex items-center gap-1 pl-1 shrink-0">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </div>
+            </div>
+            
+            <!-- 多选下拉框菜单 (设置高 z-index z-[200] 避免剪切) -->
+            <div x-show="addAccDropdownOpen" @click.away="addAccDropdownOpen = false" x-cloak
+                 class="absolute z-[200] left-0 right-0 top-11 bg-white border border-slate-200 rounded-lg shadow-xl text-xs flex flex-col max-h-72 overflow-hidden">
+              <!-- 搜索框 -->
+              <div class="p-2 border-b border-slate-100 flex-shrink-0 relative">
+                <input type="text" x-model="addAccSearchQuery" placeholder="搜索用户所在城市，不存在则选择就近选项"
+                       class="w-full h-8 border border-slate-200 rounded-md pl-8 pr-3 text-xs focus:outline-none focus:border-brand text-slate-700">
+                <svg class="w-4 h-4 text-slate-400 absolute left-4 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+              </div>
+              
+              <!-- 未搜索时：双列选框 -->
+              <template x-if="!addAccSearchQuery">
+                <div class="flex flex-1 max-h-56 overflow-hidden">
+                  <!-- 左侧大区 -->
+                  <div class="w-28 border-r border-slate-100 bg-slate-50/50 flex-shrink-0 overflow-y-auto">
+                    <template x-for="region in Object.keys(mockPops)" :key="region">
+                      <div @mouseenter="addAccActiveRegion = region"
+                           class="px-3 py-2 cursor-pointer flex items-center justify-between transition-colors select-none"
+                           :class="addAccActiveRegion === region ? 'text-brand font-semibold bg-white border-l-2 border-brand' : 'text-slate-600 hover:bg-slate-100/60'">
+                        <span x-text="region"></span>
+                        <svg class="w-3 h-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                      </div>
+                    </template>
+                  </div>
+                  <!-- 右侧 PoP 城市多选 -->
+                  <div class="flex-1 overflow-y-auto p-1">
+                    <template x-for="pop in (mockPops[addAccActiveRegion] || [])" :key="pop.key">
+                      <div @click.stop="toggleAccPop(pop.name)"
+                           class="px-3 py-2 rounded hover:bg-blue-50 cursor-pointer flex items-center gap-2 transition-colors select-none">
+                        <div class="w-4 h-4 border rounded flex items-center justify-center flex-shrink-0 transition-colors"
+                             :class="selectedAccPops.includes(pop.name) ? 'bg-brand border-brand' : 'border-slate-300 bg-white'">
+                          <svg x-show="selectedAccPops.includes(pop.name)" class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <span class="text-brand">🌐</span>
+                        <span :class="selectedAccPops.includes(pop.name) ? 'text-slate-800 font-semibold' : 'text-slate-700'" x-text="pop.name"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </template>
+              
+              <!-- 搜索时平铺匹配 PoP 列表 -->
+              <template x-if="addAccSearchQuery">
+                <div class="flex-1 overflow-y-auto max-h-56 p-1">
+                  <template x-for="pop in filterPops(addAccSearchQuery)" :key="pop.key">
+                    <div @click.stop="toggleAccPop(pop.name)"
+                         class="px-3 py-2 rounded hover:bg-blue-50 cursor-pointer flex items-center gap-2 transition-colors select-none">
+                      <div class="w-4 h-4 border rounded flex items-center justify-center flex-shrink-0 transition-colors"
+                           :class="selectedAccPops.includes(pop.name) ? 'bg-brand border-brand' : 'border-slate-300 bg-white'">
+                        <svg x-show="selectedAccPops.includes(pop.name)" class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                      </div>
+                      <span class="text-brand">🌐</span>
+                      <span :class="selectedAccPops.includes(pop.name) ? 'text-slate-800 font-semibold' : 'text-slate-700'" x-text="pop.name"></span>
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="px-5 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 flex-shrink-0 rounded-b-xl">
+        <button @click="confirmAddAccNodes()" class="h-8 px-4 rounded text-xs bg-brand text-white font-medium hover:bg-brand-hover active:bg-brand-active transition-colors shadow-sm focus:outline-none cursor-pointer">
+          确定
+        </button>
+        <button @click="showAddAccNodeModal = false" class="h-8 px-4 rounded text-xs border border-slate-200 bg-white text-slate-600 font-medium hover:bg-slate-50 transition-colors focus:outline-none cursor-pointer">
           取消
         </button>
       </div>

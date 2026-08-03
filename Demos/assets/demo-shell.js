@@ -165,7 +165,7 @@
           previewHeaderTitle: '配置预览',
           legendIngress: '加速区域 (上车点)',
           legendEgress: '源站区域 (下车点)',
-          legendOrigin: '源站对象',
+          legendOrigin: '加速对象',
           topologyHeading: '全球骨干加速拓扑',
 
           // 提示 Toast

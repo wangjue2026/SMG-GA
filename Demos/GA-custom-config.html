@@ -1697,7 +1697,7 @@
           searchQueries: {},
 
           /* ---- Step 1 — 源站行列表 ---- */
-          sourceRows: [{ id: 1, target: '', location: '', originAddress: '', resolvedIp: '', dnsStatus: 'none', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' }] }],
+          sourceRows: [{ id: 1, target: '', location: '', originAddress: '', resolvedIp: '', dnsStatus: 'none', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '', originPort: '' }] }],
           nextRowId: 2,
 
           /* ---- Step 2 — 每个源站的加速范围配置 key=id ---- */
@@ -1710,13 +1710,13 @@
           /* ---- 各子类型独立的数据备份 ---- */
           typeData: {
             ip: {
-              sourceRows: [{ id: 1, target: '', location: '', originAddress: '', resolvedIp: '', dnsStatus: 'none', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' }] }],
+              sourceRows: [{ id: 1, target: '', location: '', originAddress: '', resolvedIp: '', dnsStatus: 'none', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '', originPort: '' }] }],
               nextRowId: 2,
               popConfigs: {},
               selectedRowId: null
             },
             domain: {
-              sourceRows: [{ id: 1, target: '', location: '', originAddress: '', resolvedIp: '', dnsStatus: 'none', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' }] }],
+              sourceRows: [{ id: 1, target: '', location: '', originAddress: '', resolvedIp: '', dnsStatus: 'none', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '', originPort: '' }] }],
               nextRowId: 2,
               popConfigs: {},
               selectedRowId: null
@@ -1750,7 +1750,6 @@
                     const cfg = this.getPopConfig(row.id);
                     cfg.exclusiveIp = true;
                     if (!row._wasDomain) {
-                      cfg.advancedOpen = true;
                       row._wasDomain = true;
                     }
                   } else {
@@ -1763,7 +1762,7 @@
 
           /* ---- 端口方法 ---- */
           addPortRow(row) {
-            row.ports.push({ id: this.nextPortRowId++, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' });
+            row.ports.push({ id: this.nextPortRowId++, protocol: 'TCP-TCP', listenPort: '', originPort: '' });
           },
           removePortRow(row, portId) {
             if (row.ports.length <= 1) return;
@@ -1772,7 +1771,7 @@
 
           /* ---- 源站行方法 ---- */
           addRow() {
-            this.sourceRows.push({ id: this.nextRowId++, target: '', location: '', originAddress: '', resolvedIp: '', dnsStatus: 'none', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '待自动生成', originPort: '' }] });
+            this.sourceRows.push({ id: this.nextRowId++, target: '', location: '', originAddress: '', resolvedIp: '', dnsStatus: 'none', ports: [{ id: 1, protocol: 'TCP-TCP', listenPort: '', originPort: '' }] });
           },
           removeRow(id) {
             if (this.sourceRows.length <= 1) return;
@@ -1826,7 +1825,7 @@
              if (!this.popConfigs[id]) {
                this.popConfigs[id] = {
                  selectedPops: [],
-                 advancedOpen: isDomain ? true : false,
+                 advancedOpen: false,
                  exclusiveIp: isDomain ? true : false,
                  sourceIpPassthrough: false,
                  transportOptimize: true,
@@ -2121,7 +2120,7 @@
             // 端口拼接，形式如 target:port1/port2/port3...
             let portStr = '';
             if (firstRow.ports && firstRow.ports.length > 0) {
-              const portVals = firstRow.ports.filter(p => p.originPort).map(p => p.originPort);
+              const portVals = firstRow.ports.filter(p => p.listenPort || p.originPort).map(p => p.listenPort || p.originPort);
               if (portVals.length > 0) {
                 portStr = ':' + portVals.join('/');
               }
@@ -2231,7 +2230,7 @@
 
           getExclusiveIps(row) {
             if (!row) return [];
-            const ports = (row.ports && row.ports.length > 0) ? row.ports.filter(p => p.originPort).map(p => p.originPort) : ['4883'];
+            const ports = (row.ports && row.ports.length > 0) ? row.ports.filter(p => p.listenPort || p.originPort).map(p => p.listenPort || p.originPort) : ['4883'];
             const primaryPort = ports[0] || '4883';
             return [
               { ip: `10.24.53.33:${primaryPort}`, tag: '' },
@@ -2452,7 +2451,7 @@
                   </div>
                   
                   <!-- 提示文案 -->
-                  <p class="text-xs text-slate-500 mb-3 leading-relaxed" x-text="customType === 'ip' ? '请手动填写需要被加速的业务IP地址作为源站对象：' : '请手动填写需要被加速的业务域名作为源站对象：'"></p>
+                  <p class="text-xs text-slate-500 mb-3 leading-relaxed" x-text="customType === 'ip' ? '请手动填写需要被加速的业务IP地址作为加速对象：' : '请手动填写需要被加速的业务域名作为加速对象：'"></p>
 
                   <!-- 源站行列表 -->
                   <div class="space-y-2.5">
@@ -2635,7 +2634,7 @@
                               <div class="flex items-center gap-2 min-w-0">
                                 <svg class="w-4 h-4 flex-shrink-0 text-[#6F7785]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16v-4m0-4h.01"/></svg>
                                 <div class="text-xs text-[#6F7785] leading-relaxed font-normal">
-                                  源站对象为域名时，需补充真实服务器的公网 IP/域名，避免 DNS 解析异常等情况导致回源失败。系统会自动进行域名解析，请确认或补充真实 IP/域名，支持配置多个，以英文逗号隔开。
+                                  加速对象为域名时，需补充真实服务器的公网 IP/域名，避免 DNS 解析异常等情况导致回源失败。系统会自动进行域名解析，请确认或补充真实 IP/域名，支持配置多个，以英文逗号隔开。
                                 </div>
                               </div>
                               <button @click="row.hideOriginNotice = true" class="text-slate-400 hover:text-slate-600 p-0.5 flex-shrink-0 transition-colors" title="关闭提示">
@@ -2974,8 +2973,14 @@
                                   </td>
                                   <td class="py-2 px-3">
                                     <div class="relative group">
-                                      <input type="text" readonly x-model="pRow.listenPort" placeholder="待自动生成" class="w-full h-8 px-3 border border-slate-100 rounded bg-slate-50 text-slate-400 focus:outline-none text-xs font-mono select-none cursor-default" />
-                                      <span class="absolute hidden group-hover:flex bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full left-0 mb-1.5 shadow-lg pointer-events-none w-64 leading-relaxed font-normal whitespace-normal">当前未启用独享IP，加速端口将在规则创建成功后自动分配，如果需要单独指定端口请启用下方高级配置中的独享IP</span>
+                                      <input type="text"
+                                        :readonly="!getPopConfig(row.id).exclusiveIp"
+                                        x-model="pRow.listenPort"
+                                        :placeholder="getPopConfig(row.id).exclusiveIp ? '请输入' : '待自动生成'"
+                                        :class="getPopConfig(row.id).exclusiveIp 
+                                          ? 'w-full h-8 px-3 border border-slate-200 rounded bg-white text-slate-700 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 text-xs font-mono'
+                                          : 'w-full h-8 px-3 border border-slate-100 rounded bg-slate-50 text-slate-400 focus:outline-none text-xs font-mono select-none cursor-default'" />
+                                      <span x-show="!getPopConfig(row.id).exclusiveIp" class="absolute hidden group-hover:flex bg-slate-900 text-white text-[10px] rounded p-2 z-50 bottom-full left-0 mb-1.5 shadow-lg pointer-events-none w-64 leading-relaxed font-normal whitespace-normal">当前未启用独享IP，加速端口将在规则创建成功后自动分配，如果需要单独指定端口请启用下方高级配置中的独享IP</span>
                                     </div>
                                   </td>
                                   <td class="py-2 px-3">
@@ -3235,7 +3240,7 @@
 
                       <!-- 5. 源站对象 -->
                       <div class="flex-shrink-0 min-w-[110px] max-w-[150px] space-y-1">
-                        <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400 select-none">源站对象</div>
+                        <div class="text-[10px] uppercase font-bold tracking-wider text-slate-400 select-none">加速对象</div>
                         <div class="flex items-center gap-2">
                           <div class="w-8 h-8 rounded-xl border border-slate-200 bg-gradient-to-b from-slate-50 to-slate-100 flex items-center justify-center flex-shrink-0 shadow-sm">
                             <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -3334,7 +3339,7 @@
               </div>
               <div class="flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-[#F59E0B]"></span>
-                <span>源站对象</span>
+                <span>加速对象</span>
               </div>
             </div>
 
@@ -3385,7 +3390,7 @@
 
                 <!-- 3. 源站 -->
                 <div class="flex-1 bg-slate-50/50 p-2.5 border border-slate-200 rounded-lg relative min-w-0">
-                  <div class="text-slate-400 mb-1">源站对象</div>
+                  <div class="text-slate-400 mb-1">加速对象</div>
                   <div x-show="getPreviewRow() && getPreviewRow().target" x-cloak>
                     <div class="font-medium text-brand truncate" x-text="getPreviewRow().target"></div>
                   </div>
@@ -3653,7 +3658,7 @@
                   <table class="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr class="bg-slate-50 text-slate-400 font-semibold border-b border-slate-100 select-none">
-                        <th class="py-2.5 px-4 font-normal">源站对象</th>
+                        <th class="py-2.5 px-4 font-normal">加速对象</th>
                         <th class="py-2.5 px-4 font-normal">加速域名</th>
                       </tr>
                     </thead>
@@ -3907,7 +3912,7 @@
                   <div class="flex items-start gap-2">
                     <span class="w-4 h-4 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">1</span>
                     <div>
-                      如果加速的是零信任业务则前往 <span class="font-semibold text-slate-800">【系统管理/代理网关管理】</span> 在左树找到本次加速源站对象所在的代理区域，将地址复制到代理区域的线路中。
+                      如果加速的是零信任业务则前往 <span class="font-semibold text-slate-800">【系统管理/代理网关管理】</span> 在左树找到本次加速对象所在的代理区域，将地址复制到代理区域的线路中。
                     </div>
                   </div>
                   <div class="flex items-start gap-2">
@@ -4289,7 +4294,7 @@
       }
 
       let hubNode = null;
-      const targetText = (activeRow && activeRow.target) ? activeRow.target : '源站对象';
+      const targetText = (activeRow && activeRow.target) ? activeRow.target : '加速对象';
       
       if (lowerNode) {
         hubNode = {
